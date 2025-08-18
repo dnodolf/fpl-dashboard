@@ -48,11 +48,11 @@ export async function GET(request) {
         }
         
         // Fallback to FFH
-        const ffhResponse = await fetch(new URL('/api/ffh/players', request.url));
-        if (!ffhResponse.ok) {
-          throw new Error(`Both sources failed. FFH API error: ${ffhResponse.status}`);
+        const ffhFallbackResponse = await fetch(new URL('/api/ffh/players', request.url));
+        if (!ffhFallbackResponse.ok) {
+          throw new Error(`Both sources failed. FFH API error: ${ffhFallbackResponse.status}`);
         }
-        playerData = await ffhResponse.json();
+        playerData = await ffhFallbackResponse.json();
         playerData.source = 'ffh-fallback';
         break;
     }
