@@ -301,20 +301,21 @@ export default function FPLDashboard() {
       <div className={`min-h-screen transition-colors ${
         isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
       }`}>
-        {/* Header */}
-        // Enhanced Header Component for your dashboard
-        const DashboardHeader = ({ 
-          isDarkMode, 
-          setIsDarkMode, 
-          lastUpdated, 
-          source, 
-          players, 
-          quality, 
-          ownershipData, 
-          ownershipCount,
-          enhanced,
-          refetch 
-        }) => (
+        
+      {/* Header */}
+      // Enhanced Header Component for your dashboard
+      const DashboardHeader = ({ 
+        isDarkMode, 
+        setIsDarkMode, 
+        lastUpdated, 
+        source, 
+        players, 
+        quality, 
+        ownershipData, 
+        ownershipCount,
+        enhanced,
+        refetch 
+      }) => (
         <header className={`${
           isDarkMode ? 'bg-gray-800' : 'bg-white'
         } shadow-sm border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -403,7 +404,6 @@ export default function FPLDashboard() {
             </nav>
           </div>
         </header>
-      );
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
