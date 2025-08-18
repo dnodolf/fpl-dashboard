@@ -1,6 +1,16 @@
 // app/services/enhancedDataService.js
 import { cacheService } from './cacheService';
-import { ffhApiService } from './ffhApiService';
+
+// Dynamic import to avoid build issues
+let ffhApiService = null;
+
+async function getFFHService() {
+  if (!ffhApiService) {
+    const module = await import('./ffhApiService');
+    ffhApiService = module.ffhApiService;
+  }
+  return ffhApiService;
+}
 
 class EnhancedDataService {
   constructor() {
@@ -74,8 +84,9 @@ class EnhancedDataService {
   }
 
   async fetchFFHData() {
-    const players = await ffhApiService.getPlayerPredictions();
-    const transformedPlayers = ffhApiService.transformFFHData(players);
+    const ffhService = await getFFHService();
+    const players = await ffhService.getPlayerPredictions();
+    const transformedPlayers = ffhService.transformFFHData(players);
     
     return {
       players: transformedPlayers,

@@ -9,18 +9,24 @@ function usePlayerData() {
     players: [],
     loading: true,
     error: null,
-    lastUpdated: null
+    lastUpdated: null,
+    source: null,
+    quality: null,
+    ownershipData: false
   });
 
-  const fetchData = async (source = 'sheets') => {
+  const fetchData = async (source = 'auto', forceRefresh = false) => {
     setData(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      const endpoint = source === 'ffh' 
-        ? '/api/ffh/players' 
-        : '/api/sheets/players';
+      // Use enhanced players API
+      const params = new URLSearchParams({
+        source,
+        refresh: forceRefresh.toString(),
+        matching: 'true' // Include ownership data
+      });
       
-      const response = await fetch(endpoint);
+      const response = await fetch(`/api/players?${params}`);
       const result = await response.json();
       
       if (result.success) {
@@ -29,7 +35,11 @@ function usePlayerData() {
           loading: false,
           error: null,
           lastUpdated: result.lastUpdated,
-          source: result.source || source
+          source: result.source || source,
+          quality: result.quality,
+          ownershipData: result.ownershipData,
+          enhanced: result.enhanced,
+          cached: result.fromCache
         });
       } else {
         throw new Error(result.error || 'Failed to fetch data');
@@ -44,8 +54,19 @@ function usePlayerData() {
     }
   };
 
+  // Auto-refresh data every 10 minutes if page is visible
   useEffect(() => {
-    fetchData('sheets'); // Start with Google Sheets data
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchData('auto', false); // Use cached data
+      }
+    }, 10 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetchData('auto'); // Start with auto source selection
   }, []);
 
   return { ...data, refetch: fetchData };
