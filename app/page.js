@@ -473,6 +473,252 @@ const PlayerMatchingTab = ({ isDarkMode, players }) => {
   );
 };
 
+// ----------------- PLAYER TABLE COMPONENT -----------------
+const PlayerTable = ({ players, isDarkMode }) => {
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+
+  // Get player data with proper fallbacks
+  const getPlayerName = (player) => {
+    return player.web_name || player.name || player.full_name || 'Unknown Player';
+  };
+
+  const getTeam = (player) => {
+    return player.team?.code_name || player.team_abbr || player.team_name || player.club || player.team || '';
+  };
+
+  const getPosition = (player) => {
+    if (player.position) return player.position;
+    if (player.position_id) {
+      const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+      return positions[player.position_id] || 'Unknown';
+    }
+    if (player.element_type) {
+      const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+      return positions[player.element_type] || 'Unknown';
+    }
+    return 'Unknown';
+  };
+
+  const getOwner = (player) => {
+    if (player.owned_by) return player.owned_by;
+    if (player.owner_name) return player.owner_name;
+    return player.is_available === false ? 'Owned' : 'Free Agent';
+  };
+
+  const getSeasonPoints = (player) => {
+    // For integrated players, prefer Sleeper converted points
+    if (player.sleeper_season_total) return player.sleeper_season_total;
+    if (player.sleeper_season_avg) return player.sleeper_season_avg * 38;
+    if (player.ffh_season_prediction) return player.ffh_season_prediction;
+    if (player.predicted_pts) return player.predicted_pts;
+    if (player.total_points) return player.total_points;
+    if (player.points) return player.points;
+    return 0;
+  };
+
+  const getNext5Games = (player) => {
+    // Try to get next 5 games from GW predictions
+    if (player.sleeper_gw_predictions) {
+      try {
+        const gwPreds = JSON.parse(player.sleeper_gw_predictions);
+        const next5 = Object.values(gwPreds).slice(0, 5);
+        return next5.length > 0 ? next5.reduce((a, b) => a + b, 0) : 0;
+      } catch (e) {
+        // Fall back to estimation
+      }
+    }
+    
+    if (player.ffh_gw_predictions) {
+      try {
+        const gwPreds = JSON.parse(player.ffh_gw_predictions);
+        const next5 = Object.values(gwPreds).slice(0, 5);
+        return next5.length > 0 ? next5.reduce((a, b) => a + b, 0) : 0;
+      } catch (e) {
+        // Fall back to estimation
+      }
+    }
+    
+    // Estimate: season points / 38 * 5
+    const seasonPoints = getSeasonPoints(player);
+    return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
+  };
+
+  // Sorting function
+  const handleSort = (key) => {
+    let direction = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Sort players
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+
+    let aValue, bValue;
+
+    switch (sortConfig.key) {
+      case 'name':
+        aValue = getPlayerName(a).toLowerCase();
+        bValue = getPlayerName(b).toLowerCase();
+        break;
+      case 'team':
+        aValue = getTeam(a);
+        bValue = getTeam(b);
+        break;
+      case 'position':
+        aValue = getPosition(a);
+        bValue = getPosition(b);
+        break;
+      case 'owner':
+        aValue = getOwner(a);
+        bValue = getOwner(b);
+        break;
+      case 'seasonPoints':
+        aValue = getSeasonPoints(a);
+        bValue = getSeasonPoints(b);
+        break;
+      case 'next5Points':
+        aValue = getNext5Games(a);
+        bValue = getNext5Games(b);
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const getSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return <span className="text-gray-400 ml-1">↕️</span>;
+    }
+    return sortConfig.direction === 'desc' ? 
+      <span className="text-blue-500 ml-1">↓</span> : 
+      <span className="text-blue-500 ml-1">↑</span>;
+  };
+
+  const getPositionBadgeColor = (position) => {
+    const colors = {
+      'GK': 'bg-yellow-500 text-white',
+      'DEF': 'bg-blue-500 text-white',
+      'MID': 'bg-green-500 text-white',
+      'FWD': 'bg-red-500 text-white'
+    };
+    return colors[position] || 'bg-gray-500 text-white';
+  };
+
+  const getOwnerColor = (owner) => {
+    if (owner === 'Free Agent') return 'text-green-600 font-medium';
+    if (owner === 'ThatDerekGuy') return 'text-blue-600 font-medium'; // Your team
+    return 'text-gray-400';
+  };
+
+  return (
+    <div className={`rounded-lg overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+            <tr>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80"
+                onClick={() => handleSort('name')}
+              >
+                Player Name {getSortIcon('name')}
+              </th>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80"
+                onClick={() => handleSort('team')}
+              >
+                Team {getSortIcon('team')}
+              </th>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80"
+                onClick={() => handleSort('position')}
+              >
+                Position {getSortIcon('position')}
+              </th>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80"
+                onClick={() => handleSort('owner')}
+              >
+                Owner {getSortIcon('owner')}
+              </th>
+              <th 
+                className="px-4 py-3 text-right text-sm font-medium cursor-pointer hover:bg-opacity-80"
+                onClick={() => handleSort('seasonPoints')}
+              >
+                Season Points {getSortIcon('seasonPoints')}
+              </th>
+              <th 
+                className="px-4 py-3 text-right text-sm font-medium cursor-pointer hover:bg-opacity-80"
+                onClick={() => handleSort('next5Points')}
+              >
+                Next 5 GW {getSortIcon('next5Points')}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {sortedPlayers.map((player, index) => (
+              <tr 
+                key={player.id || player.fpl_id || player.code || player.sleeper_id || index}
+                className={`hover:bg-opacity-50 ${
+                  isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+                }`}
+              >
+                <td className="px-4 py-3">
+                  <div className="flex items-center">
+                    <span className="font-medium">{getPlayerName(player)}</span>
+                    {player.match_confidence && (
+                      <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                        player.match_confidence === 'High' ? 'bg-green-100 text-green-800' :
+                        player.match_confidence === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {player.match_confidence}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {getTeam(player)}
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPositionBadgeColor(getPosition(player))}`}>
+                    {getPosition(player)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <span className={getOwnerColor(getOwner(player))}>
+                    {getOwner(player)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right text-sm font-medium">
+                  {getSeasonPoints(player).toFixed(1)}
+                </td>
+                <td className="px-4 py-3 text-right text-sm font-medium">
+                  {getNext5Games(player).toFixed(1)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {sortedPlayers.length === 0 && (
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">🔍</div>
+          <h3 className="text-lg font-medium mb-2">No players found</h3>
+          <p className="opacity-75">Try adjusting your filters to see more results.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ----------------- DATA HOOK -----------------
 function usePlayerData() {
   const [data, setData] = useState({
@@ -575,33 +821,80 @@ export default function FPLDashboard() {
     refetch(source, forceRefresh, useIntegrated);
   };
 
-  // Filter players
+// FIXED Filter players logic
   const filteredPlayers = players.filter(player => {
+    // Helper functions for consistent data access
+    const getPlayerName = (p) => p.web_name || p.name || p.full_name || '';
+    const getPlayerPosition = (p) => {
+      if (p.position) return p.position.toUpperCase();
+      if (p.position_id) {
+        const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+        return positions[p.position_id] || '';
+      }
+      if (p.element_type) {
+        const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+        return positions[p.element_type] || '';
+      }
+      return '';
+    };
+    const getPlayerTeam = (p) => p.team?.code_name || p.team_abbr || p.team_name || p.club || p.team || '';
+    const getPlayerOwner = (p) => {
+      if (p.owned_by) return p.owned_by;
+      if (p.owner_name) return p.owner_name;
+      return p.is_available === false ? 'Owned' : 'Free Agent';
+    };
+    const getPlayerPoints = (p) => {
+      if (p.sleeper_season_total) return p.sleeper_season_total;
+      if (p.sleeper_season_avg) return p.sleeper_season_avg * 38;
+      if (p.ffh_season_prediction) return p.ffh_season_prediction;
+      if (p.predicted_pts) return p.predicted_pts;
+      if (p.total_points) return p.total_points;
+      if (p.points) return p.points;
+      return 0;
+    };
+
     // Search filter
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
-      const name = (player.web_name || player.name || player.full_name || `${player.first_name || ''} ${player.second_name || ''}`).toLowerCase();
+      const name = getPlayerName(player).toLowerCase();
       if (!name.includes(searchTerm)) return false;
     }
 
-    // Position filter
+    // Position filter - FIXED
     if (filters.position !== 'all') {
-      const position = player.position || 
-        (player.position_id && { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }[player.position_id]) ||
-        (player.element_type && { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }[player.element_type]) ||
-        '';
-      if (position.toLowerCase() !== filters.position.toLowerCase()) return false;
+      const playerPosition = getPlayerPosition(player);
+      const filterPosition = filters.position.toUpperCase();
+      
+      // Handle different position formats
+      const positionMatches = {
+        'GK': ['GK', 'GKP'],
+        'DEF': ['DEF', 'D'],
+        'MID': ['MID', 'M'],
+        'FWD': ['FWD', 'F']
+      };
+      
+      const validPositions = positionMatches[filterPosition] || [filterPosition];
+      if (!validPositions.includes(playerPosition)) return false;
     }
 
     // Team filter
     if (filters.team !== 'all') {
-      const team = player.team?.code_name || player.team_abbr || player.team_name || player.club || player.team || '';
-      if (team !== filters.team) return false;
+      const playerTeam = getPlayerTeam(player);
+      if (playerTeam !== filters.team) return false;
     }
 
-    // Points filter
+    // Availability filter - FIXED
+    if (filters.availability !== 'all') {
+      const owner = getPlayerOwner(player);
+      const isAvailable = owner === 'Free Agent';
+      
+      if (filters.availability === 'available' && !isAvailable) return false;
+      if (filters.availability === 'owned' && isAvailable) return false;
+    }
+
+    // Points filter - FIXED
     if (filters.minPoints > 0) {
-      const points = player.predicted_pts || player.total_points || player.points || player.sleeper_season_total || 0;
+      const points = getPlayerPoints(player);
       if (points < filters.minPoints) return false;
     }
 
@@ -693,7 +986,7 @@ export default function FPLDashboard() {
             </div>
           </div>
 
-          {/* Tab Content */}
+        {/* Tab Content */}
           {activeTab === 'players' && (
             <>
               {/* Filters */}
@@ -755,13 +1048,13 @@ export default function FPLDashboard() {
                       }`}
                     >
                       <option value="all">All Players</option>
-                      <option value="available">Available</option>
-                      <option value="owned">Owned</option>
+                      <option value="available">Free Agents</option>
+                      <option value="owned">Owned Players</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Min Points</label>
+                    <label className="block text-sm font-medium mb-2">Min Season Points</label>
                     <input
                       type="number"
                       placeholder="0"
@@ -775,24 +1068,8 @@ export default function FPLDashboard() {
                 </div>
               </div>
 
-              {/* Player Grid */}
-              {filteredPlayers.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filteredPlayers.map((player, index) => (
-                    <PlayerCard 
-                      key={player.id || player.fpl_id || player.code || player.sleeper_id || index} 
-                      player={player} 
-                      isDarkMode={isDarkMode}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className={`text-center p-8 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                  <div className="text-4xl mb-4">🔍</div>
-                  <h3 className="text-lg font-medium mb-2">No players found</h3>
-                  <p className="opacity-75">Try adjusting your filters to see more results.</p>
-                </div>
-              )}
+              {/* Player Table */}
+              <PlayerTable players={filteredPlayers} isDarkMode={isDarkMode} />
             </>
           )}
 
