@@ -34,18 +34,15 @@ const ErrorBoundary = ({ children }) => {
   return children;
 };
 
-// ----------------- HEADER COMPONENT -----------------
+// ----------------- SIMPLIFIED HEADER COMPONENT -----------------
 const DashboardHeader = ({ 
   isDarkMode, 
   setIsDarkMode, 
   lastUpdated, 
-  source, 
   players = [], 
-  quality, 
-  ownershipData, 
-  ownershipCount,
-  enhanced,
-  refetch,
+  matchedCount = 0,
+  matchRate = 0,
+  updateData,
   activeTab,
   setActiveTab
 }) => (
@@ -57,20 +54,9 @@ const DashboardHeader = ({
         <div>
           <h1 className="text-3xl font-bold">🏆 FPL Roster Explorer</h1>
           {lastUpdated && (
-            <div className="text-sm opacity-75 mt-1 space-x-4">
+            <div className="text-sm opacity-75 mt-1">
               <span>Last updated: {new Date(lastUpdated).toLocaleString()}</span>
-              {source && <span>• Source: {source}</span>}
-              {enhanced && <span>• Enhanced ✨</span>}
-              {ownershipData && <span>• Ownership data: {ownershipCount} players</span>}
-              {quality && (
-                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                  quality.completenessScore >= 90 ? 'bg-green-100 text-green-800' :
-                  quality.completenessScore >= 70 ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  Data Quality: {quality.completenessScore}%
-                </span>
-              )}
+              <span className="ml-4">• Match Rate: {matchRate}%</span>
             </div>
           )}
         </div>
@@ -83,36 +69,14 @@ const DashboardHeader = ({
           >
             {isDarkMode ? '☀️' : '🌙'}
           </button>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => refetch('sheets')}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm transition-colors"
-              title="Load from Google Sheets"
-            >
-              📊 Sheets
-            </button>
-            <button 
-              onClick={() => refetch('ffh')}
-              className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm transition-colors"
-              title="Load fresh FFH predictions"
-            >
-              🔄 FFH
-            </button>
-            <button 
-              onClick={() => refetch('auto', true, true)}
-              className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded text-sm transition-colors"
-              title="Use integrated matching system"
-            >
-              🔗 Integrated
-            </button>
-            <button 
-              onClick={() => refetch('auto', true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded text-sm transition-colors"
-              title="Auto-select best source with fresh data"
-            >
-              ⚡ Refresh
-            </button>
-          </div>
+          
+          <button 
+            onClick={() => updateData()}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors font-medium"
+            title="Update player data and predictions"
+          >
+            🔄 Update Data
+          </button>
         </div>
       </div>
       
@@ -802,7 +766,7 @@ function usePlayerData() {
   return { ...data, refetch: fetchData };
 }
 
-// ----------------- MAIN DASHBOARD COMPONENT START -----------------
+// ----------------- UPDATED MAIN DASHBOARD COMPONENT -----------------
 export default function FPLDashboard() {
   const [activeTab, setActiveTab] = useState('players');
   const [filters, setFilters] = useState({
@@ -816,12 +780,16 @@ export default function FPLDashboard() {
   
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
 
-  // Enhanced refetch with integrated option
-  const enhancedRefetch = (source = 'auto', forceRefresh = false, useIntegrated = false) => {
-    refetch(source, forceRefresh, useIntegrated);
+  // Calculate match statistics
+  const matchedCount = players.filter(player => player.match_confidence).length;
+  const matchRate = players.length > 0 ? Math.round((matchedCount / players.length) * 100) : 0;
+
+  // Single update function
+  const updateData = () => {
+    refetch('auto', true, true); // Always use integrated matching
   };
 
-// FIXED Filter players logic
+  // FIXED Filter players logic (from previous artifact)
   const filteredPlayers = players.filter(player => {
     // Helper functions for consistent data access
     const getPlayerName = (p) => p.web_name || p.name || p.full_name || '';
@@ -936,7 +904,7 @@ export default function FPLDashboard() {
     );
   }
 
-  // Main render
+// Main render
   return (
     <ErrorBoundary>
       <div className={`min-h-screen transition-colors ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -945,48 +913,37 @@ export default function FPLDashboard() {
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
           lastUpdated={lastUpdated}
-          source={source}
           players={players}
-          quality={quality}
-          ownershipData={ownershipData}
-          ownershipCount={ownershipCount}
-          enhanced={enhanced}
-          refetch={enhancedRefetch}
+          matchedCount={matchedCount}
+          matchRate={matchRate}
+          updateData={updateData}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
         />
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* Enhanced Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          {/* Simplified Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
               <div className="text-2xl font-bold">{players.length}</div>
               <div className="text-sm opacity-75">👥 Total Players</div>
             </div>
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold">{filteredPlayers.length}</div>
-              <div className="text-sm opacity-75">🔍 Filtered</div>
+              <div className="text-2xl font-bold text-green-600">{matchedCount}</div>
+              <div className="text-sm opacity-75">🔗 Matched Players</div>
             </div>
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold">{source?.toUpperCase() || 'FFH'}</div>
-              <div className="text-sm opacity-75">📊 Data Source</div>
+              <div className="text-2xl font-bold text-blue-600">{matchRate}%</div>
+              <div className="text-sm opacity-75">📊 Match Success</div>
             </div>
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold text-green-600">{quality?.completenessScore || 100}%</div>
-              <div className="text-sm opacity-75">🏆 Data Quality</div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold text-purple-600">
-                {integrated ? '🔗' : '📊'}
-              </div>
-              <div className="text-sm opacity-75">
-                {integrated ? 'Integrated' : 'Standard'}
-              </div>
+              <div className="text-2xl font-bold text-purple-600">{filteredPlayers.length}</div>
+              <div className="text-sm opacity-75">🔍 Filtered Results</div>
             </div>
           </div>
 
-        {/* Tab Content */}
+          {/* Tab Content - Same as before but using PlayerTable */}
           {activeTab === 'players' && (
             <>
               {/* Filters */}
@@ -1073,6 +1030,7 @@ export default function FPLDashboard() {
             </>
           )}
 
+          {/* Other tabs remain the same */}
           {activeTab === 'matching' && (
             <PlayerMatchingTab isDarkMode={isDarkMode} players={players} />
           )}
