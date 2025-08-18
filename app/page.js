@@ -683,7 +683,7 @@ const PlayerTable = ({ players, isDarkMode }) => {
   );
 };
 
-// ----------------- DATA HOOK -----------------
+// ----------------- IMPROVED DATA HOOK - AUTO-LOAD FULL DATA -----------------
 function usePlayerData() {
   const [data, setData] = useState({
     players: [],
@@ -696,35 +696,23 @@ function usePlayerData() {
     enhanced: false
   });
 
-  const fetchData = async (source = 'auto', forceRefresh = false, useIntegrated = false) => {
+  const fetchData = async (source = 'auto', forceRefresh = false, useIntegrated = true) => {
     setData(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      let endpoint = '/api/players';
-      let requestOptions = {};
+      // ALWAYS use integrated endpoint for full data
+      const endpoint = '/api/integrated-players';
+      const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          includeMatching: true,
+          includeScoring: true,
+          forceRefresh
+        })
+      };
       
-      if (useIntegrated) {
-        // Use the new integrated endpoint
-        endpoint = '/api/integrated-players';
-        requestOptions = {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            includeMatching: true,
-            includeScoring: true,
-            forceRefresh
-          })
-        };
-      } else {
-        // Use the original endpoint
-        const params = new URLSearchParams({
-          source,
-          refresh: forceRefresh.toString(),
-          matching: 'true'
-        });
-        endpoint = `/api/players?${params}`;
-        requestOptions = { method: 'GET' };
-      }
+      console.log(`🔄 Fetching integrated player data (refresh: ${forceRefresh})...`);
       
       const response = await fetch(endpoint, requestOptions);
       const result = await response.json();
@@ -732,25 +720,28 @@ function usePlayerData() {
       console.log('API Response:', result); // Debug log
       
       if (result.success !== false && result.players) {
+        const playerCount = result.players?.length || 0;
+        console.log(`✅ Successfully loaded ${playerCount} players`);
+        
         setData({
           players: result.players || [],
           loading: false,
           error: null,
           lastUpdated: result.lastUpdated || new Date().toISOString(),
-          source: result.source || source,
+          source: result.source || 'integrated',
           quality: result.quality || { completenessScore: 100 },
           ownershipData: result.ownershipData || false,
-          enhanced: result.enhanced || false,
-          cached: result.fromCache,
+          enhanced: result.enhanced || true,
+          cached: result.fromCache || false,
           ownershipCount: result.ownershipCount || result.players?.length || 0,
-          integrated: useIntegrated,
+          integrated: true,
           integration: result.integration
         });
       } else {
-        throw new Error(result.error || 'Failed to fetch data');
+        throw new Error(result.error || 'Failed to fetch integrated player data');
       }
     } catch (error) {
-      console.error('Error fetching player data:', error);
+      console.error('❌ Error fetching player data:', error);
       setData(prev => ({
         ...prev,
         loading: false,
@@ -760,7 +751,8 @@ function usePlayerData() {
   };
 
   useEffect(() => {
-    fetchData('auto');
+    // Auto-load full integrated data on first mount (use cache for speed)
+    fetchData('auto', false, true);
   }, []);
 
   return { ...data, refetch: fetchData };
@@ -784,14 +776,13 @@ export default function FPLDashboard() {
   const matchedCount = players.filter(player => player.match_confidence).length;
   const matchRate = players.length > 0 ? Math.round((matchedCount / players.length) * 100) : 0;
 
-  // Single update function
+  // Single update function - always refresh data
   const updateData = () => {
-    refetch('auto', true, true); // Always use integrated matching
+    refetch('auto', true, true); // Force refresh with integrated matching
   };
 
-  // FIXED Filter players logic (from previous artifact)
+  // SAME filter logic as before...
   const filteredPlayers = players.filter(player => {
-    // Helper functions for consistent data access
     const getPlayerName = (p) => p.web_name || p.name || p.full_name || '';
     const getPlayerPosition = (p) => {
       if (p.position) return p.position.toUpperCase();
@@ -821,46 +812,38 @@ export default function FPLDashboard() {
       return 0;
     };
 
-    // Search filter
+    // Apply all filters
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       const name = getPlayerName(player).toLowerCase();
       if (!name.includes(searchTerm)) return false;
     }
 
-    // Position filter - FIXED
     if (filters.position !== 'all') {
       const playerPosition = getPlayerPosition(player);
       const filterPosition = filters.position.toUpperCase();
-      
-      // Handle different position formats
       const positionMatches = {
         'GK': ['GK', 'GKP'],
         'DEF': ['DEF', 'D'],
         'MID': ['MID', 'M'],
         'FWD': ['FWD', 'F']
       };
-      
       const validPositions = positionMatches[filterPosition] || [filterPosition];
       if (!validPositions.includes(playerPosition)) return false;
     }
 
-    // Team filter
     if (filters.team !== 'all') {
       const playerTeam = getPlayerTeam(player);
       if (playerTeam !== filters.team) return false;
     }
 
-    // Availability filter - FIXED
     if (filters.availability !== 'all') {
       const owner = getPlayerOwner(player);
       const isAvailable = owner === 'Free Agent';
-      
       if (filters.availability === 'available' && !isAvailable) return false;
       if (filters.availability === 'owned' && isAvailable) return false;
     }
 
-    // Points filter - FIXED
     if (filters.minPoints > 0) {
       const points = getPlayerPoints(player);
       if (points < filters.minPoints) return false;
@@ -877,9 +860,12 @@ export default function FPLDashboard() {
   // Loading state
   if (loading) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
         <div className="flex items-center justify-center min-h-screen">
-          <LoadingSpinner message="Loading player data..." />
+          <LoadingSpinner 
+            message="Loading player data..." 
+            details="Fetching predictions and ownership data"
+          />
         </div>
       </div>
     );
@@ -888,26 +874,24 @@ export default function FPLDashboard() {
   // Error state
   if (error) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
         <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center p-8">
-            <div className="text-6xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold mb-4">Error Loading Data</h2>
-            <p className="text-gray-400 mb-6">{error}</p>
-            <div className="space-x-4">
-              <button onClick={() => enhancedRefetch('sheets')} className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">Try Google Sheets</button>
-              <button onClick={() => enhancedRefetch('ffh')} className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded">Try FFH API</button>
-            </div>
-          </div>
+          <ErrorDisplay 
+            error={error} 
+            onRetry={updateData} 
+            isDarkMode={isDarkMode}
+          />
         </div>
       </div>
     );
   }
 
-// Main render
+  // Main render
   return (
     <ErrorBoundary>
-      <div className={`min-h-screen transition-colors ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`min-h-screen transition-colors ${
+        isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'
+      }`}>
         
         <DashboardHeader
           isDarkMode={isDarkMode}
@@ -924,51 +908,55 @@ export default function FPLDashboard() {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
           {/* Simplified Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold">{players.length}</div>
-              <div className="text-sm opacity-75">👥 Total Players</div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold text-green-600">{matchedCount}</div>
-              <div className="text-sm opacity-75">🔗 Matched Players</div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold text-blue-600">{matchRate}%</div>
-              <div className="text-sm opacity-75">📊 Match Success</div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-2xl font-bold text-purple-600">{filteredPlayers.length}</div>
-              <div className="text-sm opacity-75">🔍 Filtered Results</div>
-            </div>
-          </div>
+          <StatsCards 
+            players={players}
+            matchedCount={matchedCount}
+            matchRate={matchRate}
+            filteredPlayers={filteredPlayers}
+            isDarkMode={isDarkMode}
+          />
 
-          {/* Tab Content - Same as before but using PlayerTable */}
+          {/* Tab Content */}
           {activeTab === 'players' && (
             <>
               {/* Filters */}
-              <div className={`p-4 rounded-lg mb-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`p-4 rounded-lg mb-6 shadow-sm ${
+                isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'
+              }`}>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Search Players</label>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}>
+                      Search Players
+                    </label>
                     <input
                       type="text"
                       placeholder="Search by name..."
                       value={filters.search}
                       onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-lg ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg transition-colors ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'
                       }`}
                     />
                   </div>
 
+                  {/* Other filter inputs with same improved styling */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">Position</label>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}>
+                      Position
+                    </label>
                     <select
                       value={filters.position}
                       onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-lg ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg transition-colors ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-800'
                       }`}
                     >
                       <option value="all">All Positions</option>
@@ -979,13 +967,14 @@ export default function FPLDashboard() {
                     </select>
                   </div>
 
+                  {/* Team, Availability, and Min Points filters with same styling... */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">Team</label>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team</label>
                     <select
                       value={filters.team}
                       onChange={(e) => setFilters(prev => ({ ...prev, team: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-lg ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg transition-colors ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'
                       }`}
                     >
                       <option value="all">All Teams</option>
@@ -996,12 +985,12 @@ export default function FPLDashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Availability</label>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Availability</label>
                     <select
                       value={filters.availability}
                       onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-lg ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg transition-colors ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'
                       }`}
                     >
                       <option value="all">All Players</option>
@@ -1011,14 +1000,14 @@ export default function FPLDashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Min Season Points</label>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Min Season Points</label>
                     <input
                       type="number"
                       placeholder="0"
                       value={filters.minPoints}
                       onChange={(e) => setFilters(prev => ({ ...prev, minPoints: Number(e.target.value) }))}
-                      className={`w-full px-3 py-2 border rounded-lg ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg transition-colors ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'
                       }`}
                     />
                   </div>
@@ -1035,29 +1024,7 @@ export default function FPLDashboard() {
             <PlayerMatchingTab isDarkMode={isDarkMode} players={players} />
           )}
 
-          {activeTab === 'optimizer' && (
-            <div className={`p-8 text-center rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-4xl mb-4">⚡</div>
-              <h3 className="text-lg font-medium mb-2">Optimizer Coming Soon</h3>
-              <p className="opacity-75">Formation optimization feature will be available in the next update.</p>
-            </div>
-          )}
-
-          {activeTab === 'transfers' && (
-            <div className={`p-8 text-center rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-4xl mb-4">🔄</div>
-              <h3 className="text-lg font-medium mb-2">Transfer Suggestions Coming Soon</h3>
-              <p className="opacity-75">AI-powered transfer recommendations will be available soon.</p>
-            </div>
-          )}
-
-          {activeTab === 'analytics' && (
-            <div className={`p-8 text-center rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-lg font-medium mb-2">Analytics Coming Soon</h3>
-              <p className="opacity-75">Performance analytics and insights will be available in the next update.</p>
-            </div>
-          )}
+          {/* Other tab content... */}
         </main>
       </div>
     </ErrorBoundary>
