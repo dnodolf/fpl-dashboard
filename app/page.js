@@ -1,430 +1,521 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// Using emoji icons instead of lucide-react for better compatibility
 
-const FPLDashboard = () => {
-  // State management
-  const [players, setPlayers] = useState([]);
-  const [filteredPlayers, setFilteredPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('players');
-  const [dataSource, setDataSource] = useState('ffh');
-  const [darkMode, setDarkMode] = useState(false);
+// ----------------- LOADING SPINNER COMPONENT -----------------
+const LoadingSpinner = ({ message = "Loading..." }) => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+    <span>{message}</span>
+  </div>
+);
+
+// ----------------- ERROR BOUNDARY COMPONENT -----------------
+const ErrorBoundary = ({ children }) => {
+  const [hasError, setHasError] = useState(false);
   
-  // Filter states
-  const [searchTerm, setSearchTerm] = useState('');
-  const [positionFilter, setPositionFilter] = useState('all');
-  const [teamFilter, setTeamFilter] = useState('all');
-  const [availabilityFilter, setAvailabilityFilter] = useState('all');
-  const [minPoints, setMinPoints] = useState(0);
-
-  // Fetch player data
-  const fetchPlayers = async (source = 'ffh', refresh = false) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      console.log(`Fetching players from ${source}...`);
-      const response = await fetch(`/api/players?source=${source}&refresh=${refresh}&matching=true`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('API Response:', data);
-      
-      if (data.players && Array.isArray(data.players)) {
-        console.log(`Successfully loaded ${data.players.length} players`);
-        setPlayers(data.players);
-        setFilteredPlayers(data.players);
-      } else {
-        console.error('Invalid data structure:', data);
-        throw new Error('Invalid data structure received from API');
-      }
-    } catch (err) {
-      console.error('Error fetching players:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial data load
   useEffect(() => {
-    fetchPlayers(dataSource);
+    const handleError = () => setHasError(true);
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
   }, []);
 
-  // Apply filters
-  useEffect(() => {
-    let filtered = [...players];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(player =>
-        player.web_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.second_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Position filter
-    if (positionFilter !== 'all') {
-      filtered = filtered.filter(player => {
-        const position = getPositionName(player.position_id || player.element_type);
-        return position.toLowerCase() === positionFilter.toLowerCase();
-      });
-    }
-
-    // Team filter
-    if (teamFilter !== 'all') {
-      filtered = filtered.filter(player => 
-        player.team?.code_name === teamFilter || 
-        player.team_abbr === teamFilter
-      );
-    }
-
-    // Points filter
-    if (minPoints > 0) {
-      filtered = filtered.filter(player => 
-        (player.predicted_pts || player.total_points || 0) >= minPoints
-      );
-    }
-
-    setFilteredPlayers(filtered);
-  }, [players, searchTerm, positionFilter, teamFilter, availabilityFilter, minPoints]);
-
-  // Helper functions
-  const getPositionName = (positionId) => {
-    const positions = {
-      1: 'GK',
-      2: 'DEF',
-      3: 'MID',
-      4: 'FWD'
-    };
-    return positions[positionId] || 'Unknown';
-  };
-
-  const getPositionColor = (positionId) => {
-    const colors = {
-      1: 'bg-yellow-100 text-yellow-800',
-      2: 'bg-blue-100 text-blue-800',
-      3: 'bg-green-100 text-green-800',
-      4: 'bg-red-100 text-red-800'
-    };
-    return colors[positionId] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getTeams = () => {
-    const teams = new Set();
-    players.forEach(player => {
-      if (player.team?.code_name) teams.add(player.team.code_name);
-      if (player.team_abbr) teams.add(player.team_abbr);
-    });
-    return Array.from(teams).sort();
-  };
-
-  const handleSourceChange = async (source) => {
-    setDataSource(source);
-    await fetchPlayers(source);
-  };
-
-  const handleRefresh = () => {
-    fetchPlayers(dataSource, true);
-  };
-
-  // Component rendering
-  const LoadingSpinner = () => (
-          <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <span className="ml-3 text-lg">Loading player data...</span>
-      </div>
-  );
-
-  const ErrorMessage = () => (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-      <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Data</h3>
-      <p className="text-red-600 mb-4">{error}</p>
-              <button 
-          onClick={handleRefresh}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2 mx-auto"
-        >
-          🔄 Try Again
+  if (hasError) {
+    return (
+      <div className="text-center p-8">
+        <h2>Something went wrong.</h2>
+        <button onClick={() => setHasError(false)} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
+          Try again
         </button>
-    </div>
-  );
+      </div>
+    );
+  }
 
-  const PlayerCard = ({ player }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-2">
+  return children;
+};
+
+// ----------------- HEADER COMPONENT -----------------
+const DashboardHeader = ({ 
+  isDarkMode, 
+  setIsDarkMode, 
+  lastUpdated, 
+  source, 
+  players = [], 
+  quality, 
+  ownershipData, 
+  ownershipCount,
+  enhanced,
+  refetch,
+  activeTab,
+  setActiveTab
+}) => (
+  <header className={`${
+    isDarkMode ? 'bg-gray-800' : 'bg-white'
+  } shadow-sm border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+    <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-semibold text-gray-900">{player.web_name || `${player.first_name} ${player.second_name}`}</h3>
-          <p className="text-sm text-gray-600">{player.team?.code_name || player.team_abbr || 'Unknown Team'}</p>
+          <h1 className="text-3xl font-bold">🏆 FPL Roster Explorer</h1>
+          {lastUpdated && (
+            <div className="text-sm opacity-75 mt-1 space-x-4">
+              <span>Last updated: {new Date(lastUpdated).toLocaleString()}</span>
+              {source && <span>• Source: {source}</span>}
+              {enhanced && <span>• Enhanced ✨</span>}
+              {ownershipData && <span>• Ownership data: {ownershipCount} players</span>}
+              {quality && (
+                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                  quality.completenessScore >= 90 ? 'bg-green-100 text-green-800' :
+                  quality.completenessScore >= 70 ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  Data Quality: {quality.completenessScore}%
+                </span>
+              )}
+            </div>
+          )}
         </div>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPositionColor(player.position_id || player.element_type)}`}>
-          {getPositionName(player.position_id || player.element_type)}
+        <div className="flex gap-4 items-center">
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-2 rounded-lg transition-colors ${
+              isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            {isDarkMode ? '☀️' : '🌙'}
+          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => refetch('sheets')}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm transition-colors"
+              title="Load from Google Sheets"
+            >
+              📊 Sheets
+            </button>
+            <button 
+              onClick={() => refetch('ffh')}
+              className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm transition-colors"
+              title="Load fresh FFH predictions"
+            >
+              🔄 FFH
+            </button>
+            <button 
+              onClick={() => refetch('auto', true)}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded text-sm transition-colors"
+              title="Auto-select best source with fresh data"
+            >
+              ⚡ Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Navigation Tabs */}
+      <nav className="mt-4">
+        <div className="flex gap-1 overflow-x-auto">
+          {[
+            { id: 'players', label: '👥 Players', desc: `Browse ${players?.length || 0} players` },
+            { id: 'optimizer', label: '⚡ Optimizer', desc: 'Find optimal lineups' },
+            { id: 'transfers', label: '🔄 Transfers', desc: 'Transfer suggestions' },
+            { id: 'analytics', label: '📊 Analytics', desc: 'Performance insights' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-3 rounded-lg font-medium transition-colors min-w-max ${
+                activeTab === tab.id
+                  ? 'bg-blue-500 text-white'
+                  : isDarkMode 
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <div className="text-sm">{tab.label}</div>
+              <div className="text-xs opacity-75">{tab.desc}</div>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  </header>
+);
+
+// ----------------- PLAYER CARD COMPONENT -----------------
+const PlayerCard = ({ player, isDarkMode }) => {
+  // Handle different data structures
+  const getName = () => {
+    if (player.web_name) return player.web_name;
+    if (player.first_name && player.second_name) return `${player.first_name} ${player.second_name}`;
+    if (player.name) return player.name;
+    return 'Unknown Player';
+  };
+
+  const getTeam = () => {
+    if (player.team?.code_name) return player.team.code_name;
+    if (player.team_abbr) return player.team_abbr;
+    if (player.team_name) return player.team_name;
+    if (player.club) return player.club;
+    return 'Unknown Team';
+  };
+
+  const getPosition = () => {
+    if (player.position) return player.position;
+    if (player.position_id) {
+      const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+      return positions[player.position_id] || 'Unknown';
+    }
+    if (player.element_type) {
+      const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+      return positions[player.element_type] || 'Unknown';
+    }
+    return 'Unknown';
+  };
+
+  const getPrice = () => {
+    if (player.now_cost) return (player.now_cost / 10).toFixed(1);
+    if (player.cost) return (player.cost / 10).toFixed(1);
+    if (player.price) return player.price;
+    return 'N/A';
+  };
+
+  const getPoints = () => {
+    if (player.predicted_pts) return player.predicted_pts.toFixed(1);
+    if (player.total_points) return player.total_points;
+    if (player.points) return player.points;
+    return 'N/A';
+  };
+
+  const getPositionColor = () => {
+    const position = getPosition();
+    const colors = {
+      'GK': 'bg-yellow-100 text-yellow-800',
+      'DEF': 'bg-blue-100 text-blue-800',
+      'MID': 'bg-green-100 text-green-800',
+      'FWD': 'bg-red-100 text-red-800'
+    };
+    return colors[position] || 'bg-gray-100 text-gray-800';
+  };
+
+  return (
+    <div className={`rounded-lg p-4 transition-all hover:shadow-lg ${
+      isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+    }`}>
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h3 className="font-semibold text-lg">{getName()}</h3>
+          <p className="text-sm opacity-75">{getTeam()}</p>
+        </div>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPositionColor()}`}>
+          {getPosition()}
         </span>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="grid grid-cols-2 gap-3 text-sm">
         <div>
-          <span className="text-gray-500">Price:</span>
-          <span className="font-medium ml-1">£{((player.now_cost || player.cost || 0) / 10).toFixed(1)}m</span>
+          <span className="opacity-75">Price:</span>
+          <span className="font-medium ml-1">£{getPrice()}m</span>
         </div>
         <div>
-          <span className="text-gray-500">Points:</span>
-          <span className="font-medium ml-1">{player.predicted_pts?.toFixed(1) || player.total_points || 'N/A'}</span>
+          <span className="opacity-75">Points:</span>
+          <span className="font-medium ml-1">{getPoints()}</span>
         </div>
         {player.form && (
           <div>
-            <span className="text-gray-500">Form:</span>
+            <span className="opacity-75">Form:</span>
             <span className="font-medium ml-1">{player.form}</span>
           </div>
         )}
         {player.selected_by_percent && (
           <div>
-            <span className="text-gray-500">Ownership:</span>
+            <span className="opacity-75">Ownership:</span>
             <span className="font-medium ml-1">{player.selected_by_percent}%</span>
           </div>
         )}
       </div>
     </div>
   );
-
-  const StatsBar = () => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <div className="flex items-center gap-2">
-          👥 <span className="text-sm text-gray-600">Total Players</span>
-        </div>
-        <p className="text-2xl font-bold text-gray-900">{players.length}</p>
-      </div>
-      
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <div className="flex items-center gap-2">
-          🔍 <span className="text-sm text-gray-600">Filtered</span>
-        </div>
-        <p className="text-2xl font-bold text-gray-900">{filteredPlayers.length}</p>
-      </div>
-      
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <div className="flex items-center gap-2">
-          📊 <span className="text-sm text-gray-600">Data Source</span>
-        </div>
-        <p className="text-lg font-bold text-gray-900">{dataSource.toUpperCase()}</p>
-      </div>
-      
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <div className="flex items-center gap-2">
-          🏆 <span className="text-sm text-gray-600">Data Quality</span>
-        </div>
-        <p className="text-lg font-bold text-green-600">100%</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className={`min-h-screen transition-colors ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      {/* Header */}
-      <header className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-10`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              🏆 <h1 className="text-xl font-bold">FPL Roster Explorer</h1>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <p className="text-sm text-gray-500">
-                Last updated: {new Date().toLocaleString()} • Source: Fantasy Football Hub
-              </p>
-              <p className="text-sm text-green-600 font-medium">
-                Enhanced ✨ • Ownership data: {players.length} players
-              </p>
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">
-                Data Quality: 100%
-              </span>
-              
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                {darkMode ? '☀️' : '🌙'}
-              </button>
-              
-              <button
-                onClick={() => handleSourceChange('sheets')}
-                className={`px-3 py-1 rounded ${dataSource === 'sheets' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-              >
-                📊 Sheets
-              </button>
-              
-              <button
-                onClick={() => handleSourceChange('ffh')}
-                className={`px-3 py-1 rounded ${dataSource === 'ffh' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-              >
-                🔄 FFH
-              </button>
-              
-              <button
-                onClick={handleRefresh}
-                className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 flex items-center gap-1"
-                disabled={loading}
-              >
-                🔄 Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation Tabs */}
-      <nav className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            {[
-              { id: 'players', label: 'Players', icon: '👥', count: filteredPlayers.length },
-              { id: 'optimizer', label: 'Optimizer', icon: '📊', disabled: true },
-              { id: 'transfers', label: 'Transfers', icon: '🔄', disabled: true },
-              { id: 'analytics', label: 'Analytics', icon: '🏆', disabled: true }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                disabled={tab.disabled}
-                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : tab.disabled
-                    ? 'border-transparent text-gray-400 cursor-not-allowed'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                    Browse {tab.count} players
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {error ? (
-          <ErrorMessage />
-        ) : loading ? (
-          <LoadingSpinner />
-        ) : (
-          <>
-            <StatsBar />
-
-            {/* Filters */}
-            <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-lg border p-6 mb-6`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Search Players</label>
-                  <div className="relative">
-                    🔍
-                    <input
-                      type="text"
-                      placeholder="Search by name..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Position</label>
-                  <select
-                    value={positionFilter}
-                    onChange={(e) => setPositionFilter(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <option value="all">All Positions</option>
-                    <option value="gk">Goalkeepers</option>
-                    <option value="def">Defenders</option>
-                    <option value="mid">Midfielders</option>
-                    <option value="fwd">Forwards</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Team</label>
-                  <select
-                    value={teamFilter}
-                    onChange={(e) => setTeamFilter(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <option value="all">All Teams</option>
-                    {getTeams().map(team => (
-                      <option key={team} value={team}>{team}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Availability</label>
-                  <select
-                    value={availabilityFilter}
-                    onChange={(e) => setAvailabilityFilter(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <option value="all">All Players</option>
-                    <option value="available">Available</option>
-                    <option value="owned">Owned</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Min Points</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={minPoints}
-                    onChange={(e) => setMinPoints(Number(e.target.value))}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                    }`}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Player Grid */}
-            {filteredPlayers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredPlayers.map((player, index) => (
-                  <PlayerCard key={player.id || player.fpl_id || index} player={player} />
-                ))}
-              </div>
-            ) : (
-              <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-lg border p-8 text-center`}>
-                🔍
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No players found</h3>
-                <p className="text-gray-500 dark:text-gray-400">Try adjusting your filters to see more results.</p>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
-  );
 };
 
-export default FPLDashboard;
+// ----------------- DATA HOOK -----------------
+function usePlayerData() {
+  const [data, setData] = useState({
+    players: [],
+    loading: true,
+    error: null,
+    lastUpdated: null,
+    source: null,
+    quality: null,
+    ownershipData: false,
+    enhanced: false
+  });
+
+  const fetchData = async (source = 'auto', forceRefresh = false) => {
+    setData(prev => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      const params = new URLSearchParams({
+        source,
+        refresh: forceRefresh.toString(),
+        matching: 'true'
+      });
+      
+      const response = await fetch(`/api/players?${params}`);
+      const result = await response.json();
+      
+      console.log('API Response:', result); // Debug log
+      
+      if (result.success !== false && result.players) {
+        setData({
+          players: result.players || [],
+          loading: false,
+          error: null,
+          lastUpdated: result.lastUpdated || new Date().toISOString(),
+          source: result.source || source,
+          quality: result.quality || { completenessScore: 100 },
+          ownershipData: result.ownershipData || false,
+          enhanced: result.enhanced || false,
+          cached: result.fromCache,
+          ownershipCount: result.ownershipCount || result.players?.length || 0
+        });
+      } else {
+        throw new Error(result.error || 'Failed to fetch data');
+      }
+    } catch (error) {
+      console.error('Error fetching player data:', error);
+      setData(prev => ({
+        ...prev,
+        loading: false,
+        error: error.message
+      }));
+    }
+  };
+
+  useEffect(() => {
+    fetchData('auto');
+  }, []);
+
+  return { ...data, refetch: fetchData };
+}
+
+// ----------------- MAIN DASHBOARD -----------------
+export default function FPLDashboard() {
+  const [activeTab, setActiveTab] = useState('players');
+  const [filters, setFilters] = useState({
+    position: 'all',
+    availability: 'all',
+    team: 'all',
+    minPoints: 0,
+    search: ''
+  });
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  
+  const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch } = usePlayerData();
+
+  // Filter players
+  const filteredPlayers = players.filter(player => {
+    // Search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      const name = (player.web_name || `${player.first_name || ''} ${player.second_name || ''}`).toLowerCase();
+      if (!name.includes(searchTerm)) return false;
+    }
+
+    // Position filter
+    if (filters.position !== 'all') {
+      const position = player.position || 
+        (player.position_id && { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }[player.position_id]) ||
+        (player.element_type && { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }[player.element_type]) ||
+        '';
+      if (position.toLowerCase() !== filters.position.toLowerCase()) return false;
+    }
+
+    // Team filter
+    if (filters.team !== 'all') {
+      const team = player.team?.code_name || player.team_abbr || player.team_name || player.club || '';
+      if (team !== filters.team) return false;
+    }
+
+    // Points filter
+    if (filters.minPoints > 0) {
+      const points = player.predicted_pts || player.total_points || player.points || 0;
+      if (points < filters.minPoints) return false;
+    }
+
+    return true;
+  });
+
+  // Get unique teams for filter
+  const teams = [...new Set(players.map(player => 
+    player.team?.code_name || player.team_abbr || player.team_name || player.club
+  ).filter(Boolean))].sort();
+
+  if (loading) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="flex items-center justify-center min-h-screen">
+          <LoadingSpinner message="Loading player data..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center p-8">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold mb-4">Error Loading Data</h2>
+            <p className="text-gray-400 mb-6">{error}</p>
+            <div className="space-x-4">
+              <button onClick={() => refetch('sheets')} className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">Try Google Sheets</button>
+              <button onClick={() => refetch('ffh')} className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded">Try FFH API</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <div className={`min-h-screen transition-colors ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        
+        <DashboardHeader
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+          lastUpdated={lastUpdated}
+          source={source}
+          players={players}
+          quality={quality}
+          ownershipData={ownershipData}
+          ownershipCount={ownershipCount}
+          enhanced={enhanced}
+          refetch={refetch}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 py-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className="text-2xl font-bold">{players.length}</div>
+              <div className="text-sm opacity-75">👥 Total Players</div>
+            </div>
+            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className="text-2xl font-bold">{filteredPlayers.length}</div>
+              <div className="text-sm opacity-75">🔍 Filtered</div>
+            </div>
+            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className="text-2xl font-bold">{source?.toUpperCase() || 'FFH'}</div>
+              <div className="text-sm opacity-75">📊 Data Source</div>
+            </div>
+            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className="text-2xl font-bold text-green-600">{quality?.completenessScore || 100}%</div>
+              <div className="text-sm opacity-75">🏆 Data Quality</div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className={`p-4 rounded-lg mb-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Search Players</label>
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Position</label>
+                <select
+                  value={filters.position}
+                  onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <option value="all">All Positions</option>
+                  <option value="gk">Goalkeepers</option>
+                  <option value="def">Defenders</option>
+                  <option value="mid">Midfielders</option>
+                  <option value="fwd">Forwards</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Team</label>
+                <select
+                  value={filters.team}
+                  onChange={(e) => setFilters(prev => ({ ...prev, team: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <option value="all">All Teams</option>
+                  {teams.map(team => (
+                    <option key={team} value={team}>{team}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Availability</label>
+                <select
+                  value={filters.availability}
+                  onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <option value="all">All Players</option>
+                  <option value="available">Available</option>
+                  <option value="owned">Owned</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Min Points</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={filters.minPoints}
+                  onChange={(e) => setFilters(prev => ({ ...prev, minPoints: Number(e.target.value) }))}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Player Grid */}
+          {filteredPlayers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredPlayers.map((player, index) => (
+                <PlayerCard 
+                  key={player.id || player.fpl_id || player.code || index} 
+                  player={player} 
+                  isDarkMode={isDarkMode}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className={`text-center p-8 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className="text-4xl mb-4">🔍</div>
+              <h3 className="text-lg font-medium mb-2">No players found</h3>
+              <p className="opacity-75">Try adjusting your filters to see more results.</p>
+            </div>
+          )}
+        </main>
+      </div>
+    </ErrorBoundary>
+  );
+}
