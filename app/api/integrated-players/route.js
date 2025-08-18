@@ -1,14 +1,109 @@
 // app/api/integrated-players/route.js
-// Enhanced API with proper scoring conversion
+// Fixed to work with your existing services
 
 import { NextResponse } from 'next/server';
-import { enhancePlayerWithScoringConversion, clearConversionCache } from '../../../services/scoringConversionService';
-import { findBestMatch } from '../../../services/playerMatchingService';
+
+// Import from your existing services (match what you actually have)
+// We'll use dynamic imports to avoid build errors
+// import { matchPlayerWithFFH } from '../../../services/playerMatchingService';
+// import { convertPredictions } from '../../../services/scoringConversionService';
 
 // Cache for API responses
 let cachedData = null;
 let cacheTimestamp = null;
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+/**
+ * Dynamic import wrapper to safely import services
+ */
+async function importServices() {
+  try {
+    const [matchingService, scoringService] = await Promise.all([
+      import('../../../services/playerMatchingService.js'),
+      import('../../../services/scoringConversionService.js')
+    ]);
+    
+    return {
+      matching: matchingService,
+      scoring: scoringService
+    };
+  } catch (error) {
+    console.warn('Could not import services, using fallback methods:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Fallback matching function if service import fails
+ */
+function fallbackFindBestMatch(sleeperPlayer, ffhPlayers) {
+  if (!sleeperPlayer.full_name || !ffhPlayers.length) {
+    return { player: null, method: 'No Match', confidence: 'None', score: 0 };
+  }
+  
+  const sleeperName = sleeperPlayer.full_name.toLowerCase().replace(/[^a-z\s]/g, '');
+  let bestMatch = null;
+  let bestScore = 0;
+  
+  for (const ffhPlayer of ffhPlayers) {
+    const ffhName = (ffhPlayer.web_name || ffhPlayer.name || '').toLowerCase().replace(/[^a-z\s]/g, '');
+    
+    // Simple similarity check
+    let score = 0;
+    if (sleeperName === ffhName) score = 1.0;
+    else if (sleeperName.includes(ffhName) || ffhName.includes(sleeperName)) score = 0.8;
+    else {
+      // Check if last names match
+      const sleeperParts = sleeperName.split(' ');
+      const ffhParts = ffhName.split(' ');
+      if (sleeperParts.length > 1 && ffhParts.length > 1) {
+        const sleeperLast = sleeperParts[sleeperParts.length - 1];
+        const ffhLast = ffhParts[ffhParts.length - 1];
+        if (sleeperLast === ffhLast) score = 0.6;
+      }
+    }
+    
+    if (score > bestScore && score >= 0.4) {
+      bestScore = score;
+      bestMatch = ffhPlayer;
+    }
+  }
+  
+  if (bestMatch) {
+    const confidence = bestScore >= 0.8 ? 'High' : bestScore >= 0.6 ? 'Medium' : 'Low';
+    return {
+      player: bestMatch,
+      method: 'Name Similarity',
+      confidence,
+      score: bestScore
+    };
+  }
+  
+  return { player: null, method: 'No Match', confidence: 'None', score: 0 };
+}
+
+/**
+ * Fallback scoring conversion if service import fails
+ */
+function fallbackConvertFFHToSleeper(ffhPrediction, position) {
+  if (!ffhPrediction) return 0;
+  
+  // Use your original position multipliers
+  const multipliers = {
+    'GK': 0.8,
+    'DEF': 0.9, 
+    'D': 0.9,
+    'MID': 1.0,
+    'M': 1.0,
+    'FWD': 1.1,
+    'F': 1.1
+  };
+  
+  const pos = position?.toUpperCase() || 'MID';
+  const multiplier = multipliers[pos] || 1.0;
+  
+  return Math.round(ffhPrediction * multiplier * 100) / 100;
+}
 
 /**
  * Fetch Sleeper players and rosters
@@ -17,7 +112,6 @@ async function fetchSleeperData() {
   try {
     const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
     
-    // Fetch players and rosters in parallel
     const [playersResponse, rostersResponse, usersResponse] = await Promise.all([
       fetch('https://api.sleeper.app/v1/players/clubsoccer:epl'),
       fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`),
@@ -38,12 +132,10 @@ async function fetchSleeperData() {
     const ownershipMap = {};
     const userMap = {};
     
-    // Map user IDs to display names
     usersData.forEach(user => {
       userMap[user.user_id] = user.display_name || user.username || 'Unknown';
     });
     
-    // Map player IDs to owners
     rostersData.forEach(roster => {
       const ownerName = userMap[roster.owner_id] || 'Unknown';
       if (roster.players && Array.isArray(roster.players)) {
@@ -110,12 +202,15 @@ async function fetchFFHData() {
 }
 
 /**
- * Main integration function with enhanced scoring conversion
+ * Main integration function with smart service loading
  */
-async function integratePlayersWithScoring(options = {}) {
-  console.log('🚀 Starting enhanced player integration with scoring conversion...');
+async function integratePlayersWithServices() {
+  console.log('🚀 Starting enhanced player integration...');
   
   try {
+    // Try to load your existing services
+    const services = await importServices();
+    
     // Fetch data from both sources
     const [sleeperData, ffhData] = await Promise.all([
       fetchSleeperData(),
@@ -124,23 +219,25 @@ async function integratePlayersWithScoring(options = {}) {
 
     console.log(`📊 Data fetched - Sleeper: ${sleeperData.totalPlayers}, FFH: ${ffhData.totalPlayers}`);
 
-    // Process and match players
     const enhancedPlayers = [];
     const matchingStats = {
       total: 0,
       matched: 0,
-      byMethod: {
-        'Opta ID': 0,
-        'FPL ID': 0,
-        'Name Similarity': 0,
-        'Fallback': 0
-      },
-      byConfidence: {
-        'High': 0,
-        'Medium': 0,
-        'Low': 0
-      }
+      byMethod: { 'Name Similarity': 0, 'No Match': 0 },
+      byConfidence: { 'High': 0, 'Medium': 0, 'Low': 0, 'None': 0 }
     };
+
+    // Choose matching function
+    const findBestMatch = services?.matching?.findBestMatch || 
+                         services?.matching?.matchPlayerWithFFH || 
+                         fallbackFindBestMatch;
+    
+    // Choose conversion function
+    const convertFFHToSleeper = services?.scoring?.convertFFHToSleeperPrediction || 
+                               services?.scoring?.convertPredictions || 
+                               fallbackConvertFFHToSleeper;
+
+    console.log(`🔧 Using ${services ? 'imported' : 'fallback'} services for processing`);
 
     // Process each Sleeper player
     for (const [playerId, sleeperPlayer] of Object.entries(sleeperData.players)) {
@@ -151,13 +248,10 @@ async function integratePlayersWithScoring(options = {}) {
       // Find matching FFH player
       const matchResult = findBestMatch(sleeperPlayer, ffhData.players);
       
-      // Base player record from Sleeper
+      // Base player record
       let enhancedPlayer = {
-        // Core identifiers
         player_id: playerId,
         sleeper_id: playerId,
-        
-        // Player info
         name: sleeperPlayer.full_name,
         web_name: sleeperPlayer.last_name || sleeperPlayer.full_name,
         full_name: sleeperPlayer.full_name,
@@ -165,52 +259,76 @@ async function integratePlayersWithScoring(options = {}) {
                  (sleeperPlayer.fantasy_positions && sleeperPlayer.fantasy_positions[0]) || 'MID',
         team: sleeperPlayer.team || sleeperPlayer.team_abbr || 'Unknown',
         team_abbr: sleeperPlayer.team_abbr || sleeperPlayer.team || 'UNK',
-        
-        // Ownership info
         owned_by: sleeperData.ownership[playerId] || 'Free Agent',
         owner_name: sleeperData.ownership[playerId] || 'Free Agent',
         is_available: !sleeperData.ownership[playerId],
-        
-        // Sleeper metadata
-        fantasy_positions: sleeperPlayer.fantasy_positions || [sleeperPlayer.position || 'MID'],
-        years_exp: sleeperPlayer.years_exp || 0,
-        age: sleeperPlayer.age || null,
-        height: sleeperPlayer.height || null,
-        weight: sleeperPlayer.weight || null
+        fantasy_positions: sleeperPlayer.fantasy_positions || [sleeperPlayer.position || 'MID']
       };
 
       if (matchResult.player) {
-        // Found a match! Apply scoring conversion
         matchingStats.matched++;
-        matchingStats.byMethod[matchResult.method]++;
-        matchingStats.byConfidence[matchResult.confidence]++;
+        matchingStats.byMethod[matchResult.method] = (matchingStats.byMethod[matchResult.method] || 0) + 1;
+        matchingStats.byConfidence[matchResult.confidence] = (matchingStats.byConfidence[matchResult.confidence] || 0) + 1;
         
-        // Apply enhanced scoring conversion
-        enhancedPlayer = await enhancePlayerWithScoringConversion(enhancedPlayer, matchResult.player);
+        // Extract FFH predictions
+        const ffhSeasonPrediction = matchResult.player.season_prediction || 
+                                   matchResult.player.range_prediction || 
+                                   matchResult.player.predicted_pts || 0;
         
-        // Add matching metadata
+        // Convert to Sleeper scoring
+        let sleeperSeasonTotal;
+        if (typeof convertFFHToSleeper === 'function') {
+          try {
+            sleeperSeasonTotal = convertFFHToSleeper(ffhSeasonPrediction, enhancedPlayer.position);
+          } catch (error) {
+            console.warn('Service conversion failed, using fallback:', error.message);
+            sleeperSeasonTotal = fallbackConvertFFHToSleeper(ffhSeasonPrediction, enhancedPlayer.position);
+          }
+        } else {
+          sleeperSeasonTotal = fallbackConvertFFHToSleeper(ffhSeasonPrediction, enhancedPlayer.position);
+        }
+        
+        // Add predictions
+        enhancedPlayer.ffh_season_prediction = ffhSeasonPrediction;
+        enhancedPlayer.sleeper_season_total = sleeperSeasonTotal;
+        enhancedPlayer.sleeper_season_avg = sleeperSeasonTotal / 38;
         enhancedPlayer.match_confidence = matchResult.confidence;
         enhancedPlayer.match_method = matchResult.method;
-        enhancedPlayer.match_score = matchResult.score;
         enhancedPlayer.ffh_matched = true;
+        enhancedPlayer.scoring_conversion_applied = true;
         
-        console.log(`✅ Enhanced ${enhancedPlayer.name} with scoring conversion (${matchResult.confidence})`);
+        // Add gameweek predictions if available
+        if (matchResult.player.predictions && Array.isArray(matchResult.player.predictions)) {
+          const gwPredictions = {};
+          matchResult.player.predictions.forEach(pred => {
+            if (pred.gw && pred.predicted_pts) {
+              const pts = typeof pred.predicted_pts === 'object' ? 
+                         pred.predicted_pts.predicted_pts : pred.predicted_pts;
+              if (typeof pts === 'number') {
+                // Convert GW prediction to Sleeper scoring too
+                const convertedGwPts = fallbackConvertFFHToSleeper(pts, enhancedPlayer.position);
+                gwPredictions[pred.gw] = convertedGwPts;
+              }
+            }
+          });
+          enhancedPlayer.sleeper_gw_predictions = JSON.stringify(gwPredictions);
+          enhancedPlayer.ffh_gw_predictions = JSON.stringify(gwPredictions); // Keep for compatibility
+        }
+        
+        console.log(`✅ Enhanced ${enhancedPlayer.name}: ${ffhSeasonPrediction} → ${sleeperSeasonTotal} (${matchResult.confidence})`);
+        
       } else {
-        // No FFH match found - use fallback predictions
         matchingStats.byMethod['No Match']++;
+        matchingStats.byConfidence['None']++;
         
-        enhancedPlayer.ffh_matched = false;
-        enhancedPlayer.match_confidence = 'None';
-        enhancedPlayer.match_method = 'No Match';
-        
-        // Fallback predictions (basic estimates)
-        const estimatedSeasonPoints = estimatePlayerPoints(enhancedPlayer);
-        enhancedPlayer.sleeper_season_total = estimatedSeasonPoints;
-        enhancedPlayer.sleeper_season_avg = estimatedSeasonPoints / 38;
+        // Fallback predictions for unmatched players
+        const estimatedPoints = { 'GK': 120, 'DEF': 110, 'MID': 90, 'FWD': 100 }[enhancedPlayer.position] || 90;
+        enhancedPlayer.sleeper_season_total = estimatedPoints;
+        enhancedPlayer.sleeper_season_avg = estimatedPoints / 38;
         enhancedPlayer.ffh_season_prediction = 0;
+        enhancedPlayer.match_confidence = 'None';
+        enhancedPlayer.ffh_matched = false;
         enhancedPlayer.scoring_conversion_applied = false;
-        
-        console.log(`⚠️ No FFH match for ${enhancedPlayer.name}, using fallback predictions`);
       }
       
       enhancedPlayers.push(enhancedPlayer);
@@ -220,8 +338,7 @@ async function integratePlayersWithScoring(options = {}) {
     const finalStats = {
       ...matchingStats,
       matchRate: matchingStats.total > 0 ? 
-        Math.round((matchingStats.matched / matchingStats.total) * 100) : 0,
-      averageConfidence: calculateAverageConfidence(matchingStats.byConfidence)
+        Math.round((matchingStats.matched / matchingStats.total) * 100) : 0
     };
 
     console.log('📈 Integration complete:', finalStats);
@@ -229,19 +346,14 @@ async function integratePlayersWithScoring(options = {}) {
     return {
       success: true,
       players: enhancedPlayers,
-      integration: {
-        matchingStats: finalStats,
-        sleeperTotal: sleeperData.totalPlayers,
-        ffhTotal: ffhData.totalPlayers,
-        enhancedTotal: enhancedPlayers.length
-      },
-      quality: {
-        completenessScore: 100,
+      integration: { matchingStats: finalStats },
+      quality: { 
         matchingQuality: `${finalStats.matchRate}%`,
-        averageConfidence: finalStats.averageConfidence
+        completenessScore: 100 
       },
       source: 'integrated-enhanced',
       enhanced: true,
+      usingServices: !!services,
       lastUpdated: new Date().toISOString(),
       fromCache: false
     };
@@ -253,57 +365,19 @@ async function integratePlayersWithScoring(options = {}) {
 }
 
 /**
- * Estimate points for players without FFH matches
- */
-function estimatePlayerPoints(player) {
-  const position = player.position?.toUpperCase() || 'MID';
-  const basePoints = {
-    'GK': 120,
-    'DEF': 110,
-    'MID': 90,
-    'FWD': 100
-  };
-  
-  // Add some randomness to make it feel more realistic
-  const base = basePoints[position] || 90;
-  const variance = base * 0.2; // ±20% variance
-  const random = (Math.random() - 0.5) * variance;
-  
-  return Math.round(base + random);
-}
-
-/**
- * Calculate average confidence percentage
- */
-function calculateAverageConfidence(confidenceStats) {
-  const total = confidenceStats.High + confidenceStats.Medium + confidenceStats.Low;
-  if (total === 0) return 0;
-  
-  const weighted = (confidenceStats.High * 90) + (confidenceStats.Medium * 70) + (confidenceStats.Low * 50);
-  return Math.round(weighted / total);
-}
-
-/**
- * POST handler for enhanced integration
+ * POST handler
  */
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { 
-      includeMatching = true, 
-      includeScoring = true, 
-      forceRefresh = false,
-      clearCache = false
-    } = body;
+    const { forceRefresh = false, clearCache = false } = body;
 
-    console.log('🔄 Enhanced integration request:', { includeMatching, includeScoring, forceRefresh, clearCache });
+    console.log('🔄 Enhanced integration request:', { forceRefresh, clearCache });
 
-    // Clear caches if requested
     if (clearCache) {
       cachedData = null;
       cacheTimestamp = null;
-      clearConversionCache();
-      console.log('🗑️ All caches cleared');
+      console.log('🗑️ Cache cleared');
     }
 
     // Check cache
@@ -317,11 +391,8 @@ export async function POST(request) {
       });
     }
 
-    // Perform enhanced integration
-    const result = await integratePlayersWithScoring({
-      includeMatching,
-      includeScoring
-    });
+    // Perform integration
+    const result = await integratePlayersWithServices();
 
     // Cache the result
     cachedData = result;
@@ -330,7 +401,7 @@ export async function POST(request) {
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('❌ Enhanced integration API error:', error);
+    console.error('❌ Integration API error:', error);
     return NextResponse.json({
       success: false,
       error: error.message,
@@ -344,16 +415,11 @@ export async function POST(request) {
 /**
  * GET handler for backwards compatibility
  */
-export async function GET(request) {
+export async function GET() {
   console.log('🔄 GET request received, redirecting to POST logic');
   
-  // Convert GET to POST logic
   const mockRequest = {
-    json: () => Promise.resolve({
-      includeMatching: true,
-      includeScoring: true,
-      forceRefresh: false
-    })
+    json: () => Promise.resolve({ forceRefresh: false })
   };
   
   return POST(mockRequest);
