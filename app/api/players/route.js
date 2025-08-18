@@ -1,6 +1,5 @@
 // app/api/players/route.js
 import { NextResponse } from 'next/server';
-import { enhancedDataService } from '../../services/enhancedDataService';
 
 export async function GET(request) {
   try {
@@ -11,16 +10,61 @@ export async function GET(request) {
 
     console.log(`Fetching player data: source=${source}, refresh=${refresh}, matching=${includeMatching}`);
 
-    // Get player data using enhanced service
-    const playerData = await enhancedDataService.fetchPlayerData(source, refresh);
+    let playerData;
+
+    // Route to appropriate data source
+    switch (source) {
+      case 'sheets':
+        const sheetsResponse = await fetch(new URL('/api/sheets/players', request.url));
+        if (!sheetsResponse.ok) {
+          throw new Error(`Sheets API error: ${sheetsResponse.status}`);
+        }
+        playerData = await sheetsResponse.json();
+        break;
+        
+      case 'ffh':
+        const ffhResponse = await fetch(new URL('/api/ffh/players', request.url));
+        if (!ffhResponse.ok) {
+          throw new Error(`FFH API error: ${ffhResponse.status}`);
+        }
+        playerData = await ffhResponse.json();
+        break;
+        
+      case 'auto':
+      default:
+        // Try Google Sheets first, fallback to FFH
+        try {
+          const sheetsResponse = await fetch(new URL('/api/sheets/players', request.url));
+          if (sheetsResponse.ok) {
+            const sheetsResult = await sheetsResponse.json();
+            if (sheetsResult.success && sheetsResult.players && sheetsResult.players.length > 0) {
+              playerData = sheetsResult;
+              playerData.source = 'sheets-primary';
+              break;
+            }
+          }
+        } catch (sheetsError) {
+          console.warn('Sheets failed, trying FFH:', sheetsError.message);
+        }
+        
+        // Fallback to FFH
+        const ffhResponse = await fetch(new URL('/api/ffh/players', request.url));
+        if (!ffhResponse.ok) {
+          throw new Error(`Both sources failed. FFH API error: ${ffhResponse.status}`);
+        }
+        playerData = await ffhResponse.json();
+        playerData.source = 'ffh-fallback';
+        break;
+    }
+
+    if (!playerData.success) {
+      throw new Error(playerData.error || 'Failed to fetch player data');
+    }
 
     // Add ownership data from Sleeper if requested
     if (includeMatching || source === 'auto') {
       try {
-        // Fetch Sleeper ownership data
-        const ownershipResponse = await fetch(
-          new URL('/api/sleeper?endpoint=ownership', request.url)
-        );
+        const ownershipResponse = await fetch(new URL('/api/sleeper?endpoint=ownership', request.url));
         
         if (ownershipResponse.ok) {
           const ownershipResult = await ownershipResponse.json();
@@ -38,6 +82,7 @@ export async function GET(request) {
             });
             
             playerData.ownershipData = true;
+            playerData.ownershipCount = Object.keys(ownershipResult.data).length;
           }
         }
       } catch (ownershipError) {
@@ -46,14 +91,24 @@ export async function GET(request) {
       }
     }
 
-    // Add data quality metrics
-    const qualityMetrics = enhancedDataService.getDataQuality(playerData.players);
+    // Add simple data quality metrics
+    const players = playerData.players || [];
+    const quality = {
+      totalPlayers: players.length,
+      hasName: players.filter(p => p.name).length,
+      hasPosition: players.filter(p => p.position).length,
+      hasTeam: players.filter(p => p.team).length,
+      hasPoints: players.filter(p => p.sleeper_points > 0).length,
+      completenessScore: players.length > 0 ? 
+        Math.round(((players.filter(p => p.name && p.position && p.team).length / players.length) * 100)) : 0
+    };
 
     return NextResponse.json({
       success: true,
       ...playerData,
-      quality: qualityMetrics,
-      enhanced: true
+      quality,
+      enhanced: true,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
@@ -75,41 +130,57 @@ export async function POST(request) {
     switch (action) {
       case 'search':
         const { searchTerm, filters } = data;
-        const playerData = await enhancedDataService.fetchPlayerData('auto');
-        const searchResults = enhancedDataService.searchPlayers(
-          playerData.players, 
-          searchTerm, 
-          filters
-        );
+        
+        // Get player data first
+        const playersResponse = await fetch(new URL('/api/players?source=auto', request.url));
+        const playersResult = await playersResponse.json();
+        
+        if (!playersResult.success) {
+          throw new Error('Could not fetch player data for search');
+        }
+        
+        // Simple search implementation
+        const filteredPlayers = playersResult.players.filter(player => {
+          // Search term filter
+          if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const searchableFields = [
+              player.name || '',
+              player.team || '',
+              player.position || ''
+            ].join(' ').toLowerCase();
+            
+            if (!searchableFields.includes(term)) {
+              return false;
+            }
+          }
+
+          // Apply filters
+          if (filters.position && filters.position !== 'all' && player.position !== filters.position) {
+            return false;
+          }
+          if (filters.team && filters.team !== 'all' && player.team !== filters.team) {
+            return false;
+          }
+          if (filters.minPoints && (player.sleeper_points || 0) < filters.minPoints) {
+            return false;
+          }
+
+          return true;
+        });
         
         return NextResponse.json({
           success: true,
-          players: searchResults,
-          total: searchResults.length,
+          players: filteredPlayers,
+          total: filteredPlayers.length,
           searchTerm,
           filters
-        });
-
-      case 'optimize':
-        const { formation, strategy = 'points' } = data;
-        const optimizationData = await enhancedDataService.fetchPlayerData('auto');
-        const optimization = enhancedDataService.optimizeFormation(
-          optimizationData.players, 
-          formation, 
-          strategy
-        );
-        
-        return NextResponse.json({
-          success: true,
-          optimization,
-          formation,
-          strategy
         });
 
       default:
         return NextResponse.json({
           success: false,
-          error: `Unknown action: ${action}. Available: search, optimize`
+          error: `Unknown action: ${action}. Available: search`
         }, { status: 400 });
     }
 
