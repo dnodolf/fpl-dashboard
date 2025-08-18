@@ -9,7 +9,7 @@ export class PlayerMatchingService {
       'alex': 'alexander', 'matt': 'matthew', 'matty': 'matthew', 'joe': 'joseph',
       'jota': 'diogo', 'leo': 'leonardo', 'eddie': 'edward', 'phil': 'philip',
       'mikey': 'michael', 'ben': 'benjamin', 'kyle': 'kyle', 'kev': 'kevin',
-      'ronnie': 'ronald', 'cris': 'cristiano'
+      'ronnie': 'ronald', 'cris': 'cristiano', 'erling': 'haaland', 'cole': 'palmer'
     };
 
     // Manual overrides for problematic matches
@@ -31,9 +31,9 @@ export class PlayerMatchingService {
       'SHU': 'SHU', 'TOT': 'TOT', 'WHU': 'WHU', 'WOL': 'WOL'
     };
 
-    // Position mappings
+    // Position mappings - MUCH MORE FLEXIBLE
     this.positionMap = {
-      'GKP': 1, 'GK': 1,
+      'GKP': 1, 'GK': 1, 'G': 1,
       'DEF': 2, 'D': 2,
       'MID': 3, 'M': 3,
       'FWD': 4, 'F': 4
@@ -43,7 +43,7 @@ export class PlayerMatchingService {
     this.matchCache = new Map();
   }
 
-  // Normalize name for matching
+  // Normalize name for matching - MORE AGGRESSIVE
   normalizeNameForMatching(name) {
     if (!name) return '';
     
@@ -77,31 +77,60 @@ export class PlayerMatchingService {
     return this.teamCodeMap[normalized] || normalized;
   }
 
-  // Calculate string similarity using Levenshtein distance
+  // MUCH MORE FLEXIBLE name similarity
   calculateNameSimilarity(name1, name2) {
     if (!name1 || !name2) return 0;
     
-    const len1 = name1.length;
-    const len2 = name2.length;
+    // Split names into parts
+    const parts1 = name1.toLowerCase().split(' ').filter(p => p.length > 1);
+    const parts2 = name2.toLowerCase().split(' ').filter(p => p.length > 1);
+    
+    // Check for any matching parts
+    let bestMatch = 0;
+    
+    for (const part1 of parts1) {
+      for (const part2 of parts2) {
+        // Exact match
+        if (part1 === part2 && part1.length > 2) {
+          return 0.9;
+        }
+        
+        // Substring match
+        if ((part1.includes(part2) || part2.includes(part1)) && Math.min(part1.length, part2.length) > 2) {
+          bestMatch = Math.max(bestMatch, 0.8);
+        }
+        
+        // Levenshtein for individual parts
+        const similarity = this.levenshteinSimilarity(part1, part2);
+        if (similarity > 0.7 && Math.min(part1.length, part2.length) > 2) {
+          bestMatch = Math.max(bestMatch, similarity * 0.7);
+        }
+      }
+    }
+    
+    return bestMatch;
+  }
+
+  // Levenshtein distance helper
+  levenshteinSimilarity(str1, str2) {
+    const len1 = str1.length;
+    const len2 = str2.length;
     
     if (len1 === 0) return len2 === 0 ? 1 : 0;
     if (len2 === 0) return 0;
 
-    // Create matrix
     const matrix = Array(len1 + 1).fill().map(() => Array(len2 + 1).fill(0));
     
-    // Initialize first row and column
     for (let i = 0; i <= len1; i++) matrix[i][0] = i;
     for (let j = 0; j <= len2; j++) matrix[0][j] = j;
     
-    // Fill the matrix
     for (let i = 1; i <= len1; i++) {
       for (let j = 1; j <= len2; j++) {
-        const cost = name1[i - 1] === name2[j - 1] ? 0 : 1;
+        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
         matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,     // deletion
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j - 1] + cost // substitution
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
         );
       }
     }
@@ -111,7 +140,7 @@ export class PlayerMatchingService {
     return (maxLength - distance) / maxLength;
   }
 
-  // Find best FFH match for a Sleeper player
+  // Find best FFH match - MUCH MORE FLEXIBLE
   findBestFFHMatch(sleeperPlayer, ffhPlayers, diagnostics = []) {
     if (!sleeperPlayer?.name && !sleeperPlayer?.full_name) {
       return null;
@@ -124,14 +153,16 @@ export class PlayerMatchingService {
     // Check cache first
     if (this.matchCache.has(sleeperKey)) {
       const cachedMatch = this.matchCache.get(sleeperKey);
-      diagnostics.push({
-        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-        ffh: cachedMatch ? `${cachedMatch.web_name || cachedMatch.name} (${this.getFFHTeam(cachedMatch)})` : 'No match',
-        method: 'Cache',
-        confidence: cachedMatch ? 'High' : 'None',
-        score: cachedMatch ? 1.0 : 0
-      });
-      return cachedMatch;
+      if (cachedMatch) {
+        diagnostics.push({
+          sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
+          ffh: `${cachedMatch.web_name || cachedMatch.name} (${this.getFFHTeam(cachedMatch)})`,
+          method: 'Cache',
+          confidence: 'High',
+          score: 1.0
+        });
+        return cachedMatch;
+      }
     }
 
     // Check manual overrides
@@ -153,26 +184,20 @@ export class PlayerMatchingService {
       }
     }
 
-    // Filter by position if available
+    // Position filtering - MUCH MORE FLEXIBLE
     let positionMatches = ffhPlayers;
     if (sleeperPlayer.position) {
-      const sleeperPositionId = this.positionMap[sleeperPlayer.position];
+      const sleeperPositionId = this.positionMap[sleeperPlayer.position.toUpperCase()];
       if (sleeperPositionId) {
-        positionMatches = ffhPlayers.filter(p => 
+        const strictMatches = ffhPlayers.filter(p => 
           this.getFFHPositionId(p) === sleeperPositionId
         );
+        
+        // If we have position matches, use them, otherwise ignore position
+        if (strictMatches.length > 0) {
+          positionMatches = strictMatches;
+        }
       }
-    }
-
-    if (positionMatches.length === 0) {
-      diagnostics.push({
-        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-        ffh: 'No position matches',
-        method: 'Position Filter',
-        confidence: 'None',
-        score: 0
-      });
-      return null;
     }
 
     // Try Opta ID match first
@@ -213,13 +238,16 @@ export class PlayerMatchingService {
       }
     }
 
-    // Name similarity matching
+    // MUCH MORE FLEXIBLE name similarity matching
     const candidates = [];
-    positionMatches.forEach(ffhPlayer => {
+    
+    // First pass - all FFH players (ignore position if necessary)
+    ffhPlayers.forEach(ffhPlayer => {
       const ffhName = this.normalizeNameForMatching(ffhPlayer.web_name || ffhPlayer.name);
       const similarity = this.calculateNameSimilarity(sleeperName, ffhName);
       
-      if (similarity >= 0.7) {
+      // LOWERED threshold from 0.7 to 0.4
+      if (similarity >= 0.4) {
         candidates.push({
           player: ffhPlayer,
           score: similarity,
@@ -227,6 +255,25 @@ export class PlayerMatchingService {
         });
       }
     });
+
+    // If no matches, try even more flexible matching
+    if (candidates.length === 0) {
+      const sleeperParts = sleeperName.split(' ');
+      const longestPart = sleeperParts.reduce((a, b) => a.length > b.length ? a : b, '');
+      
+      if (longestPart.length > 3) {
+        ffhPlayers.forEach(ffhPlayer => {
+          const ffhName = this.normalizeNameForMatching(ffhPlayer.web_name || ffhPlayer.name);
+          if (ffhName.includes(longestPart) || longestPart.includes(ffhName.replace(/\./g, ''))) {
+            candidates.push({
+              player: ffhPlayer,
+              score: 0.5,
+              ffhName
+            });
+          }
+        });
+      }
+    }
 
     if (candidates.length === 0) {
       diagnostics.push({
@@ -244,11 +291,12 @@ export class PlayerMatchingService {
     candidates.sort((a, b) => b.score - a.score);
     const bestMatch = candidates[0];
     
-    // Determine confidence level
-    const confidence = bestMatch.score >= 0.95 ? 'High' : 
-                     bestMatch.score >= 0.85 ? 'Medium' : 'Low';
+    // More flexible confidence levels
+    const confidence = bestMatch.score >= 0.8 ? 'High' : 
+                     bestMatch.score >= 0.6 ? 'Medium' : 'Low';
 
-    if (bestMatch.score >= 0.7) {
+    // MUCH LOWER acceptance threshold - from 0.7 to 0.4
+    if (bestMatch.score >= 0.4) {
       this.matchCache.set(sleeperKey, bestMatch.player);
       diagnostics.push({
         sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
@@ -263,9 +311,9 @@ export class PlayerMatchingService {
     // No good match found
     diagnostics.push({
       sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-      ffh: 'Score too low',
+      ffh: `Best: ${bestMatch.player.web_name || bestMatch.player.name} (${bestMatch.score.toFixed(2)})`,
       method: 'Name Similarity',
-      confidence: 'None',
+      confidence: 'Rejected',
       score: bestMatch.score
     });
     this.matchCache.set(sleeperKey, null);
@@ -287,7 +335,7 @@ export class PlayerMatchingService {
            0;
   }
 
-  // Match all players
+  // Match all players - with progress logging
   async matchAllPlayers(sleeperPlayers, ffhPlayers) {
     const diagnostics = [];
     const matches = [];
@@ -298,6 +346,9 @@ export class PlayerMatchingService {
       byConfidence: {}
     };
 
+    console.log(`🔄 ENHANCED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
+
+    let processed = 0;
     for (const sleeperPlayer of sleeperPlayers) {
       const ffhMatch = this.findBestFFHMatch(sleeperPlayer, ffhPlayers, diagnostics);
       
@@ -319,9 +370,20 @@ export class PlayerMatchingService {
         const confidence = diagnostics[diagnostics.length - 1]?.confidence || 'Unknown';
         stats.byConfidence[confidence] = (stats.byConfidence[confidence] || 0) + 1;
       }
+
+      processed++;
+      if (processed % 100 === 0) {
+        console.log(`  Progress: ${processed}/${sleeperPlayers.length} (${stats.matched} matches so far)`);
+      }
     }
 
     stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
+
+    console.log(`✅ ENHANCED MATCHING COMPLETE:`);
+    console.log(`  Total: ${stats.total} Sleeper players`);
+    console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
+    console.log(`  Methods:`, stats.byMethod);
+    console.log(`  Confidence:`, stats.byConfidence);
 
     return {
       matches,
