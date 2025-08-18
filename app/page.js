@@ -34,6 +34,78 @@ const ErrorBoundary = ({ children }) => {
   return children;
 };
 
+// ----------------- CURRENT GAMEWEEK FUNCTION -----------------
+const getCurrentGameweek = () => {
+  const now = new Date();
+  const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  // Complete 38-gameweek schedule for 2025-26 season based on Fantrax schedule
+  const gameweekDates = [
+    { gw: 1, start: '2025-08-15', end: '2025-08-18' },
+    { gw: 2, start: '2025-08-22', end: '2025-08-25' },
+    { gw: 3, start: '2025-08-30', end: '2025-09-01' },
+    { gw: 4, start: '2025-09-13', end: '2025-09-15' },
+    { gw: 5, start: '2025-09-20', end: '2025-09-22' },
+    { gw: 6, start: '2025-09-27', end: '2025-09-29' },
+    { gw: 7, start: '2025-10-04', end: '2025-10-06' },
+    { gw: 8, start: '2025-10-18', end: '2025-10-20' },
+    { gw: 9, start: '2025-10-25', end: '2025-10-27' },
+    { gw: 10, start: '2025-11-01', end: '2025-11-03' },
+    { gw: 11, start: '2025-11-08', end: '2025-11-10' },
+    { gw: 12, start: '2025-11-22', end: '2025-11-24' },
+    { gw: 13, start: '2025-11-29', end: '2025-12-01' },
+    { gw: 14, start: '2025-12-06', end: '2025-12-08' },
+    { gw: 15, start: '2025-12-13', end: '2025-12-15' },
+    { gw: 16, start: '2025-12-20', end: '2025-12-22' },
+    { gw: 17, start: '2025-12-26', end: '2025-12-30' },
+    { gw: 18, start: '2026-01-03', end: '2026-01-05' },
+    { gw: 19, start: '2026-01-10', end: '2026-01-12' },
+    { gw: 20, start: '2026-01-17', end: '2026-01-19' },
+    { gw: 21, start: '2026-01-24', end: '2026-01-26' },
+    { gw: 22, start: '2026-01-31', end: '2026-02-02' },
+    { gw: 23, start: '2026-02-07', end: '2026-02-09' },
+    { gw: 24, start: '2026-02-14', end: '2026-02-16' },
+    { gw: 25, start: '2026-02-21', end: '2026-02-23' },
+    { gw: 26, start: '2026-02-28', end: '2026-03-02' },
+    { gw: 27, start: '2026-03-07', end: '2026-03-09' },
+    { gw: 28, start: '2026-03-14', end: '2026-03-16' },
+    { gw: 29, start: '2026-03-28', end: '2026-03-30' },
+    { gw: 30, start: '2026-04-04', end: '2026-04-06' },
+    { gw: 31, start: '2026-04-11', end: '2026-04-13' },
+    { gw: 32, start: '2026-04-18', end: '2026-04-20' },
+    { gw: 33, start: '2026-04-25', end: '2026-04-27' },
+    { gw: 34, start: '2026-05-02', end: '2026-05-04' },
+    { gw: 35, start: '2026-05-09', end: '2026-05-11' },
+    { gw: 36, start: '2026-05-16', end: '2026-05-18' },
+    { gw: 37, start: '2026-05-23', end: '2026-05-25' },
+    { gw: 38, start: '2026-05-30', end: '2026-05-30' }
+  ];
+
+  // Find current gameweek
+  for (const gwData of gameweekDates) {
+    if (currentDate >= gwData.start && currentDate <= gwData.end) {
+      return gwData.gw;
+    }
+  }
+
+  // If no exact match, find the next upcoming gameweek
+  for (const gwData of gameweekDates) {
+    if (currentDate < gwData.start) {
+      return gwData.gw;
+    }
+  }
+
+  // Default to GW1 if before season starts, or estimate if after our defined dates
+  if (currentDate < '2025-08-15') {
+    return 1;
+  }
+  
+  // Rough estimation for dates beyond our defined gameweeks
+  const seasonStart = new Date('2025-08-15');
+  const weeksSinceStart = Math.floor((now - seasonStart) / (7 * 24 * 60 * 60 * 1000));
+  return Math.min(Math.max(weeksSinceStart + 1, 1), 38);
+};
+
 // ----------------- SIMPLIFIED HEADER COMPONENT -----------------
 const DashboardHeader = ({ 
   isDarkMode, 
@@ -45,71 +117,85 @@ const DashboardHeader = ({
   updateData,
   activeTab,
   setActiveTab
-}) => (
-  <header className={`${
-    isDarkMode ? 'bg-gray-800' : 'bg-white'
-  } shadow-sm border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-    <div className="max-w-7xl mx-auto px-4 py-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">🏆 FPL Roster Explorer</h1>
-          {lastUpdated && (
-            <div className="text-sm opacity-75 mt-1">
-              <span>Last updated: {new Date(lastUpdated).toLocaleString()}</span>
-              <span className="ml-4">• Match Rate: {matchRate}%</span>
-            </div>
-          )}
-        </div>
-        <div className="flex gap-4 items-center">
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`p-2 rounded-lg transition-colors ${
-              isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-            }`}
-          >
-            {isDarkMode ? '☀️' : '🌙'}
-          </button>
-          
-          <button 
-            onClick={() => updateData()}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors font-medium"
-            title="Update player data and predictions"
-          >
-            🔄 Update Data
-          </button>
-        </div>
-      </div>
-      
-      {/* Navigation Tabs */}
-      <nav className="mt-4">
-        <div className="flex gap-1 overflow-x-auto">
-          {[
-            { id: 'players', label: '👥 Players', desc: `Browse ${players?.length || 0} players` },
-            { id: 'matching', label: '🔗 Matching', desc: 'Player matching system' },
-            { id: 'optimizer', label: '⚡ Optimizer', desc: 'Find optimal lineups' },
-            { id: 'transfers', label: '🔄 Transfers', desc: 'Transfer suggestions' },
-            { id: 'analytics', label: '📊 Analytics', desc: 'Performance insights' }
-          ].map(tab => (
+}) => {
+  const [currentGameweek, setCurrentGameweek] = useState(null);
+
+  useEffect(() => {
+    setCurrentGameweek(getCurrentGameweek());
+  }, []);
+
+  return (
+    <header className={`${
+      isDarkMode ? 'bg-gray-800' : 'bg-white'
+    } shadow-sm border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-3xl font-bold">🏆 FPL Roster Explorer</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            {currentGameweek && (
+              <div className={`px-4 py-2 rounded-lg shadow-sm border ${
+                isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'
+              }`}>
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl">⏰</span>
+                  <span className="text-sm font-medium">
+                    Gameweek {currentGameweek}
+                  </span>
+                </div>
+              </div>
+            )}
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 rounded-lg font-medium transition-colors min-w-max ${
-                activeTab === tab.id
-                  ? 'bg-blue-500 text-white'
-                  : isDarkMode 
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`p-2 rounded-lg transition-colors ${
+                isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
               }`}
             >
-              <div className="text-sm">{tab.label}</div>
-              <div className="text-xs opacity-75">{tab.desc}</div>
+              {isDarkMode ? '☀️' : '🌙'}
             </button>
-          ))}
+            
+            <button 
+              onClick={() => updateData()}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors font-medium"
+              title="Update player data and predictions"
+            >
+              🔄 Update Data
+            </button>
+          </div>
         </div>
-      </nav>
-    </div>
-  </header>
-);
+        
+        {/* Navigation Tabs */}
+        <nav className="mt-4">
+          <div className="flex gap-1 overflow-x-auto">
+            {[
+              { id: 'players', label: '👥 Players', desc: `Browse ${players?.length || 0} players` },
+              { id: 'matching', label: '🔗 Matching', desc: 'Player matching system' },
+              { id: 'optimizer', label: '⚡ Optimizer', desc: 'Find optimal lineups' },
+              { id: 'transfers', label: '🔄 Transfers', desc: 'Transfer suggestions' },
+              { id: 'analytics', label: '📊 Analytics', desc: 'Performance insights' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-3 rounded-lg font-medium transition-colors min-w-max ${
+                  activeTab === tab.id
+                    ? 'bg-blue-500 text-white'
+                    : isDarkMode 
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <div className="text-sm">{tab.label}</div>
+                <div className="text-xs opacity-75">{tab.desc}</div>
+              </button>
+            ))}
+          </div>
+        </nav>
+      </div>
+    </header>
+  );
+};
 
 // ----------------- PLAYER CARD COMPONENT -----------------
 const PlayerCard = ({ player, isDarkMode }) => {
@@ -439,7 +525,8 @@ const PlayerMatchingTab = ({ isDarkMode, players }) => {
 
 // ----------------- PLAYER TABLE COMPONENT -----------------
 const PlayerTable = ({ players, isDarkMode }) => {
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+  // DEFAULT SORT: ROS Points (sleeper_season_total) descending (highest first)
+  const [sortConfig, setSortConfig] = useState({ key: 'rosPoints', direction: 'desc' });
 
   // Get player data with proper fallbacks
   const getPlayerName = (player) => {
@@ -469,7 +556,8 @@ const PlayerTable = ({ players, isDarkMode }) => {
     return player.is_available === false ? 'Owned' : 'Free Agent';
   };
 
-  const getSeasonPoints = (player) => {
+  // CHANGED: ROS Points (Rest of Season)
+  const getRosPoints = (player) => {
     // For integrated players, prefer Sleeper converted points
     if (player.sleeper_season_total) return player.sleeper_season_total;
     if (player.sleeper_season_avg) return player.sleeper_season_avg * 38;
@@ -503,7 +591,7 @@ const PlayerTable = ({ players, isDarkMode }) => {
     }
     
     // Estimate: season points / 38 * 5
-    const seasonPoints = getSeasonPoints(player);
+    const seasonPoints = getRosPoints(player);
     return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
   };
 
@@ -539,9 +627,9 @@ const PlayerTable = ({ players, isDarkMode }) => {
         aValue = getOwner(a);
         bValue = getOwner(b);
         break;
-      case 'seasonPoints':
-        aValue = getSeasonPoints(a);
-        bValue = getSeasonPoints(b);
+      case 'rosPoints': // CHANGED: was 'seasonPoints'
+        aValue = getRosPoints(a);
+        bValue = getRosPoints(b);
         break;
       case 'next5Points':
         aValue = getNext5Games(a);
@@ -613,9 +701,9 @@ const PlayerTable = ({ players, isDarkMode }) => {
               </th>
               <th 
                 className="px-4 py-3 text-right text-sm font-medium cursor-pointer hover:bg-opacity-80"
-                onClick={() => handleSort('seasonPoints')}
+                onClick={() => handleSort('rosPoints')}
               >
-                Season Points {getSortIcon('seasonPoints')}
+                ROS Points {getSortIcon('rosPoints')}
               </th>
               <th 
                 className="px-4 py-3 text-right text-sm font-medium cursor-pointer hover:bg-opacity-80"
@@ -661,7 +749,7 @@ const PlayerTable = ({ players, isDarkMode }) => {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-medium">
-                  {getSeasonPoints(player).toFixed(1)}
+                  {getRosPoints(player).toFixed(1)}
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-medium">
                   {getNext5Games(player).toFixed(1)}
@@ -889,11 +977,16 @@ export default function FPLDashboard() {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
         <div className="flex items-center justify-center min-h-screen">
-          <ErrorDisplay 
-            error={error} 
-            onRetry={updateData} 
-            isDarkMode={isDarkMode}
-          />
+          <div className="text-center p-8">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">❌ Error Loading Data</h2>
+            <p className="text-gray-400 mb-4">{error}</p>
+            <button
+              onClick={updateData}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -925,7 +1018,7 @@ export default function FPLDashboard() {
             {/* Total Sleeper Players */}
             <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
               <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                {totalSleeperCount}
+                {totalSleeperCount.toLocaleString()}
               </div>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 👥 Total Players
@@ -934,7 +1027,7 @@ export default function FPLDashboard() {
 
             {/* Matched Players */}
             <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-              <div className="text-2xl font-bold text-green-600">{matchedCount}</div>
+              <div className="text-2xl font-bold text-green-600">{matchedCount.toLocaleString()}</div>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 🔗 Matched Players
               </div>
@@ -1043,7 +1136,7 @@ export default function FPLDashboard() {
                   </div>
 
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Min Season Points</label>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Min ROS Points</label>
                     <input
                       type="number"
                       placeholder="0"
