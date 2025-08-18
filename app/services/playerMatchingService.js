@@ -140,185 +140,171 @@ export class PlayerMatchingService {
     return (maxLength - distance) / maxLength;
   }
 
-  // Find best FFH match - MUCH MORE FLEXIBLE
-  findBestFFHMatch(sleeperPlayer, ffhPlayers, diagnostics = []) {
-    if (!sleeperPlayer?.name && !sleeperPlayer?.full_name) {
-      return null;
+ // Find best FFH match - NOW WITH TEAM RESTRICTION
+findBestFFHMatch(sleeperPlayer, ffhPlayers, diagnostics = []) {
+  if (!sleeperPlayer?.name && !sleeperPlayer?.full_name) {
+    return null;
+  }
+
+  const sleeperName = this.normalizeNameForMatching(sleeperPlayer.name || sleeperPlayer.full_name);
+  const sleeperTeam = this.normalizeTeamForMatching(sleeperPlayer.team);
+  const sleeperKey = `${sleeperName}|${sleeperTeam}`;
+
+  // Check cache first
+  if (this.matchCache.has(sleeperKey)) {
+    const cachedMatch = this.matchCache.get(sleeperKey);
+    if (cachedMatch) {
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
+        ffh: `${cachedMatch.web_name || cachedMatch.name} (${this.getFFHTeam(cachedMatch)})`,
+        method: 'Cache',
+        confidence: 'High',
+        score: 1.0
+      });
+      return cachedMatch;
     }
+  }
 
-    const sleeperName = this.normalizeNameForMatching(sleeperPlayer.name || sleeperPlayer.full_name);
-    const sleeperTeam = this.normalizeTeamForMatching(sleeperPlayer.team);
-    const sleeperKey = `${sleeperName}|${sleeperTeam}`;
-
-    // Check cache first
-    if (this.matchCache.has(sleeperKey)) {
-      const cachedMatch = this.matchCache.get(sleeperKey);
-      if (cachedMatch) {
-        diagnostics.push({
-          sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-          ffh: `${cachedMatch.web_name || cachedMatch.name} (${this.getFFHTeam(cachedMatch)})`,
-          method: 'Cache',
-          confidence: 'High',
-          score: 1.0
-        });
-        return cachedMatch;
-      }
+  // Check manual overrides
+  if (this.manualOverrides[sleeperKey]) {
+    const override = ffhPlayers.find(p => 
+      this.normalizeNameForMatching(p.web_name || p.name) === this.normalizeNameForMatching(this.manualOverrides[sleeperKey])
+    );
+    
+    if (override) {
+      this.matchCache.set(sleeperKey, override);
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
+        ffh: `${override.web_name || override.name} (${this.getFFHTeam(override)})`,
+        method: 'Manual Override',
+        confidence: 'High',
+        score: 1.0
+      });
+      return override;
     }
+  }
 
-    // Check manual overrides
-    if (this.manualOverrides[sleeperKey]) {
-      const override = ffhPlayers.find(p => 
-        this.normalizeNameForMatching(p.web_name || p.name) === this.normalizeNameForMatching(this.manualOverrides[sleeperKey])
+  // Position filtering
+  let positionMatches = ffhPlayers;
+  if (sleeperPlayer.position) {
+    const sleeperPositionId = this.positionMap[sleeperPlayer.position.toUpperCase()];
+    if (sleeperPositionId) {
+      const strictMatches = ffhPlayers.filter(p => 
+        this.getFFHPositionId(p) === sleeperPositionId
       );
-      
-      if (override) {
-        this.matchCache.set(sleeperKey, override);
-        diagnostics.push({
-          sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-          ffh: `${override.web_name || override.name} (${this.getFFHTeam(override)})`,
-          method: 'Manual Override',
-          confidence: 'High',
-          score: 1.0
-        });
-        return override;
+      if (strictMatches.length > 0) {
+        positionMatches = strictMatches;
       }
     }
+  }
 
-    // Position filtering - MUCH MORE FLEXIBLE
-    let positionMatches = ffhPlayers;
-    if (sleeperPlayer.position) {
-      const sleeperPositionId = this.positionMap[sleeperPlayer.position.toUpperCase()];
-      if (sleeperPositionId) {
-        const strictMatches = ffhPlayers.filter(p => 
-          this.getFFHPositionId(p) === sleeperPositionId
-        );
-        
-        // If we have position matches, use them, otherwise ignore position
-        if (strictMatches.length > 0) {
-          positionMatches = strictMatches;
+  // Team filtering (NEW) - narrow to players on same team if possible
+  const teamMatches = positionMatches.filter(p =>
+    this.normalizeTeamForMatching(this.getFFHTeam(p)) === sleeperTeam
+  );
+  const searchPool = teamMatches.length > 0 ? teamMatches : positionMatches;
+
+  // Opta ID match
+  if (sleeperPlayer.opta_id) {
+    const optaMatch = searchPool.find(p => 
+      p.opta_uuid && p.opta_uuid === sleeperPlayer.opta_id
+    );
+    if (optaMatch) {
+      this.matchCache.set(sleeperKey, optaMatch);
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
+        ffh: `${optaMatch.web_name || optaMatch.name} (${this.getFFHTeam(optaMatch)})`,
+        method: 'Opta ID',
+        confidence: 'High',
+        score: 1.0
+      });
+      return optaMatch;
+    }
+  }
+
+  // FPL ID match
+  if (sleeperPlayer.rotowire_id) {
+    const fplMatch = searchPool.find(p => 
+      String(p.id || p.element_id) === String(sleeperPlayer.rotowire_id)
+    );
+    if (fplMatch) {
+      this.matchCache.set(sleeperKey, fplMatch);
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
+        ffh: `${fplMatch.web_name || fplMatch.name} (${this.getFFHTeam(fplMatch)})`,
+        method: 'FPL ID',
+        confidence: 'High',
+        score: 1.0
+      });
+      return fplMatch;
+    }
+  }
+
+  // Name similarity matching (restricted to searchPool)
+  const candidates = [];
+  searchPool.forEach(ffhPlayer => {
+    const ffhName = this.normalizeNameForMatching(ffhPlayer.web_name || ffhPlayer.name);
+    const similarity = this.calculateNameSimilarity(sleeperName, ffhName);
+    if (similarity >= 0.4) {
+      candidates.push({ player: ffhPlayer, score: similarity, ffhName });
+    }
+  });
+
+  // Backup flexible matching
+  if (candidates.length === 0) {
+    const sleeperParts = sleeperName.split(' ');
+    const longestPart = sleeperParts.reduce((a, b) => a.length > b.length ? a : b, '');
+    if (longestPart.length > 3) {
+      searchPool.forEach(ffhPlayer => {
+        const ffhName = this.normalizeNameForMatching(ffhPlayer.web_name || ffhPlayer.name);
+        if (ffhName.includes(longestPart) || longestPart.includes(ffhName.replace(/\./g, ''))) {
+          candidates.push({ player: ffhPlayer, score: 0.5, ffhName });
         }
-      }
-    }
-
-    // Try Opta ID match first
-    if (sleeperPlayer.opta_id) {
-      const optaMatch = positionMatches.find(p => 
-        p.opta_uuid && p.opta_uuid === sleeperPlayer.opta_id
-      );
-      
-      if (optaMatch) {
-        this.matchCache.set(sleeperKey, optaMatch);
-        diagnostics.push({
-          sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-          ffh: `${optaMatch.web_name || optaMatch.name} (${this.getFFHTeam(optaMatch)})`,
-          method: 'Opta ID',
-          confidence: 'High',
-          score: 1.0
-        });
-        return optaMatch;
-      }
-    }
-
-    // Try FPL ID match
-    if (sleeperPlayer.rotowire_id) {
-      const fplMatch = positionMatches.find(p => 
-        String(p.id || p.element_id) === String(sleeperPlayer.rotowire_id)
-      );
-      
-      if (fplMatch) {
-        this.matchCache.set(sleeperKey, fplMatch);
-        diagnostics.push({
-          sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-          ffh: `${fplMatch.web_name || fplMatch.name} (${this.getFFHTeam(fplMatch)})`,
-          method: 'FPL ID',
-          confidence: 'High',
-          score: 1.0
-        });
-        return fplMatch;
-      }
-    }
-
-    // MUCH MORE FLEXIBLE name similarity matching
-    const candidates = [];
-    
-    // First pass - all FFH players (ignore position if necessary)
-    ffhPlayers.forEach(ffhPlayer => {
-      const ffhName = this.normalizeNameForMatching(ffhPlayer.web_name || ffhPlayer.name);
-      const similarity = this.calculateNameSimilarity(sleeperName, ffhName);
-      
-      // LOWERED threshold from 0.7 to 0.4
-      if (similarity >= 0.4) {
-        candidates.push({
-          player: ffhPlayer,
-          score: similarity,
-          ffhName
-        });
-      }
-    });
-
-    // If no matches, try even more flexible matching
-    if (candidates.length === 0) {
-      const sleeperParts = sleeperName.split(' ');
-      const longestPart = sleeperParts.reduce((a, b) => a.length > b.length ? a : b, '');
-      
-      if (longestPart.length > 3) {
-        ffhPlayers.forEach(ffhPlayer => {
-          const ffhName = this.normalizeNameForMatching(ffhPlayer.web_name || ffhPlayer.name);
-          if (ffhName.includes(longestPart) || longestPart.includes(ffhName.replace(/\./g, ''))) {
-            candidates.push({
-              player: ffhPlayer,
-              score: 0.5,
-              ffhName
-            });
-          }
-        });
-      }
-    }
-
-    if (candidates.length === 0) {
-      diagnostics.push({
-        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-        ffh: 'No name similarity matches',
-        method: 'Name Similarity',
-        confidence: 'None',
-        score: 0
       });
-      this.matchCache.set(sleeperKey, null);
-      return null;
     }
+  }
 
-    // Sort by similarity score
-    candidates.sort((a, b) => b.score - a.score);
-    const bestMatch = candidates[0];
-    
-    // More flexible confidence levels
-    const confidence = bestMatch.score >= 0.8 ? 'High' : 
-                     bestMatch.score >= 0.6 ? 'Medium' : 'Low';
-
-    // MUCH LOWER acceptance threshold - from 0.7 to 0.4
-    if (bestMatch.score >= 0.4) {
-      this.matchCache.set(sleeperKey, bestMatch.player);
-      diagnostics.push({
-        sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-        ffh: `${bestMatch.player.web_name || bestMatch.player.name} (${this.getFFHTeam(bestMatch.player)})`,
-        method: 'Name Similarity',
-        confidence,
-        score: bestMatch.score
-      });
-      return bestMatch.player;
-    }
-
-    // No good match found
+  if (candidates.length === 0) {
     diagnostics.push({
       sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
-      ffh: `Best: ${bestMatch.player.web_name || bestMatch.player.name} (${bestMatch.score.toFixed(2)})`,
+      ffh: 'No name similarity matches',
       method: 'Name Similarity',
-      confidence: 'Rejected',
-      score: bestMatch.score
+      confidence: 'None',
+      score: 0
     });
     this.matchCache.set(sleeperKey, null);
     return null;
   }
+
+  // Pick best similarity match
+  candidates.sort((a, b) => b.score - a.score);
+  const bestMatch = candidates[0];
+  const confidence = bestMatch.score >= 0.8 ? 'High' : bestMatch.score >= 0.6 ? 'Medium' : 'Low';
+
+  if (bestMatch.score >= 0.4) {
+    this.matchCache.set(sleeperKey, bestMatch.player);
+    diagnostics.push({
+      sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
+      ffh: `${bestMatch.player.web_name || bestMatch.player.name} (${this.getFFHTeam(bestMatch.player)})`,
+      method: 'Name Similarity',
+      confidence,
+      score: bestMatch.score
+    });
+    return bestMatch.player;
+  }
+
+  // No good match
+  diagnostics.push({
+    sleeper: `${sleeperPlayer.name || sleeperPlayer.full_name} (${sleeperTeam})`,
+    ffh: `Best: ${bestMatch.player.web_name || bestMatch.player.name} (${bestMatch.score.toFixed(2)})`,
+    method: 'Name Similarity',
+    confidence: 'Rejected',
+    score: bestMatch.score
+  });
+  this.matchCache.set(sleeperKey, null);
+  return null;
+}
+
 
   // Helper methods for extracting data from different FFH formats
   getFFHTeam(ffhPlayer) {
@@ -336,69 +322,69 @@ export class PlayerMatchingService {
   }
 
   // Match all players - with progress logging
-  async matchAllPlayers(sleeperPlayers, ffhPlayers) {
-    const diagnostics = [];
-    const matches = [];
-    const stats = {
-      total: sleeperPlayers.length,
-      matched: 0,
-      byMethod: {},
-      byConfidence: {}
-    };
+async matchAllPlayers(sleeperPlayers, ffhPlayers) {
+  const diagnostics = [];
+  const matches = [];
+  const stats = { total: sleeperPlayers.length, matched: 0, byMethod: {}, byConfidence: {} };
 
-    console.log(`🔄 ENHANCED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
-
-    let processed = 0;
-    for (const sleeperPlayer of sleeperPlayers) {
-      const ffhMatch = this.findBestFFHMatch(sleeperPlayer, ffhPlayers, diagnostics);
-      
-      if (ffhMatch) {
-        matches.push({
-          sleeperPlayer,
-          ffhPlayer: ffhMatch,
-          confidence: diagnostics[diagnostics.length - 1]?.confidence || 'Unknown',
-          method: diagnostics[diagnostics.length - 1]?.method || 'Unknown',
-          score: diagnostics[diagnostics.length - 1]?.score || 0
-        });
-        stats.matched++;
-        
-        // Track method stats
-        const method = diagnostics[diagnostics.length - 1]?.method || 'Unknown';
-        stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
-        
-        // Track confidence stats
-        const confidence = diagnostics[diagnostics.length - 1]?.confidence || 'Unknown';
-        stats.byConfidence[confidence] = (stats.byConfidence[confidence] || 0) + 1;
-      }
-
-      processed++;
-      if (processed % 100 === 0) {
-        console.log(`  Progress: ${processed}/${sleeperPlayers.length} (${stats.matched} matches so far)`);
-      }
+  for (const sleeperPlayer of sleeperPlayers) {
+    const ffhMatch = this.findBestFFHMatch(sleeperPlayer, ffhPlayers, diagnostics);
+    if (ffhMatch) {
+      matches.push({
+        sleeperPlayer,
+        ffhPlayer: ffhMatch,
+        confidence: diagnostics[diagnostics.length - 1]?.confidence || 'Unknown',
+        method: diagnostics[diagnostics.length - 1]?.method || 'Unknown',
+        score: diagnostics[diagnostics.length - 1]?.score || 0
+      });
+      stats.matched++;
     }
-
-    stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
-
-    console.log(`✅ ENHANCED MATCHING COMPLETE:`);
-    console.log(`  Total: ${stats.total} Sleeper players`);
-    console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
-    console.log(`  Methods:`, stats.byMethod);
-    console.log(`  Confidence:`, stats.byConfidence);
-
-    return {
-      matches,
-      diagnostics,
-      stats,
-      summary: {
-        totalSleeperPlayers: sleeperPlayers.length,
-        totalFFHPlayers: ffhPlayers.length,
-        matchedPlayers: stats.matched,
-        matchRate: `${stats.matchRate}%`,
-        newMatches: matches.filter(m => m.method !== 'Cache').length,
-        averageConfidence: this.calculateAverageConfidence(matches)
-      }
-    };
   }
+
+  // 🚨 Dedupe FFH players (keep best score/confidence)
+  const seen = new Map();
+  for (const m of matches) {
+    const ffhId = m.ffhPlayer.id || m.ffhPlayer.element_id;
+    const current = seen.get(ffhId);
+
+    if (!current) {
+      seen.set(ffhId, m);
+    } else {
+      const isBetter = m.score > current.score ||
+        (m.score === current.score && this.confidenceRank(m.confidence) > this.confidenceRank(current.confidence));
+      if (isBetter) seen.set(ffhId, m);
+    }
+  }
+
+  const dedupedMatches = Array.from(seen.values());
+
+  stats.matchRate = stats.total > 0 ? Math.round((dedupedMatches.length / stats.total) * 100) : 0;
+
+  return {
+    matches: dedupedMatches,
+    diagnostics,
+    stats,
+    summary: {
+      totalSleeperPlayers: sleeperPlayers.length,
+      totalFFHPlayers: ffhPlayers.length,
+      matchedPlayers: dedupedMatches.length,
+      matchRate: `${stats.matchRate}%`,
+      newMatches: dedupedMatches.filter(m => m.method !== 'Cache').length,
+      averageConfidence: this.calculateAverageConfidence(dedupedMatches)
+    }
+  };
+}
+
+// Helper to rank confidence levels numerically
+confidenceRank(confidence) {
+  switch (confidence) {
+    case 'High': return 3;
+    case 'Medium': return 2;
+    case 'Low': return 1;
+    default: return 0;
+  }
+}
+
 
   calculateAverageConfidence(matches) {
     if (matches.length === 0) return 0;
