@@ -15,7 +15,7 @@ export async function GET(request) {
     // Route to appropriate data source
     switch (source) {
       case 'sheets':
-        const sheetsResponse = await fetch(new URL('/api/sheets/players', request.url));
+        const sheetsResponse = await fetch('/api/sheets/players');
         if (!sheetsResponse.ok) {
           throw new Error(`Sheets API error: ${sheetsResponse.status}`);
         }
@@ -23,7 +23,7 @@ export async function GET(request) {
         break;
         
       case 'ffh':
-        const ffhResponse = await fetch(new URL('/api/ffh/players', request.url));
+        const ffhResponse = await fetch('/api/ffh/players');
         if (!ffhResponse.ok) {
           throw new Error(`FFH API error: ${ffhResponse.status}`);
         }
@@ -34,7 +34,7 @@ export async function GET(request) {
       default:
         // Try Google Sheets first, fallback to FFH
         try {
-          const sheetsResponse = await fetch(new URL('/api/sheets/players', request.url));
+          const sheetsResponse = await fetch('/api/sheets/players');
           if (sheetsResponse.ok) {
             const sheetsResult = await sheetsResponse.json();
             if (sheetsResult.success && sheetsResult.players && sheetsResult.players.length > 0) {
@@ -48,9 +48,9 @@ export async function GET(request) {
         }
         
         // Fallback to FFH
-        const ffhFallbackResponse = await fetch(new URL('/api/ffh/players', request.url));
+        const ffhFallbackResponse = await fetch('/api/ffh/players');
         if (!ffhFallbackResponse.ok) {
-          throw new Error(`Both sources failed. FFH API error: ${ffhFallbackResponse.status}`);
+          throw new Error(`Both sources failed. Sheets may have failed, FFH API error: ${ffhFallbackResponse.status}`);
         }
         playerData = await ffhFallbackResponse.json();
         playerData.source = 'ffh-fallback';
@@ -64,7 +64,7 @@ export async function GET(request) {
     // Add ownership data from Sleeper if requested
     if (includeMatching || source === 'auto') {
       try {
-        const ownershipResponse = await fetch(new URL('/api/sleeper?endpoint=ownership', request.url));
+        const ownershipResponse = await fetch('/api/sleeper?endpoint=ownership');
         
         if (ownershipResponse.ok) {
           const ownershipResult = await ownershipResponse.json();
@@ -132,7 +132,7 @@ export async function POST(request) {
         const { searchTerm, filters } = data;
         
         // Get player data first
-        const playersResponse = await fetch(new URL('/api/players?source=auto', request.url));
+        const playersResponse = await fetch('/api/players?source=auto');
         const playersResult = await playersResponse.json();
         
         if (!playersResult.success) {
