@@ -12,18 +12,19 @@ function usePlayerData() {
     lastUpdated: null,
     source: null,
     quality: null,
-    ownershipData: false
+    ownershipData: false,
+    enhanced: false
   });
 
   const fetchData = async (source = 'auto', forceRefresh = false) => {
     setData(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      // Use enhanced players API
+      // Use enhanced players API with ownership data
       const params = new URLSearchParams({
         source,
         refresh: forceRefresh.toString(),
-        matching: 'true' // Include ownership data
+        matching: 'true' // Include ownership data from Sleeper
       });
       
       const response = await fetch(`/api/players?${params}`);
@@ -39,7 +40,8 @@ function usePlayerData() {
           quality: result.quality,
           ownershipData: result.ownershipData,
           enhanced: result.enhanced,
-          cached: result.fromCache
+          cached: result.fromCache,
+          ownershipCount: result.ownershipCount || 0
         });
       } else {
         throw new Error(result.error || 'Failed to fetch data');
@@ -300,6 +302,19 @@ export default function FPLDashboard() {
         isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
       }`}>
         {/* Header */}
+        // Enhanced Header Component for your dashboard
+        const DashboardHeader = ({ 
+          isDarkMode, 
+          setIsDarkMode, 
+          lastUpdated, 
+          source, 
+          players, 
+          quality, 
+          ownershipData, 
+          ownershipCount,
+          enhanced,
+          refetch 
+        }) => (
         <header className={`${
           isDarkMode ? 'bg-gray-800' : 'bg-white'
         } shadow-sm border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -308,10 +323,21 @@ export default function FPLDashboard() {
               <div>
                 <h1 className="text-3xl font-bold">🏆 FPL Roster Explorer</h1>
                 {lastUpdated && (
-                  <p className="text-sm opacity-75 mt-1">
-                    Last updated: {new Date(lastUpdated).toLocaleString()} 
-                    {source && ` • Source: ${source}`}
-                  </p>
+                  <div className="text-sm opacity-75 mt-1 space-x-4">
+                    <span>Last updated: {new Date(lastUpdated).toLocaleString()}</span>
+                    {source && <span>• Source: {source}</span>}
+                    {enhanced && <span>• Enhanced ✨</span>}
+                    {ownershipData && <span>• Ownership data: {ownershipCount} players</span>}
+                    {quality && (
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                        quality.completenessScore >= 90 ? 'bg-green-100 text-green-800' :
+                        quality.completenessScore >= 70 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        Data Quality: {quality.completenessScore}%
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex gap-4 items-center">
@@ -326,15 +352,24 @@ export default function FPLDashboard() {
                 <div className="flex gap-2">
                   <button 
                     onClick={() => refetch('sheets')}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm transition-colors"
+                    title="Load from Google Sheets"
                   >
                     📊 Sheets
                   </button>
                   <button 
                     onClick={() => refetch('ffh')}
-                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm"
+                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm transition-colors"
+                    title="Load fresh FFH predictions"
                   >
                     🔄 FFH
+                  </button>
+                  <button 
+                    onClick={() => refetch('auto', true)}
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded text-sm transition-colors"
+                    title="Auto-select best source with fresh data"
+                  >
+                    ⚡ Refresh
                   </button>
                 </div>
               </div>
@@ -368,6 +403,7 @@ export default function FPLDashboard() {
             </nav>
           </div>
         </header>
+      );
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
