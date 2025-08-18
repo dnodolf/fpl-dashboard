@@ -3,3 +3,6 @@ node_modules/
 .vercel/
 .DS_Store
 *.log
+
+# Local env files
+.env*.local
