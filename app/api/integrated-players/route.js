@@ -1,5 +1,5 @@
 // app/api/integrated-players/route.js
-// Fixed to work with your existing service structure
+// Fixed import paths to match your actual file structure
 
 import { NextResponse } from 'next/server';
 
@@ -13,10 +13,10 @@ const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
  */
 async function importYourServices() {
   try {
-    // Import your existing services with proper error handling
+    // FIXED: Corrected import paths to match your actual file structure
     const [playerMatchingModule, scoringModule] = await Promise.all([
-      import('../../../services/playerMatchingService.js').catch(() => null),
-      import('../../../services/scoringConversionService.js').catch(() => null)
+      import('../../services/playerMatchingService.js').catch(() => null),
+      import('../../services/scoringConversionService.js').catch(() => null)
     ]);
 
     // Your playerMatchingService uses export class
