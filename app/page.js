@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Trophy, RotateCcw, Download, Sun, Moon, Users, TrendingUp } from 'lucide-react';
+// Using emoji icons instead of lucide-react for better compatibility
 
 const FPLDashboard = () => {
   // State management
@@ -137,23 +137,22 @@ const FPLDashboard = () => {
 
   // Component rendering
   const LoadingSpinner = () => (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      <span className="ml-3 text-lg">Loading player data...</span>
-    </div>
+          <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <span className="ml-3 text-lg">Loading player data...</span>
+      </div>
   );
 
   const ErrorMessage = () => (
     <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
       <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Data</h3>
       <p className="text-red-600 mb-4">{error}</p>
-      <button 
-        onClick={handleRefresh}
-        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2 mx-auto"
-      >
-        <RotateCcw className="w-4 h-4" />
-        Try Again
-      </button>
+              <button 
+          onClick={handleRefresh}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2 mx-auto"
+        >
+          🔄 Try Again
+        </button>
     </div>
   );
 
@@ -198,32 +197,28 @@ const FPLDashboard = () => {
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-500" />
-          <span className="text-sm text-gray-600">Total Players</span>
+          👥 <span className="text-sm text-gray-600">Total Players</span>
         </div>
         <p className="text-2xl font-bold text-gray-900">{players.length}</p>
       </div>
       
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-green-500" />
-          <span className="text-sm text-gray-600">Filtered</span>
+          🔍 <span className="text-sm text-gray-600">Filtered</span>
         </div>
         <p className="text-2xl font-bold text-gray-900">{filteredPlayers.length}</p>
       </div>
       
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-purple-500" />
-          <span className="text-sm text-gray-600">Data Source</span>
+          📊 <span className="text-sm text-gray-600">Data Source</span>
         </div>
         <p className="text-lg font-bold text-gray-900">{dataSource.toUpperCase()}</p>
       </div>
       
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-500" />
-          <span className="text-sm text-gray-600">Data Quality</span>
+          🏆 <span className="text-sm text-gray-600">Data Quality</span>
         </div>
         <p className="text-lg font-bold text-green-600">100%</p>
       </div>
@@ -237,8 +232,7 @@ const FPLDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-blue-500" />
-              <h1 className="text-xl font-bold">FPL Roster Explorer</h1>
+              🏆 <h1 className="text-xl font-bold">FPL Roster Explorer</h1>
             </div>
             
             <div className="flex items-center gap-4">
@@ -256,7 +250,7 @@ const FPLDashboard = () => {
                 onClick={() => setDarkMode(!darkMode)}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {darkMode ? '☀️' : '🌙'}
               </button>
               
               <button
@@ -278,8 +272,7 @@ const FPLDashboard = () => {
                 className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 flex items-center gap-1"
                 disabled={loading}
               >
-                <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                🔄 Refresh
               </button>
             </div>
           </div>
@@ -291,10 +284,10 @@ const FPLDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             {[
-              { id: 'players', label: 'Players', icon: Users, count: filteredPlayers.length },
-              { id: 'optimizer', label: 'Optimizer', icon: TrendingUp, disabled: true },
-              { id: 'transfers', label: 'Transfers', icon: RotateCcw, disabled: true },
-              { id: 'analytics', label: 'Analytics', icon: Trophy, disabled: true }
+              { id: 'players', label: 'Players', icon: '👥', count: filteredPlayers.length },
+              { id: 'optimizer', label: 'Optimizer', icon: '📊', disabled: true },
+              { id: 'transfers', label: 'Transfers', icon: '🔄', disabled: true },
+              { id: 'analytics', label: 'Analytics', icon: '🏆', disabled: true }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -308,7 +301,7 @@ const FPLDashboard = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <tab.icon className="w-4 h-4" />
+                {tab.icon}
                 {tab.label}
                 {tab.count !== undefined && (
                   <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
@@ -337,7 +330,7 @@ const FPLDashboard = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Search Players</label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    🔍
                     <input
                       type="text"
                       placeholder="Search by name..."
@@ -422,7 +415,7 @@ const FPLDashboard = () => {
               </div>
             ) : (
               <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-lg border p-8 text-center`}>
-                <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                🔍
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No players found</h3>
                 <p className="text-gray-500 dark:text-gray-400">Try adjusting your filters to see more results.</p>
               </div>
