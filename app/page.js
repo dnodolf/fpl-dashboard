@@ -772,9 +772,22 @@ export default function FPLDashboard() {
   
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
 
-  // Calculate match statistics
+  // Calculate real match statistics from actual data
   const matchedCount = players.filter(player => player.match_confidence).length;
-  const matchRate = players.length > 0 ? Math.round((matchedCount / players.length) * 100) : 0;
+  const totalSleeperCount = integration?.matchingStats?.total || players.length;
+  const matchRate = integration?.matchingStats?.matchRate || 
+    (players.length > 0 ? Math.round((matchedCount / totalSleeperCount) * 100) : 0);
+
+  // Calculate confidence breakdown
+  const confidenceStats = players.reduce((stats, player) => {
+    if (player.match_confidence === 'High') stats.high++;
+    else if (player.match_confidence === 'Medium') stats.medium++;
+    else if (player.match_confidence === 'Low') stats.low++;
+    return stats;
+  }, { high: 0, medium: 0, low: 0 });
+
+  // Use integration stats if available (more accurate)
+  const finalConfidenceStats = integration?.matchingStats?.byConfidence || confidenceStats;
 
   // Single update function - always refresh data
   const updateData = () => {
@@ -907,37 +920,54 @@ export default function FPLDashboard() {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Simplified Stats Cards - INLINE VERSION */}
+          {/* Updated Stats Cards with Real API Data */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {/* Total Sleeper Players */}
             <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
               <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                {players.length}
+                {totalSleeperCount}
               </div>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 👥 Total Players
               </div>
             </div>
+
+            {/* Matched Players */}
             <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
               <div className="text-2xl font-bold text-green-600">{matchedCount}</div>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 🔗 Matched Players
               </div>
             </div>
+
+            {/* Match Success Rate */}
             <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
               <div className="text-2xl font-bold text-blue-600">{matchRate}%</div>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 📊 Match Success
               </div>
             </div>
+
+            {/* Match Confidence Breakdown */}
             <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-              <div className="text-2xl font-bold text-purple-600">{filteredPlayers.length}</div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg font-bold text-green-500">
+                  {finalConfidenceStats.High || finalConfidenceStats.high || 0}
+                </span>
+                <span className="text-sm font-bold text-yellow-500">
+                  {finalConfidenceStats.Medium || finalConfidenceStats.medium || 0}
+                </span>
+                <span className="text-sm font-bold text-red-500">
+                  {finalConfidenceStats.Low || finalConfidenceStats.low || 0}
+                </span>
+              </div>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                🔍 Filtered Results
+                🎯 High • Med • Low
               </div>
             </div>
           </div>
 
-          {/* Tab Content */}
+          {/* Rest of the dashboard remains the same... */}
           {activeTab === 'players' && (
             <>
               {/* Filters */}
@@ -964,20 +994,13 @@ export default function FPLDashboard() {
                     />
                   </div>
 
-                  {/* Other filter inputs with same improved styling */}
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${
-                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
-                      Position
-                    </label>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Position</label>
                     <select
                       value={filters.position}
                       onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
                       className={`w-full px-3 py-2 border rounded-lg transition-colors ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-800'
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'
                       }`}
                     >
                       <option value="all">All Positions</option>
@@ -988,7 +1011,6 @@ export default function FPLDashboard() {
                     </select>
                   </div>
 
-                  {/* Team, Availability, and Min Points filters with same styling... */}
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team</label>
                     <select
@@ -1045,7 +1067,7 @@ export default function FPLDashboard() {
             <PlayerMatchingTab isDarkMode={isDarkMode} players={players} />
           )}
 
-          {/* Other tab content... */}
+          {/* Other tab placeholders... */}
         </main>
       </div>
     </ErrorBoundary>
