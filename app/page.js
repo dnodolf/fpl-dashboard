@@ -907,14 +907,35 @@ export default function FPLDashboard() {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* Simplified Stats Cards */}
-          <StatsCards 
-            players={players}
-            matchedCount={matchedCount}
-            matchRate={matchRate}
-            filteredPlayers={filteredPlayers}
-            isDarkMode={isDarkMode}
-          />
+        {/* Simplified Stats Cards - INLINE VERSION */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                {players.length}
+              </div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                👥 Total Players
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className="text-2xl font-bold text-green-600">{matchedCount}</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                🔗 Matched Players
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className="text-2xl font-bold text-blue-600">{matchRate}%</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                📊 Match Success
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className="text-2xl font-bold text-purple-600">{filteredPlayers.length}</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                🔍 Filtered Results
+              </div>
+            </div>
+          </div>
 
           {/* Tab Content */}
           {activeTab === 'players' && (
