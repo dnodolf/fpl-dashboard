@@ -1,6 +1,7 @@
 // services/scoringConversionService.js
-// Enhanced scoring conversion from FPL to Sleeper scoring systems
-// Based on Derek's original Google Apps Script logic
+// Fixed export structure for Next.js compatibility
+
+// Your existing code with proper ES module exports
 
 /**
  * FPL Scoring System (what FFH predictions are based on)
@@ -56,7 +57,7 @@ let cachedConversionRatios = null;
 /**
  * Fetch current Sleeper league scoring settings
  */
-async function fetchSleeperScoringSettings() {
+export async function fetchSleeperScoringSettings() {
   if (cachedSleeperScoring) {
     return cachedSleeperScoring;
   }
@@ -86,7 +87,7 @@ async function fetchSleeperScoringSettings() {
 /**
  * Calculate position-specific conversion ratios (FPL → Sleeper)
  */
-async function calculateConversionRatios() {
+export async function calculateConversionRatios() {
   if (cachedConversionRatios) {
     return cachedConversionRatios;
   }
@@ -100,9 +101,9 @@ async function calculateConversionRatios() {
                 position === 'DEF' ? 'd' : 
                 position === 'MID' ? 'm' : 'f';
     
-    const fplPrefix = position === 'DEF' ? 'D' : 
-                     position === 'MID' ? 'M' : 
-                     position === 'FWD' ? 'F' : 'GK';
+    const fplPrefix = position === 'DEF' ? 'DEF' : 
+                     position === 'MID' ? 'MID' : 
+                     position === 'FWD' ? 'FWD' : 'GK';
     
     // Compare key scoring categories
     const goalWeight = 0.4;  // Goals are most important
@@ -177,7 +178,7 @@ async function calculateConversionRatios() {
 /**
  * Convert FFH season prediction to Sleeper scoring
  */
-async function convertFFHToSleeperPrediction(ffhPrediction, position) {
+export async function convertFFHToSleeperPrediction(ffhPrediction, position) {
   if (!ffhPrediction || !position) {
     return ffhPrediction || 0;
   }
@@ -196,7 +197,7 @@ async function convertFFHToSleeperPrediction(ffhPrediction, position) {
 /**
  * Convert FFH gameweek predictions to Sleeper scoring
  */
-async function convertFFHGWPredictionsToSleeper(ffhGwPredictions, position) {
+export async function convertFFHGWPredictionsToSleeper(ffhGwPredictions, position) {
   if (!ffhGwPredictions || !position) {
     return ffhGwPredictions || {};
   }
@@ -221,7 +222,7 @@ async function convertFFHGWPredictionsToSleeper(ffhGwPredictions, position) {
 /**
  * Extract position from various data formats
  */
-function normalizePosition(player) {
+export function normalizePosition(player) {
   // From FFH data
   if (player.position_id) {
     const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
@@ -252,7 +253,7 @@ function normalizePosition(player) {
 /**
  * Main conversion function for enhanced player records
  */
-async function enhancePlayerWithScoringConversion(player, ffhData) {
+export async function enhancePlayerWithScoringConversion(player, ffhData) {
   if (!ffhData) {
     return player; // Return unchanged if no FFH data
   }
@@ -319,17 +320,21 @@ async function enhancePlayerWithScoringConversion(player, ffhData) {
 /**
  * Clear conversion cache (for testing/debugging)
  */
-function clearConversionCache() {
+export function clearConversionCache() {
   cachedSleeperScoring = null;
   cachedConversionRatios = null;
   console.log('🔄 Conversion cache cleared');
 }
 
-module.exports = {
+// Default export for compatibility
+const scoringConversionService = {
   enhancePlayerWithScoringConversion,
   convertFFHToSleeperPrediction,
   convertFFHGWPredictionsToSleeper,
   calculateConversionRatios,
   normalizePosition,
-  clearConversionCache
+  clearConversionCache,
+  fetchSleeperScoringSettings
 };
+
+export default scoringConversionService;
