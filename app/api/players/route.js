@@ -11,11 +11,12 @@ export async function GET(request) {
     console.log(`Fetching player data: source=${source}, refresh=${refresh}, matching=${includeMatching}`);
 
     let playerData;
+    const baseUrl = new URL(request.url).origin;
 
     // Route to appropriate data source
     switch (source) {
       case 'sheets':
-        const sheetsResponse = await fetch('/api/sheets/players');
+        const sheetsResponse = await fetch(`${baseUrl}/api/sheets/players`);
         if (!sheetsResponse.ok) {
           throw new Error(`Sheets API error: ${sheetsResponse.status}`);
         }
@@ -23,7 +24,7 @@ export async function GET(request) {
         break;
         
       case 'ffh':
-        const ffhResponse = await fetch('/api/ffh/players');
+        const ffhResponse = await fetch(`${baseUrl}/api/ffh/players`);
         if (!ffhResponse.ok) {
           throw new Error(`FFH API error: ${ffhResponse.status}`);
         }
@@ -34,7 +35,7 @@ export async function GET(request) {
       default:
         // Try Google Sheets first, fallback to FFH
         try {
-          const sheetsResponse = await fetch('/api/sheets/players');
+          const sheetsResponse = await fetch(`${baseUrl}/api/sheets/players`);
           if (sheetsResponse.ok) {
             const sheetsResult = await sheetsResponse.json();
             if (sheetsResult.success && sheetsResult.players && sheetsResult.players.length > 0) {
@@ -48,9 +49,9 @@ export async function GET(request) {
         }
         
         // Fallback to FFH
-        const ffhFallbackResponse = await fetch('/api/ffh/players');
+        const ffhFallbackResponse = await fetch(`${baseUrl}/api/ffh/players`);
         if (!ffhFallbackResponse.ok) {
-          throw new Error(`Both sources failed. Sheets may have failed, FFH API error: ${ffhFallbackResponse.status}`);
+          throw new Error(`Both sources failed. Sheets worked but no data, FFH API error: ${ffhFallbackResponse.status}`);
         }
         playerData = await ffhFallbackResponse.json();
         playerData.source = 'ffh-fallback';
@@ -64,7 +65,7 @@ export async function GET(request) {
     // Add ownership data from Sleeper if requested
     if (includeMatching || source === 'auto') {
       try {
-        const ownershipResponse = await fetch('/api/sleeper?endpoint=ownership');
+        const ownershipResponse = await fetch(`${baseUrl}/api/sleeper?endpoint=ownership`);
         
         if (ownershipResponse.ok) {
           const ownershipResult = await ownershipResponse.json();
