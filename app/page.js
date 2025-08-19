@@ -623,9 +623,8 @@ export default function FPLDashboard() {
   const [activeTab, setActiveTab] = useState('players');
   const [filters, setFilters] = useState({
     position: 'all',
-    availability: 'all',
     team: 'all',
-    owner: 'all', // Added owner filter
+    owner: 'all', // Removed availability since owner handles this
     minPoints: 0.1,
     search: ''
   });
@@ -705,23 +704,16 @@ export default function FPLDashboard() {
       return false;
     }
 
-    // Availability filter - ✅ FIXED: Better free agent detection
-    if (filters.availability !== 'all') {
-      const isOwned = player.owned_by && player.owned_by.trim() !== '' && player.owned_by !== 'null' && player.owned_by !== 'undefined';
-      if (filters.availability === 'available' && isOwned) return false;
-      if (filters.availability === 'owned' && !isOwned) return false;
-    }
-
     // Team filter
     if (filters.team !== 'all' && player.team !== filters.team) {
       return false;
     }
 
-    // ✅ ADDED: Owner filter
+    // ✅ SIMPLIFIED: Owner filter only (removed availability filter)
     if (filters.owner !== 'all') {
-      if (filters.owner === 'free_agents' && player.owned_by) return false;
+      if (filters.owner === 'free_agent' && player.owned_by) return false;
       if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') return false;
-      if (filters.owner !== 'free_agents' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
+      if (filters.owner !== 'free_agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
     }
 
     // Min points filter - ✅ REVERTED: Use original working point logic
@@ -865,7 +857,7 @@ export default function FPLDashboard() {
             <>
               {/* Filters */}
               <div className={`p-4 rounded-lg mb-6 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {/* Position Filter */}
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -885,26 +877,6 @@ export default function FPLDashboard() {
                       <option value="DEF">Defender</option>
                       <option value="MID">Midfielder</option>
                       <option value="FWD">Forward</option>
-                    </select>
-                  </div>
-
-                  {/* Availability Filter */}
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Availability
-                    </label>
-                    <select
-                      value={filters.availability}
-                      onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
-                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="all">All Players</option>
-                      <option value="available">Free Agents</option>
-                      <option value="owned">Owned Players</option>
                     </select>
                   </div>
 
@@ -929,7 +901,7 @@ export default function FPLDashboard() {
                     </select>
                   </div>
 
-                  {/* ✅ ADDED: Owner Filter */}
+                  {/* ✅ SIMPLIFIED: Owner Filter (removed availability dropdown) */}
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Owner
@@ -944,7 +916,7 @@ export default function FPLDashboard() {
                       }`}
                     >
                       <option value="all">All Owners</option>
-                      <option value="free_agents">Free Agents</option>
+                      <option value="free_agent">Free Agent</option>
                       <option value="ThatDerekGuy">My Players</option>
                       {owners.filter(owner => owner !== 'ThatDerekGuy').map(owner => (
                         <option key={owner} value={owner}>{owner}</option>
@@ -1168,7 +1140,6 @@ export default function FPLDashboard() {
                     onClick={() => {
                       setFilters({
                         position: 'all',
-                        availability: 'all',
                         team: 'all',
                         owner: 'all',
                         minPoints: 0.1,
