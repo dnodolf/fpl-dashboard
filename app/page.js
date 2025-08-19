@@ -624,8 +624,8 @@ export default function FPLDashboard() {
   const [filters, setFilters] = useState({
     position: 'all',
     team: 'all',
-    owner: 'all', // Removed availability since owner handles this
-    minPoints: 0.1,
+    owner: 'all',
+    minPoints: 0, // ✅ FIXED: Changed back to 0
     search: ''
   });
   const [isDarkMode, setIsDarkMode] = useState(true); // ✅ FIXED: Back to dark mode default
@@ -711,9 +711,9 @@ export default function FPLDashboard() {
 
     // ✅ SIMPLIFIED: Owner filter only (removed availability filter)
     if (filters.owner !== 'all') {
-      if (filters.owner === 'free_agent' && player.owned_by) return false;
+      if ((filters.owner === 'free_agent' || filters.owner === 'Free Agent') && player.owned_by) return false;
       if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') return false;
-      if (filters.owner !== 'free_agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
+      if (filters.owner !== 'free_agent' && filters.owner !== 'Free Agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
     }
 
     // Min points filter - ✅ REVERTED: Use original working point logic
@@ -771,6 +771,10 @@ export default function FPLDashboard() {
   // Get unique teams and owners for filter dropdowns
   const teams = [...new Set(players.map(p => p.team).filter(Boolean))].sort();
   const owners = [...new Set(players.map(p => p.owned_by).filter(Boolean))].sort();
+  
+  // ✅ FIXED: Check if there's already a "Free Agent" in the data
+  const hasDataFreeAgent = owners.includes('Free Agent');
+  const actualFreeAgentValue = hasDataFreeAgent ? 'Free Agent' : 'free_agent';
 
   // ✅ ADDED: Render sort icon
   const renderSortIcon = (columnKey) => {
@@ -916,7 +920,7 @@ export default function FPLDashboard() {
                       }`}
                     >
                       <option value="all">All Owners</option>
-                      <option value="free_agent">Free Agent</option>
+                      {!hasDataFreeAgent && <option value="free_agent">Free Agent</option>}
                       <option value="ThatDerekGuy">My Players</option>
                       {owners.filter(owner => owner !== 'ThatDerekGuy').map(owner => (
                         <option key={owner} value={owner}>{owner}</option>
@@ -939,7 +943,7 @@ export default function FPLDashboard() {
                           ? 'bg-gray-700 border-gray-600 text-white' 
                           : 'bg-white border-gray-300 text-gray-900'
                       }`}
-                      placeholder="0.1"
+                      placeholder="0"
                     />
                   </div>
 
@@ -1142,7 +1146,7 @@ export default function FPLDashboard() {
                         position: 'all',
                         team: 'all',
                         owner: 'all',
-                        minPoints: 0.1,
+                        minPoints: 0, // ✅ FIXED: Back to 0
                         search: ''
                       });
                     }}
