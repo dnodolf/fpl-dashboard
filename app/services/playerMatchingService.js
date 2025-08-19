@@ -308,92 +308,228 @@ export class PlayerMatchingService {
   }
 
   // Match all players - with progress logging
-  async matchAllPlayers(sleeperPlayers, ffhPlayers) {
-    const diagnostics = [];
-    const matches = [];
-    const stats = {
-      total: sleeperPlayers.length,
-      matched: 0,
-      byMethod: {},
-      byConfidence: {}
-    };
+async matchAllPlayers(sleeperPlayers, ffhPlayers) {
+  const diagnostics = [];
+  const matches = [];
+  const stats = {
+    total: sleeperPlayers.length,
+    matched: 0,
+    byMethod: {},
+    byConfidence: {}
+  };
 
-    console.log(`🔄 ENHANCED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
+  console.log(`🔄 ENHANCED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
 
-    let processed = 0;
-    for (const sleeperPlayer of sleeperPlayers) {
-      const ffhMatch = this.findBestFFHMatch(sleeperPlayer, ffhPlayers, diagnostics);
-      
-      if (ffhMatch) {
-        const lastDiagnostic = diagnostics[diagnostics.length - 1];
-        matches.push({
-          sleeperPlayer,
-          ffhPlayer: ffhMatch,
-          confidence: lastDiagnostic?.confidence || 'Unknown',
-          method: lastDiagnostic?.method || 'Unknown',
-          score: lastDiagnostic?.score || 0
-        });
-        stats.matched++;
-        
-        // Track method stats
-        const method = lastDiagnostic?.method || 'Unknown';
-        stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
-        
-        // Track confidence stats
-        const confidence = lastDiagnostic?.confidence || 'Unknown';
-        stats.byConfidence[confidence] = (stats.byConfidence[confidence] || 0) + 1;
-      } else {
-        // Track unmatched
-        stats.byMethod['No Match'] = (stats.byMethod['No Match'] || 0) + 1;
-        stats.byConfidence['None'] = (stats.byConfidence['None'] || 0) + 1;
-      }
-
-      processed++;
-      if (processed % 100 === 0) {
-        console.log(`  Progress: ${processed}/${sleeperPlayers.length} (${stats.matched} matches so far)`);
-      }
+  // Track which FFH players have been used to prevent duplicates
+  const usedFFHPlayers = new Set();
+  
+  // First pass: High confidence matches (Opta ID, FPL ID, Manual overrides)
+  console.log('🎯 Pass 1: High confidence matches...');
+  for (const sleeperPlayer of sleeperPlayers) {
+    const ffhMatch = this.findHighConfidenceMatch(sleeperPlayer, ffhPlayers, usedFFHPlayers, diagnostics);
+    if (ffhMatch) {
+      matches.push({
+        sleeperPlayer,
+        ffhPlayer: ffhMatch,
+        confidence: diagnostics[diagnostics.length - 1]?.confidence || 'High',
+        method: diagnostics[diagnostics.length - 1]?.method || 'High Confidence',
+        score: diagnostics[diagnostics.length - 1]?.score || 1.0
+      });
+      usedFFHPlayers.add(ffhMatch.id || ffhMatch.element_id || ffhMatch.fpl_id);
+      stats.matched++;
     }
-
-    // 🚨 Dedupe FFH players (keep best score/confidence)
-    const seen = new Map();
-    for (const m of matches) {
-      const ffhId = m.ffhPlayer.id || m.ffhPlayer.element_id || m.ffhPlayer.fpl_id;
-      const current = seen.get(ffhId);
-
-      if (!current) {
-        seen.set(ffhId, m);
-      } else {
-        const isBetter = m.score > current.score ||
-          (m.score === current.score && this.confidenceRank(m.confidence) > this.confidenceRank(current.confidence));
-        if (isBetter) seen.set(ffhId, m);
-      }
-    }
-
-    const dedupedMatches = Array.from(seen.values());
-    stats.matched = dedupedMatches.length; // Update matched count after deduplication
-
-    stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
-
-    console.log(`✅ ENHANCED MATCHING COMPLETE:`);
-    console.log(`  Total: ${stats.total} Sleeper players`);
-    console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
-    console.log(`  Methods:`, stats.byMethod);
-    console.log(`  Confidence:`, stats.byConfidence);
-
-    return {
-      matches: dedupedMatches,
-      diagnostics,
-      stats,
-      summary: {
-        totalSleeperPlayers: sleeperPlayers.length,
-        totalFFHPlayers: ffhPlayers.length,
-        matchedPlayers: stats.matched,
-        matchRate: `${stats.matchRate}%`,
-        newMatches: dedupedMatches.filter(m => m.method !== 'Cache').length,
-        averageConfidence: this.calculateAverageConfidence(dedupedMatches)
-      }
-    };
   }
+
+  // Second pass: Name similarity matches for remaining players
+  console.log('🎯 Pass 2: Name similarity matches...');
+  const remainingSleeperPlayers = sleeperPlayers.filter(sp => 
+    !matches.some(m => m.sleeperPlayer.id === sp.id)
+  );
+
+  for (const sleeperPlayer of remainingSleeperPlayers) {
+    const ffhMatch = this.findNameSimilarityMatch(sleeperPlayer, ffhPlayers, usedFFHPlayers, diagnostics);
+    if (ffhMatch) {
+      matches.push({
+        sleeperPlayer,
+        ffhPlayer: ffhMatch,
+        confidence: diagnostics[diagnostics.length - 1]?.confidence || 'Medium',
+        method: diagnostics[diagnostics.length - 1]?.method || 'Name Similarity',
+        score: diagnostics[diagnostics.length - 1]?.score || 0.5
+      });
+      usedFFHPlayers.add(ffhMatch.id || ffhMatch.element_id || ffhMatch.fpl_id);
+      stats.matched++;
+    }
+  }
+
+  // Track unmatched players
+  const unmatchedCount = sleeperPlayers.length - matches.length;
+  if (unmatchedCount > 0) {
+    stats.byMethod['No Match'] = unmatchedCount;
+    stats.byConfidence['None'] = unmatchedCount;
+  }
+
+  // Update method and confidence stats
+  matches.forEach(match => {
+    const method = match.method || 'Unknown';
+    const confidence = match.confidence || 'Unknown';
+    
+    stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
+    stats.byConfidence[confidence] = (stats.byConfidence[confidence] || 0) + 1;
+  });
+
+  stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
+
+  console.log(`✅ ENHANCED MATCHING COMPLETE:`);
+  console.log(`  Total: ${stats.total} Sleeper players`);
+  console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
+  console.log(`  Unique FFH players used: ${usedFFHPlayers.size}`);
+  console.log(`  Methods:`, stats.byMethod);
+  console.log(`  Confidence:`, stats.byConfidence);
+
+  return {
+    matches,
+    diagnostics,
+    stats,
+    summary: {
+      totalSleeperPlayers: sleeperPlayers.length,
+      totalFFHPlayers: ffhPlayers.length,
+      matchedPlayers: stats.matched,
+      matchRate: `${stats.matchRate}%`,
+      uniqueFFHPlayersUsed: usedFFHPlayers.size,
+      averageConfidence: this.calculateAverageConfidence(matches)
+    }
+  };
+}
+
+// Add this new method for high confidence matches:
+findHighConfidenceMatch(sleeperPlayer, ffhPlayers, usedFFHPlayers, diagnostics) {
+  if (!sleeperPlayer?.full_name && !sleeperPlayer?.name) {
+    return null;
+  }
+
+  const sleeperName = this.normalizeNameForMatching(sleeperPlayer.full_name || sleeperPlayer.name);
+  const sleeperTeam = this.normalizeTeamForMatching(sleeperPlayer.team_abbr || sleeperPlayer.team);
+  const sleeperKey = `${sleeperName}|${sleeperTeam}`;
+
+  // Check manual overrides first
+  if (this.manualOverrides[sleeperKey]) {
+    const override = ffhPlayers.find(p => {
+      const ffhId = p.id || p.element_id || p.fpl_id;
+      return !usedFFHPlayers.has(ffhId) && 
+             this.normalizeNameForMatching(p.web_name || p.name) === this.normalizeNameForMatching(this.manualOverrides[sleeperKey]);
+    });
+    
+    if (override) {
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
+        ffh: `${override.web_name || override.name} (${this.getFFHTeam(override)})`,
+        method: 'Manual Override',
+        confidence: 'High',
+        score: 1.0
+      });
+      return override;
+    }
+  }
+
+  // Try Opta ID match
+  if (sleeperPlayer.opta_id) {
+    const optaMatch = ffhPlayers.find(p => {
+      const ffhId = p.id || p.element_id || p.fpl_id;
+      return !usedFFHPlayers.has(ffhId) && p.opta_uuid && p.opta_uuid === sleeperPlayer.opta_id;
+    });
+    
+    if (optaMatch) {
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
+        ffh: `${optaMatch.web_name || optaMatch.name} (${this.getFFHTeam(optaMatch)})`,
+        method: 'Opta ID',
+        confidence: 'High',
+        score: 1.0
+      });
+      return optaMatch;
+    }
+  }
+
+  // Try FPL ID match
+  if (sleeperPlayer.rotowire_id) {
+    const fplMatch = ffhPlayers.find(p => {
+      const ffhId = p.id || p.element_id || p.fpl_id;
+      return !usedFFHPlayers.has(ffhId) && String(ffhId) === String(sleeperPlayer.rotowire_id);
+    });
+    
+    if (fplMatch) {
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
+        ffh: `${fplMatch.web_name || fplMatch.name} (${this.getFFHTeam(fplMatch)})`,
+        method: 'FPL ID',
+        confidence: 'High',
+        score: 1.0
+      });
+      return fplMatch;
+    }
+  }
+
+  return null;
+}
+
+// Add this new method for name similarity matches:
+findNameSimilarityMatch(sleeperPlayer, ffhPlayers, usedFFHPlayers, diagnostics) {
+  const sleeperName = this.normalizeNameForMatching(sleeperPlayer.full_name || sleeperPlayer.name);
+  const sleeperTeam = this.normalizeTeamForMatching(sleeperPlayer.team_abbr || sleeperPlayer.team);
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  // Filter out already used FFH players and restrict by team if possible
+  const availableFFHPlayers = ffhPlayers.filter(p => {
+    const ffhId = p.id || p.element_id || p.fpl_id;
+    return !usedFFHPlayers.has(ffhId);
+  });
+
+  // First try team-restricted matches
+  const teamMatches = availableFFHPlayers.filter(p =>
+    this.normalizeTeamForMatching(this.getFFHTeam(p)) === sleeperTeam
+  );
+  
+  const searchPool = teamMatches.length > 0 ? teamMatches : availableFFHPlayers;
+
+  for (const ffhPlayer of searchPool) {
+    const ffhName = this.normalizeNameForMatching(ffhPlayer.web_name || ffhPlayer.name);
+    const ffhTeam = this.normalizeTeamForMatching(this.getFFHTeam(ffhPlayer));
+
+    // Require team match when both have teams and we found team matches
+    if (sleeperTeam && ffhTeam && sleeperTeam !== ffhTeam && teamMatches.length > 0) {
+      continue;
+    }
+
+    const score = this.calculateNameSimilarity(sleeperName, ffhName);
+    
+    // Boost score for team match
+    let adjustedScore = score;
+    if (sleeperTeam && ffhTeam && sleeperTeam === ffhTeam) {
+      adjustedScore = Math.min(score + 0.2, 1.0);
+    }
+
+    if (adjustedScore > bestScore && adjustedScore >= 0.4) { // Minimum threshold
+      bestScore = adjustedScore;
+      bestMatch = ffhPlayer;
+    }
+  }
+
+  if (bestMatch) {
+    const confidence = this.assignConfidence(bestScore);
+    diagnostics.push({
+      sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
+      ffh: `${bestMatch.web_name || bestMatch.name} (${this.getFFHTeam(bestMatch)})`,
+      method: 'Name Similarity',
+      confidence,
+      score: bestScore
+    });
+    return bestMatch;
+  }
+
+  return null;
+}
 
   // Helper to rank confidence levels numerically
   confidenceRank(confidence) {
