@@ -709,9 +709,9 @@ export default function FPLDashboard() {
       return false;
     }
 
-    // ✅ FIXED: Owner filter - handle the real "Free Agent" from data
+    // ✅ FIXED: Owner filter - correct logic for free agents
     if (filters.owner !== 'all') {
-      if (filters.owner === 'Free Agent' && player.owned_by) return false;
+      if (filters.owner === 'Free Agent' && player.owned_by && player.owned_by !== 'Free Agent') return false;
       if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') return false;
       if (filters.owner !== 'Free Agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
     }
