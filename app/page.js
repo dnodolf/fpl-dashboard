@@ -651,7 +651,7 @@ export default function FPLDashboard() {
     setSortConfig({ key, direction });
   };
 
-  // ✅ ADDED: Get sortable value function
+  // ✅ REVERTED: Use original working point field names
   const getSortValue = (player, key) => {
     switch (key) {
       case 'name':
@@ -661,11 +661,36 @@ export default function FPLDashboard() {
       case 'team':
         return player.team || '';
       case 'sleeper_points_ros':
-        // ✅ FIXED: Try multiple point fields in order
-        return player.sleeper_points_ros || player.ros_points || player.total_points || player.event_points || 0;
+        // Use original working field names
+        if (player.sleeper_season_total) return player.sleeper_season_total;
+        if (player.sleeper_season_avg) return player.sleeper_season_avg * 38;
+        if (player.ffh_season_prediction) return player.ffh_season_prediction;
+        if (player.predicted_pts) return player.predicted_pts;
+        if (player.total_points) return player.total_points;
+        return 0;
       case 'sleeper_points_next5':
-        // ✅ FIXED: Try multiple next 5 fields in order  
-        return player.sleeper_points_next5 || player.next5_points || player.event_points || player.form || 0;
+        // Try to get next 5 games from GW predictions
+        if (player.sleeper_gw_predictions) {
+          try {
+            const gwPreds = JSON.parse(player.sleeper_gw_predictions);
+            const next5 = Object.values(gwPreds).slice(0, 5);
+            return next5.length > 0 ? next5.reduce((a, b) => a + b, 0) : 0;
+          } catch (e) {
+            // Fall back to estimation
+          }
+        }
+        if (player.ffh_gw_predictions) {
+          try {
+            const gwPreds = JSON.parse(player.ffh_gw_predictions);
+            const next5 = Object.values(gwPreds).slice(0, 5);
+            return next5.length > 0 ? next5.reduce((a, b) => a + b, 0) : 0;
+          } catch (e) {
+            // Fall back to estimation
+          }
+        }
+        // Estimate: season points / 38 * 5
+        const seasonPoints = this.getSortValue(player, 'sleeper_points_ros');
+        return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -698,8 +723,17 @@ export default function FPLDashboard() {
       if (filters.owner !== 'free_agents' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
     }
 
-    // Min points filter - ✅ FIXED: Use multiple point fields
-    const playerPoints = player.sleeper_points_ros || player.ros_points || player.total_points || player.event_points || 0;
+    // Min points filter - ✅ REVERTED: Use original working point logic
+    const getRosPoints = (player) => {
+      if (player.sleeper_season_total) return player.sleeper_season_total;
+      if (player.sleeper_season_avg) return player.sleeper_season_avg * 38;
+      if (player.ffh_season_prediction) return player.ffh_season_prediction;
+      if (player.predicted_pts) return player.predicted_pts;
+      if (player.total_points) return player.total_points;
+      return 0;
+    };
+    
+    const playerPoints = getRosPoints(player);
     if (playerPoints < filters.minPoints) {
       return false;
     }
@@ -1007,6 +1041,16 @@ export default function FPLDashboard() {
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
                             isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
                           }`}
+                          onClick={() => handleSort('owned_by')}
+                        >
+                          <div className="flex items-center">
+                            Ownership {renderSortIcon('owned_by')}
+                          </div>
+                        </th>
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
                           onClick={() => handleSort('sleeper_points_ros')}
                         >
                           <div className="flex items-center">
@@ -1021,16 +1065,6 @@ export default function FPLDashboard() {
                         >
                           <div className="flex items-center">
                             Next 5 GW {renderSortIcon('sleeper_points_next5')}
-                          </div>
-                        </th>
-                        <th 
-                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                          }`}
-                          onClick={() => handleSort('owned_by')}
-                        >
-                          <div className="flex items-center">
-                            Ownership {renderSortIcon('owned_by')}
                           </div>
                         </th>
                       </tr>
@@ -1061,19 +1095,6 @@ export default function FPLDashboard() {
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                             {player.team || 'N/A'}
                           </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {/* ✅ FIXED: Use multiple point fields */}
-                            {(player.sleeper_points_ros || player.total_points) ? 
-                              (player.sleeper_points_ros || player.total_points).toFixed(1) : 
-                              'N/A'
-                            }
-                          </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {(player.sleeper_points_next5 || player.event_points) ? 
-                              (player.sleeper_points_next5 || player.event_points).toFixed(1) : 
-                              'N/A'
-                            }
-                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {player.owned_by ? (
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1088,6 +1109,43 @@ export default function FPLDashboard() {
                                 🆓 Free Agent
                               </span>
                             )}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {(() => {
+                              // ✅ REVERTED: Use original working point logic
+                              if (player.sleeper_season_total) return player.sleeper_season_total.toFixed(1);
+                              if (player.sleeper_season_avg) return (player.sleeper_season_avg * 38).toFixed(1);
+                              if (player.ffh_season_prediction) return player.ffh_season_prediction.toFixed(1);
+                              if (player.predicted_pts) return player.predicted_pts.toFixed(1);
+                              if (player.total_points) return player.total_points.toFixed(1);
+                              return 'N/A';
+                            })()}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {(() => {
+                              // ✅ REVERTED: Use original working next 5 logic
+                              if (player.sleeper_gw_predictions) {
+                                try {
+                                  const gwPreds = JSON.parse(player.sleeper_gw_predictions);
+                                  const next5 = Object.values(gwPreds).slice(0, 5);
+                                  return next5.length > 0 ? next5.reduce((a, b) => a + b, 0).toFixed(1) : 'N/A';
+                                } catch (e) {
+                                  // Fall through to next option
+                                }
+                              }
+                              if (player.ffh_gw_predictions) {
+                                try {
+                                  const gwPreds = JSON.parse(player.ffh_gw_predictions);
+                                  const next5 = Object.values(gwPreds).slice(0, 5);
+                                  return next5.length > 0 ? next5.reduce((a, b) => a + b, 0).toFixed(1) : 'N/A';
+                                } catch (e) {
+                                  // Fall through to estimation
+                                }
+                              }
+                              // Estimate: season points / 38 * 5
+                              const seasonPoints = player.sleeper_season_total || (player.sleeper_season_avg * 38) || player.ffh_season_prediction || player.predicted_pts || player.total_points || 0;
+                              return seasonPoints > 0 ? ((seasonPoints / 38) * 5).toFixed(1) : 'N/A';
+                            })()}
                           </td>
                         </tr>
                       ))}
