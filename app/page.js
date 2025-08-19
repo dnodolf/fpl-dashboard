@@ -709,11 +709,11 @@ export default function FPLDashboard() {
       return false;
     }
 
-    // ✅ SIMPLIFIED: Owner filter only (removed availability filter)
+    // ✅ FIXED: Owner filter - handle the real "Free Agent" from data
     if (filters.owner !== 'all') {
-      if ((filters.owner === 'free_agent' || filters.owner === 'Free Agent') && player.owned_by) return false;
+      if (filters.owner === 'Free Agent' && player.owned_by) return false;
       if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') return false;
-      if (filters.owner !== 'free_agent' && filters.owner !== 'Free Agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
+      if (filters.owner !== 'Free Agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
     }
 
     // Min points filter - ✅ REVERTED: Use original working point logic
@@ -771,10 +771,6 @@ export default function FPLDashboard() {
   // Get unique teams and owners for filter dropdowns
   const teams = [...new Set(players.map(p => p.team).filter(Boolean))].sort();
   const owners = [...new Set(players.map(p => p.owned_by).filter(Boolean))].sort();
-  
-  // ✅ FIXED: Check if there's already a "Free Agent" in the data
-  const hasDataFreeAgent = owners.includes('Free Agent');
-  const actualFreeAgentValue = hasDataFreeAgent ? 'Free Agent' : 'free_agent';
 
   // ✅ ADDED: Render sort icon
   const renderSortIcon = (columnKey) => {
@@ -920,9 +916,8 @@ export default function FPLDashboard() {
                       }`}
                     >
                       <option value="all">All Owners</option>
-                      {!hasDataFreeAgent && <option value="free_agent">Free Agent</option>}
                       <option value="ThatDerekGuy">My Players</option>
-                      {owners.filter(owner => owner !== 'ThatDerekGuy').map(owner => (
+                      {owners.map(owner => (
                         <option key={owner} value={owner}>{owner}</option>
                       ))}
                     </select>
