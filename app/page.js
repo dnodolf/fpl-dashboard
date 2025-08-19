@@ -814,8 +814,8 @@ export default function FPLDashboard() {
   });
 
   // Get unique teams and owners for filter dropdowns
-  const teams = [...new Set(players.map(p => p.team).filter(Boolean))].sort();
-  const owners = [...new Set(players.map(p => p.owned_by).filter(Boolean))].sort();
+  const teams = EPL_TEAMS.sort(); // ✅ FIXED: Use EPL teams only instead of all teams from data
+  const owners = [...new Set(players.filter(isEPLPlayer).map(p => p.owned_by).filter(Boolean))].sort();
 
   // ✅ ADDED: Render sort icon
   const renderSortIcon = (columnKey) => {
