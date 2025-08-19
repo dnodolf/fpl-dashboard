@@ -457,12 +457,31 @@ async function integratePlayersWithYourServices() {
       enhancedPlayers.push(enhancedPlayer);
     }
 
-    // Calculate final statistics
+    // Calculate final statistics - FIXED VERSION
     const finalStats = {
-      ...matchingStats,
-      matchRate: matchingStats.total > 0 ? 
-        Math.round((matchingStats.matched / matchingStats.total) * 100) : 0
+      total: sleeperPlayersArray.length,
+      matched: enhancedPlayers.filter(p => p.ffh_matched).length,
+      byMethod: {},
+      byConfidence: {},
+      matchRate: 0
     };
+
+    // Count by method and confidence from actual enhanced players
+    enhancedPlayers.forEach(player => {
+      if (player.ffh_matched) {
+        const method = player.match_method || 'Name Similarity';
+        const confidence = player.match_confidence || 'None';
+        
+        finalStats.byMethod[method] = (finalStats.byMethod[method] || 0) + 1;
+        finalStats.byConfidence[confidence] = (finalStats.byConfidence[confidence] || 0) + 1;
+      } else {
+        finalStats.byMethod['No Match'] = (finalStats.byMethod['No Match'] || 0) + 1;
+        finalStats.byConfidence['None'] = (finalStats.byConfidence['None'] || 0) + 1;
+      }
+    });
+
+    finalStats.matchRate = finalStats.total > 0 ? 
+      Math.round((finalStats.matched / finalStats.total) * 100) : 0;
 
     console.log('📈 Integration complete:', finalStats);
 
@@ -473,7 +492,7 @@ async function integratePlayersWithYourServices() {
         matchingStats: finalStats,
         sleeperTotal: sleeperData.totalPlayers,
         ffhTotal: ffhData.totalPlayers,
-        enhancedTotal: enhancedPlayers.length,
+        enhancedTotal: finalStats.matched, // FIXED: Use actual matched count, not total
         servicesUsed: services.available
       },
       quality: {
