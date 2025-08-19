@@ -2,6 +2,38 @@
 
 import { useState, useEffect } from 'react';
 
+// ----------------- EPL TEAMS FILTER -----------------
+const EPL_TEAMS = [
+  'Arsenal', 'Aston Villa', 'Bournemouth', 'Brentford', 'Brighton', 
+  'Burnley', 'Chelsea', 'Crystal Palace', 'Everton', 'Fulham', 
+  'Leeds United', 'Liverpool', 'Man. City', 'Manchester Utd', 'Newcastle', 
+  'Nottingham', 'Sunderland', 'Tottenham', 'West Ham', 'Wolves'
+];
+
+// Helper function to check if player is on EPL team
+const isEPLPlayer = (player) => {
+  if (!player.team) return false;
+  
+  // Normalize team name for comparison
+  const playerTeam = player.team.trim();
+  
+  // Check exact match first
+  if (EPL_TEAMS.includes(playerTeam)) return true;
+  
+  // Check common abbreviations/variations
+  const teamMappings = {
+    'ARS': 'Arsenal', 'AVL': 'Aston Villa', 'BOU': 'Bournemouth', 
+    'BRE': 'Brentford', 'BHA': 'Brighton', 'BUR': 'Burnley',
+    'CHE': 'Chelsea', 'CRY': 'Crystal Palace', 'EVE': 'Everton', 
+    'FUL': 'Fulham', 'LEE': 'Leeds United', 'LIV': 'Liverpool', 
+    'MCI': 'Man. City', 'MUN': 'Manchester Utd', 'NEW': 'Newcastle', 
+    'NFO': 'Nottingham', 'SUN': 'Sunderland', 'TOT': 'Tottenham', 
+    'WHU': 'West Ham', 'WOL': 'Wolves'
+  };
+  
+  return EPL_TEAMS.includes(teamMappings[playerTeam]);
+};
+
 // ----------------- LOADING SPINNER COMPONENT -----------------
 const LoadingSpinner = ({ message = "Loading..." }) => (
   <div className="flex items-center justify-center p-8">
@@ -699,8 +731,8 @@ export default function FPLDashboard() {
 
   // Filter players based on current filters
   const filteredPlayers = players.filter(player => {
-    // ✅ NEW: Only show players who are on EPL teams (exclude free agents without teams)
-    if (!player.team || player.team.trim() === '') {
+    // ✅ EPL TEAMS ONLY: Only show players from actual EPL teams
+    if (!isEPLPlayer(player)) {
       return false;
     }
 
