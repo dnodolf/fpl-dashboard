@@ -699,6 +699,11 @@ export default function FPLDashboard() {
 
   // Filter players based on current filters
   const filteredPlayers = players.filter(player => {
+    // ✅ NEW: Only show players who are on EPL teams (exclude free agents without teams)
+    if (!player.team || player.team.trim() === '') {
+      return false;
+    }
+
     // Position filter - ✅ FIXED: Handle goalkeeper variations (GKP vs GK)
     if (filters.position !== 'all') {
       const playerPos = player.position;
