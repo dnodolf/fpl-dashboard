@@ -705,10 +705,11 @@ export default function FPLDashboard() {
       return false;
     }
 
-    // Availability filter
+    // Availability filter - ✅ FIXED: Better free agent detection
     if (filters.availability !== 'all') {
-      if (filters.availability === 'available' && player.owned_by) return false;
-      if (filters.availability === 'owned' && !player.owned_by) return false;
+      const isOwned = player.owned_by && player.owned_by.trim() !== '' && player.owned_by !== 'null' && player.owned_by !== 'undefined';
+      if (filters.availability === 'available' && isOwned) return false;
+      if (filters.availability === 'owned' && !isOwned) return false;
     }
 
     // Team filter
@@ -990,10 +991,15 @@ export default function FPLDashboard() {
                 </div>
               </div>
 
-              {/* Results Summary */}
+              {/* Results Summary with Debug Info */}
               <div className="mb-4 flex items-center justify-between">
                 <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
+                  {/* Debug: Show free agent count */}
+                  <span className="ml-2 text-xs">
+                    (Free Agents: {players.filter(p => !p.owned_by).length}, 
+                     Owned: {players.filter(p => p.owned_by).length})
+                  </span>
                 </div>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                   Click column headers to sort
