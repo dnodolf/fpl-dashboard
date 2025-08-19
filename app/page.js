@@ -699,9 +699,17 @@ export default function FPLDashboard() {
 
   // Filter players based on current filters
   const filteredPlayers = players.filter(player => {
-    // Position filter
-    if (filters.position !== 'all' && player.position !== filters.position) {
-      return false;
+    // Position filter - ✅ FIXED: Handle goalkeeper variations (GKP vs GK)
+    if (filters.position !== 'all') {
+      const playerPos = player.position;
+      const filterPos = filters.position;
+      
+      // Handle goalkeeper variations
+      if (filterPos === 'GKP') {
+        if (playerPos !== 'GKP' && playerPos !== 'GK') return false;
+      } else {
+        if (playerPos !== filterPos) return false;
+      }
     }
 
     // Team filter
