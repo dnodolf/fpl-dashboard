@@ -118,10 +118,92 @@ const DashboardHeader = ({
   activeTab,
   setActiveTab
 }) => {
-  const [currentGameweek, setCurrentGameweek] = useState(null);
+  const [gameweekStatus, setGameweekStatus] = useState(null);
 
   useEffect(() => {
-    setCurrentGameweek(getCurrentGameweek());
+    const getGameweekStatus = () => {
+      const now = new Date();
+      const currentDate = now.toISOString().split('T')[0];
+      
+      const gameweekDates = [
+        { gw: 1, start: '2025-08-15', end: '2025-08-18' },
+        { gw: 2, start: '2025-08-22', end: '2025-08-25' },
+        { gw: 3, start: '2025-08-30', end: '2025-09-01' },
+        { gw: 4, start: '2025-09-13', end: '2025-09-15' },
+        { gw: 5, start: '2025-09-20', end: '2025-09-22' },
+        { gw: 6, start: '2025-09-27', end: '2025-09-29' },
+        { gw: 7, start: '2025-10-04', end: '2025-10-06' },
+        { gw: 8, start: '2025-10-18', end: '2025-10-20' },
+        { gw: 9, start: '2025-10-25', end: '2025-10-27' },
+        { gw: 10, start: '2025-11-01', end: '2025-11-03' },
+        { gw: 11, start: '2025-11-08', end: '2025-11-10' },
+        { gw: 12, start: '2025-11-22', end: '2025-11-24' },
+        { gw: 13, start: '2025-11-29', end: '2025-12-01' },
+        { gw: 14, start: '2025-12-06', end: '2025-12-08' },
+        { gw: 15, start: '2025-12-13', end: '2025-12-15' },
+        { gw: 16, start: '2025-12-20', end: '2025-12-22' },
+        { gw: 17, start: '2025-12-26', end: '2025-12-30' },
+        { gw: 18, start: '2026-01-03', end: '2026-01-05' },
+        { gw: 19, start: '2026-01-10', end: '2026-01-12' },
+        { gw: 20, start: '2026-01-17', end: '2026-01-19' },
+        { gw: 21, start: '2026-01-24', end: '2026-01-26' },
+        { gw: 22, start: '2026-01-31', end: '2026-02-02' },
+        { gw: 23, start: '2026-02-07', end: '2026-02-09' },
+        { gw: 24, start: '2026-02-14', end: '2026-02-16' },
+        { gw: 25, start: '2026-02-21', end: '2026-02-23' },
+        { gw: 26, start: '2026-02-28', end: '2026-03-02' },
+        { gw: 27, start: '2026-03-07', end: '2026-03-09' },
+        { gw: 28, start: '2026-03-14', end: '2026-03-16' },
+        { gw: 29, start: '2026-03-28', end: '2026-03-30' },
+        { gw: 30, start: '2026-04-04', end: '2026-04-06' },
+        { gw: 31, start: '2026-04-11', end: '2026-04-13' },
+        { gw: 32, start: '2026-04-18', end: '2026-04-20' },
+        { gw: 33, start: '2026-04-25', end: '2026-04-27' },
+        { gw: 34, start: '2026-05-02', end: '2026-05-04' },
+        { gw: 35, start: '2026-05-09', end: '2026-05-11' },
+        { gw: 36, start: '2026-05-16', end: '2026-05-18' },
+        { gw: 37, start: '2026-05-23', end: '2026-05-25' },
+        { gw: 38, start: '2026-05-30', end: '2026-05-30' }
+      ];
+
+      // Check if currently in a live gameweek
+      for (const gwData of gameweekDates) {
+        if (currentDate >= gwData.start && currentDate <= gwData.end) {
+          return {
+            gw: gwData.gw,
+            status: 'live',
+            label: `Live: Gameweek ${gwData.gw}`,
+            icon: '🔴',
+            isLive: true
+          };
+        }
+      }
+
+      // Find next upcoming gameweek
+      for (const gwData of gameweekDates) {
+        if (currentDate < gwData.start) {
+          return {
+            gw: gwData.gw,
+            status: 'upcoming',
+            label: `Upcoming: Gameweek ${gwData.gw}`,
+            icon: '⏰',
+            isLive: false
+          };
+        }
+      }
+
+      // Default fallback
+      const defaultGw = currentDate < '2025-08-15' ? 1 : 38;
+      return {
+        gw: defaultGw,
+        status: 'upcoming',
+        label: `Upcoming: Gameweek ${defaultGw}`,
+        icon: '⏰',
+        isLive: false
+      };
+    };
+
+    setGameweekStatus(getGameweekStatus());
   }, []);
 
   return (
@@ -134,14 +216,18 @@ const DashboardHeader = ({
             <h1 className="text-3xl font-bold">🏆 FPL Roster Explorer</h1>
           </div>
           <div className="flex items-center space-x-4">
-            {currentGameweek && (
+            {gameweekStatus && (
               <div className={`px-4 py-2 rounded-lg shadow-sm border ${
-                isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'
+                gameweekStatus.isLive 
+                  ? 'bg-green-500 border-green-400 text-white animate-pulse' 
+                  : isDarkMode 
+                    ? 'bg-gray-700 border-gray-600' 
+                    : 'bg-white border-gray-200'
               }`}>
                 <div className="flex items-center space-x-2">
-                  <span className="text-2xl">⏰</span>
+                  <span className="text-lg">{gameweekStatus.icon}</span>
                   <span className="text-sm font-medium">
-                    Gameweek {currentGameweek}
+                    {gameweekStatus.label}
                   </span>
                 </div>
               </div>
@@ -1013,52 +1099,76 @@ export default function FPLDashboard() {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* Updated Stats Cards with Real API Data */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {/* Total Sleeper Players */}
-            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-              <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                {totalSleeperCount.toLocaleString()}
-              </div>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                👥 Total Players
-              </div>
-            </div>
+{/* Updated Stats Cards to Match API Health Check Format */}
+<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  {/* Total Sleeper Players */}
+  <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="text-2xl font-bold text-blue-600">
+          {integration?.sleeperTotal?.toLocaleString() || totalSleeperCount.toLocaleString()}
+        </div>
+        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          👥 Total Players
+        </div>
+      </div>
+      <div className="text-blue-500 text-2xl">👥</div>
+    </div>
+  </div>
 
-            {/* Matched Players */}
-            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-              <div className="text-2xl font-bold text-green-600">{matchedCount.toLocaleString()}</div>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                🔗 Matched Players
-              </div>
-            </div>
+  {/* Matched Players */}
+  <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="text-2xl font-bold text-green-600">
+          {integration?.enhancedTotal?.toLocaleString() || matchedCount.toLocaleString()}
+        </div>
+        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          🔗 Matched Players
+        </div>
+      </div>
+      <div className="text-green-500 text-2xl">🔗</div>
+    </div>
+  </div>
 
-            {/* Match Success Rate */}
-            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-              <div className="text-2xl font-bold text-blue-600">{matchRate}%</div>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                📊 Match Success
-              </div>
-            </div>
+  {/* Match Success Rate */}
+  <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="text-2xl font-bold text-purple-600">
+          {integration?.matchingStats?.matchRate || matchRate}%
+        </div>
+        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          📊 Match Success
+        </div>
+      </div>
+      <div className="text-purple-500 text-2xl">📊</div>
+    </div>
+  </div>
 
-            {/* Match Confidence Breakdown */}
-            <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg font-bold text-green-500">
-                  {finalConfidenceStats.High || finalConfidenceStats.high || 0}
-                </span>
-                <span className="text-sm font-bold text-yellow-500">
-                  {finalConfidenceStats.Medium || finalConfidenceStats.medium || 0}
-                </span>
-                <span className="text-sm font-bold text-red-500">
-                  {finalConfidenceStats.Low || finalConfidenceStats.low || 0}
-                </span>
-              </div>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                🎯 High • Med • Low
-              </div>
-            </div>
-          </div>
+  {/* Match Confidence Breakdown */}
+  <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="flex items-center gap-1 text-lg font-bold">
+          <span className="text-green-500">
+            {finalConfidenceStats.High || finalConfidenceStats.high || 0}
+          </span>
+          <span className="text-yellow-500">
+            {finalConfidenceStats.Medium || finalConfidenceStats.medium || 0}
+          </span>
+          <span className="text-red-500">
+            {finalConfidenceStats.Low || finalConfidenceStats.low || 0}
+          </span>
+        </div>
+        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          🎯 High • Med • Low
+        </div>
+      </div>
+      <div className="text-orange-500 text-2xl">🎯</div>
+    </div>
+  </div>
+</div>
 
           {/* Rest of the dashboard remains the same... */}
           {activeTab === 'players' && (
