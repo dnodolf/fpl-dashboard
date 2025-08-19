@@ -10,28 +10,30 @@ const EPL_TEAMS = [
   'Nottingham', 'Sunderland', 'Tottenham', 'West Ham', 'Wolves'
 ];
 
+// Team mappings for display name to data value
+const TEAM_MAPPINGS = {
+  'Arsenal': 'ARS', 'Aston Villa': 'AVL', 'Bournemouth': 'BOU', 
+  'Brentford': 'BRE', 'Brighton': 'BHA', 'Burnley': 'BUR',
+  'Chelsea': 'CHE', 'Crystal Palace': 'CRY', 'Everton': 'EVE', 
+  'Fulham': 'FUL', 'Leeds United': 'LEE', 'Liverpool': 'LIV', 
+  'Man. City': 'MCI', 'Manchester Utd': 'MUN', 'Newcastle': 'NEW', 
+  'Nottingham': 'NFO', 'Sunderland': 'SUN', 'Tottenham': 'TOT', 
+  'West Ham': 'WHU', 'Wolves': 'WOL'
+};
+
+// Reverse mapping for abbreviation to display name
+const TEAM_DISPLAY_NAMES = Object.fromEntries(
+  Object.entries(TEAM_MAPPINGS).map(([display, abbrev]) => [abbrev, display])
+);
+
 // Helper function to check if player is on EPL team
 const isEPLPlayer = (player) => {
   if (!player.team) return false;
   
-  // Normalize team name for comparison
   const playerTeam = player.team.trim();
   
-  // Check exact match first
-  if (EPL_TEAMS.includes(playerTeam)) return true;
-  
-  // Check common abbreviations/variations
-  const teamMappings = {
-    'ARS': 'Arsenal', 'AVL': 'Aston Villa', 'BOU': 'Bournemouth', 
-    'BRE': 'Brentford', 'BHA': 'Brighton', 'BUR': 'Burnley',
-    'CHE': 'Chelsea', 'CRY': 'Crystal Palace', 'EVE': 'Everton', 
-    'FUL': 'Fulham', 'LEE': 'Leeds United', 'LIV': 'Liverpool', 
-    'MCI': 'Man. City', 'MUN': 'Manchester Utd', 'NEW': 'Newcastle', 
-    'NFO': 'Nottingham', 'SUN': 'Sunderland', 'TOT': 'Tottenham', 
-    'WHU': 'West Ham', 'WOL': 'Wolves'
-  };
-  
-  return EPL_TEAMS.includes(teamMappings[playerTeam]);
+  // Check if it's an EPL abbreviation
+  return Object.values(TEAM_MAPPINGS).includes(playerTeam) || EPL_TEAMS.includes(playerTeam);
 };
 
 // ----------------- LOADING SPINNER COMPONENT -----------------
@@ -940,8 +942,8 @@ export default function FPLDashboard() {
                       }`}
                     >
                       <option value="all">All Teams</option>
-                      {teams.map(team => (
-                        <option key={team} value={team}>{team}</option>
+                      {EPL_TEAMS.map(teamName => (
+                        <option key={teamName} value={TEAM_MAPPINGS[teamName]}>{teamName}</option>
                       ))}
                     </select>
                   </div>
@@ -1115,7 +1117,7 @@ export default function FPLDashboard() {
                             </span>
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {player.team || 'N/A'}
+                            {TEAM_DISPLAY_NAMES[player.team] || player.team || 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {player.owned_by ? (
