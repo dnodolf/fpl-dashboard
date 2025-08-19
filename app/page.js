@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 const LoadingSpinner = ({ message = "Loading..." }) => (
   <div className="flex items-center justify-center p-8">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
-    <span>{message}</span>
+    <span className="text-white">{message}</span>
   </div>
 );
 
@@ -23,7 +23,7 @@ const ErrorBoundary = ({ children }) => {
   if (hasError) {
     return (
       <div className="text-center p-8">
-        <h2>Something went wrong.</h2>
+        <h2 className="text-white">Something went wrong.</h2>
         <button onClick={() => setHasError(false)} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
           Try again
         </button>
@@ -91,7 +91,7 @@ const getCurrentGameweek = () => {
       return {
         number: gw.gw,
         status: 'upcoming',
-        statusDisplay: `GW ${gw.gw} (Upcoming)`,
+        statusDisplay: `🏁 GW ${gw.gw} (Upcoming)`,
         date: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         fullDate: gw.start
       };
@@ -101,7 +101,7 @@ const getCurrentGameweek = () => {
       return {
         number: gw.gw,
         status: 'live',
-        statusDisplay: `GW ${gw.gw} (Live)`,
+        statusDisplay: `🔴 GW ${gw.gw} (Live)`,
         date: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         fullDate: gw.end
       };
@@ -112,7 +112,7 @@ const getCurrentGameweek = () => {
   return {
     number: 1,
     status: 'upcoming',
-    statusDisplay: 'GW 1 (Upcoming)',
+    statusDisplay: '🏁 GW 1 (Upcoming)',
     date: 'Aug 15',
     fullDate: '2025-08-15'
   };
@@ -195,6 +195,23 @@ const getDataFreshnessStatus = (lastUpdated) => {
   } else {
     const ageHours = Math.round(ageMinutes / 60);
     return { status: 'old', message: `${ageHours}h ago`, color: 'red' };
+  }
+};
+
+const formatCacheAge = (ageSeconds) => {
+  if (!ageSeconds) return '';
+  
+  if (ageSeconds < 60) {
+    return 'less than a minute ago';
+  } else if (ageSeconds < 3600) {
+    const minutes = Math.round(ageSeconds / 60);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  } else if (ageSeconds < 86400) {
+    const hours = Math.round(ageSeconds / 3600);
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  } else {
+    const days = Math.round(ageSeconds / 86400);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
   }
 };
 
@@ -292,8 +309,28 @@ function usePlayerData() {
   return { ...data, refetch: fetchData };
 }
 
+// ----------------- SLEEPER POSITION COLORS -----------------
+const getSleeperPositionStyle = (position) => {
+  switch (position) {
+    case 'GKP':
+    case 'GK':
+      return 'bg-yellow-100 text-yellow-800 border border-yellow-300'; // Goalkeeper - Yellow
+    case 'DEF':
+    case 'D':
+      return 'bg-cyan-100 text-cyan-800 border border-cyan-300'; // Defender - Cyan/Light Blue
+    case 'MID':
+    case 'M':
+      return 'bg-green-100 text-green-800 border border-green-300'; // Midfielder - Green
+    case 'FWD':
+    case 'F':
+      return 'bg-red-100 text-red-800 border border-red-300'; // Forward - Red
+    default:
+      return 'bg-gray-100 text-gray-800 border border-gray-300';
+  }
+};
+
 // ----------------- TAB-SPECIFIC STATS COMPONENTS -----------------
-const MatchingStats = ({ players, integration }) => {
+const MatchingStats = ({ players, integration, isDarkMode }) => {
   const matchedCount = players.filter(player => player.match_confidence).length;
   const totalSleeperCount = integration?.matchingStats?.total || players.length;
   const matchRate = integration?.matchingStats?.matchRate || 
@@ -311,46 +348,46 @@ const MatchingStats = ({ players, integration }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       {/* Total Players */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-blue-600">
               {integration?.sleeperTotal?.toLocaleString() || totalSleeperCount.toLocaleString()}
             </div>
-            <div className="text-sm text-gray-600">Total Players</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Players</div>
           </div>
           <div className="text-blue-500 text-2xl">👥</div>
         </div>
       </div>
 
       {/* Matched Players */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-green-600">
               {integration?.enhancedTotal?.toLocaleString() || matchedCount.toLocaleString()}
             </div>
-            <div className="text-sm text-gray-600">Matched Players</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Matched Players</div>
           </div>
           <div className="text-green-500 text-2xl">🔗</div>
         </div>
       </div>
 
       {/* Match Success Rate */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-purple-600">
               {integration?.matchingStats?.matchRate || matchRate}%
             </div>
-            <div className="text-sm text-gray-600">Match Success</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Match Success</div>
           </div>
           <div className="text-purple-500 text-2xl">📊</div>
         </div>
       </div>
 
       {/* Match Confidence Breakdown */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-1">
@@ -364,7 +401,7 @@ const MatchingStats = ({ players, integration }) => {
                 {confidenceStats.Low || 0}
               </span>
             </div>
-            <div className="text-sm text-gray-600">High • Med • Low</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>High • Med • Low</div>
           </div>
           <div className="text-orange-500 text-2xl">🎯</div>
         </div>
@@ -373,47 +410,47 @@ const MatchingStats = ({ players, integration }) => {
   );
 };
 
-const OptimizerStats = () => (
+const OptimizerStats = ({ isDarkMode }) => (
   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
     {/* Current Roster Points */}
-    <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
       <div className="flex items-center justify-between">
         <div>
           <div className="text-2xl font-bold text-blue-600">--</div>
-          <div className="text-sm text-gray-600">Current Roster Points</div>
+          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Current Roster Points</div>
         </div>
         <div className="text-blue-500 text-2xl">⚽</div>
       </div>
     </div>
 
     {/* Optimized Roster Points */}
-    <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
       <div className="flex items-center justify-between">
         <div>
           <div className="text-2xl font-bold text-green-600">--</div>
-          <div className="text-sm text-gray-600">Optimized Roster Points</div>
+          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Optimized Roster Points</div>
         </div>
         <div className="text-green-500 text-2xl">🚀</div>
       </div>
     </div>
 
     {/* % Optimized */}
-    <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
       <div className="flex items-center justify-between">
         <div>
           <div className="text-2xl font-bold text-purple-600">--%</div>
-          <div className="text-sm text-gray-600">% Optimized</div>
+          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>% Optimized</div>
         </div>
         <div className="text-purple-500 text-2xl">📈</div>
       </div>
     </div>
 
     {/* Players to Swap */}
-    <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
       <div className="flex items-center justify-between">
         <div>
           <div className="text-2xl font-bold text-orange-600">--</div>
-          <div className="text-sm text-gray-600">Players to Swap</div>
+          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Players to Swap</div>
         </div>
         <div className="text-orange-500 text-2xl">🔄</div>
       </div>
@@ -421,23 +458,23 @@ const OptimizerStats = () => (
   </div>
 );
 
-const TransferStats = ({ players }) => {
+const TransferStats = ({ players, isDarkMode }) => {
   // Calculate transfer analytics
   const freeAgents = players.filter(p => !p.owned_by);
   const ownedPlayers = players.filter(p => p.owned_by);
   
   // Find outperforming free agents (simplistic calculation for now)
   const outperformingFAs = freeAgents.filter(fa => {
-    const faPoints = fa.sleeper_points_ros || 0;
-    return ownedPlayers.some(owned => (owned.sleeper_points_ros || 0) < faPoints);
+    const faPoints = fa.sleeper_points_ros || fa.total_points || 0;
+    return ownedPlayers.some(owned => (owned.sleeper_points_ros || owned.total_points || 0) < faPoints);
   });
 
   // Calculate recommended moves (best FA vs worst owned)
   const worstOwned = ownedPlayers.sort((a, b) => 
-    (a.sleeper_points_ros || 0) - (b.sleeper_points_ros || 0)
+    (a.sleeper_points_ros || a.total_points || 0) - (b.sleeper_points_ros || b.total_points || 0)
   )[0];
   const bestFA = freeAgents.sort((a, b) => 
-    (b.sleeper_points_ros || 0) - (a.sleeper_points_ros || 0)
+    (b.sleeper_points_ros || b.total_points || 0) - (a.sleeper_points_ros || a.total_points || 0)
   )[0];
 
   const hasUpgrades = outperformingFAs.length > 0;
@@ -447,48 +484,48 @@ const TransferStats = ({ players }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       {/* Available Free Agents */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-blue-600">{freeAgents.length}</div>
-            <div className="text-sm text-gray-600">Available Free Agents</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Available Free Agents</div>
           </div>
           <div className="text-blue-500 text-2xl">🆓</div>
         </div>
       </div>
 
       {/* Outperforming Free Agents */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-green-600">{outperformingFAs.length}</div>
-            <div className="text-sm text-gray-600">Outperforming Free Agents</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Show Upgrades Only</div>
           </div>
           <div className="text-green-500 text-2xl">⭐</div>
         </div>
       </div>
 
       {/* Recommended Moves */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-purple-600">
               {(bestFA && worstOwned) ? 1 : 0}
             </div>
-            <div className="text-sm text-gray-600">Recommended Moves</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Recommended Moves</div>
           </div>
           <div className="text-purple-500 text-2xl">💡</div>
         </div>
       </div>
 
       {/* Status */}
-      <div className="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className={`text-lg font-bold text-${statusColor}-600`}>
               {statusMessage}
             </div>
-            <div className="text-sm text-gray-600">Status</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</div>
           </div>
           <div className={`text-${statusColor}-500 text-2xl`}>
             {hasUpgrades ? "🚨" : "✅"}
@@ -500,18 +537,18 @@ const TransferStats = ({ players }) => {
 };
 
 // ----------------- DASHBOARD HEADER COMPONENT -----------------
-const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab }) => {
+const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, updateData, activeTab, setActiveTab }) => {
   const currentGameweek = getCurrentGameweek();
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
   const cacheAge = CacheManager.getAge();
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-50`}>
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Top Row: Title, Gameweek, Update Button */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-900">⚽ FPL Dashboard</h1>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>⚽ FPL Dashboard</h1>
             
             {/* Data Freshness Indicator */}
             <div className="flex items-center gap-2 text-sm">
@@ -519,8 +556,8 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                 🕒 {freshnessStatus.message}
               </span>
               {cacheAge && (
-                <span className="text-gray-500 text-xs">
-                  (cached {cacheAge}s ago)
+                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  (cached {formatCacheAge(cacheAge)})
                 </span>
               )}
             </div>
@@ -528,14 +565,24 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
 
           <div className="flex items-center gap-4">
             {/* Current Gameweek with Enhanced Display */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-              <div className="text-sm font-medium text-blue-900">
+            <div className={`${isDarkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'} border rounded-lg px-3 py-2`}>
+              <div className={`text-sm font-medium ${isDarkMode ? 'text-blue-100' : 'text-blue-900'}`}>
                 {currentGameweek.statusDisplay}
               </div>
-              <div className="text-xs text-blue-600">
+              <div className={`text-xs ${isDarkMode ? 'text-blue-200' : 'text-blue-600'}`}>
                 {currentGameweek.status === 'upcoming' ? 'Starts' : 'Ends'}: {currentGameweek.date}
               </div>
             </div>
+
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`p-2 rounded-lg transition-colors ${
+                isDarkMode ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
 
             {/* Update Data Button */}
             <button
@@ -561,7 +608,9 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
               className={`px-4 py-2 font-medium rounded-lg transition-colors ${
                 activeTab === tab.id
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  : isDarkMode 
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
               {tab.label}
@@ -580,10 +629,12 @@ export default function FPLDashboard() {
     position: 'all',
     availability: 'all',
     team: 'all',
-    minPoints: 0.1, // ✅ PHASE 1: Changed default from 0 to 0.1
+    owner: 'all', // Added owner filter
+    minPoints: 0.1,
     search: ''
   });
-  const [showUpgradesOnly, setShowUpgradesOnly] = useState(false); // ✅ PHASE 1: Quick action filter
+  const [isDarkMode, setIsDarkMode] = useState(true); // ✅ FIXED: Back to dark mode default
+  const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' }); // ✅ ADDED: Sorting state
   
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
 
@@ -595,7 +646,36 @@ export default function FPLDashboard() {
     refetch(type, forceRefresh, useCache);
   };
 
-  // Filter players based on current filters and quick actions
+  // ✅ ADDED: Sorting function
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // ✅ ADDED: Get sortable value function
+  const getSortValue = (player, key) => {
+    switch (key) {
+      case 'name':
+        return (player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()).toLowerCase();
+      case 'position':
+        return player.position || '';
+      case 'team':
+        return player.team || '';
+      case 'sleeper_points_ros':
+        return player.sleeper_points_ros || player.total_points || 0;
+      case 'sleeper_points_next5':
+        return player.sleeper_points_next5 || player.event_points || 0;
+      case 'owned_by':
+        return player.owned_by || 'Free Agent';
+      default:
+        return '';
+    }
+  };
+
+  // Filter players based on current filters
   const filteredPlayers = players.filter(player => {
     // Position filter
     if (filters.position !== 'all' && player.position !== filters.position) {
@@ -613,8 +693,15 @@ export default function FPLDashboard() {
       return false;
     }
 
-    // Min points filter
-    const playerPoints = player.sleeper_points_ros || 0;
+    // ✅ ADDED: Owner filter
+    if (filters.owner !== 'all') {
+      if (filters.owner === 'free_agents' && player.owned_by) return false;
+      if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') return false;
+      if (filters.owner !== 'free_agents' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
+    }
+
+    // Min points filter - ✅ FIXED: Use multiple point fields
+    const playerPoints = player.sleeper_points_ros || player.total_points || 0;
     if (playerPoints < filters.minPoints) {
       return false;
     }
@@ -635,28 +722,45 @@ export default function FPLDashboard() {
       }
     }
 
-    // ✅ PHASE 1: Show Upgrades Only filter
-    if (showUpgradesOnly && player.owned_by) {
-      return false; // Only show available players when "upgrades only" is active
-    }
-
     return true;
   });
 
-  // Sort players by ROS points (highest first) as default
+  // ✅ ADDED: Sort players based on sort config
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-    const aPoints = a.sleeper_points_ros || 0;
-    const bPoints = b.sleeper_points_ros || 0;
-    return bPoints - aPoints;
+    const aValue = getSortValue(a, sortConfig.key);
+    const bValue = getSortValue(b, sortConfig.key);
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+    } else {
+      const aStr = String(aValue);
+      const bStr = String(bValue);
+      if (sortConfig.direction === 'asc') {
+        return aStr.localeCompare(bStr);
+      } else {
+        return bStr.localeCompare(aStr);
+      }
+    }
   });
 
-  // Get unique teams for filter dropdown
+  // Get unique teams and owners for filter dropdowns
   const teams = [...new Set(players.map(p => p.team).filter(Boolean))].sort();
+  const owners = [...new Set(players.map(p => p.owned_by).filter(Boolean))].sort();
+
+  // ✅ ADDED: Render sort icon
+  const renderSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return <span className="text-gray-400 ml-1">↕️</span>;
+    }
+    return sortConfig.direction === 'asc' ? 
+      <span className="text-blue-500 ml-1">↑</span> : 
+      <span className="text-blue-500 ml-1">↓</span>;
+  };
 
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 text-gray-800">
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
         <div className="flex items-center justify-center min-h-screen">
           <LoadingSpinner 
             message="Loading player data..." 
@@ -669,11 +773,11 @@ export default function FPLDashboard() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 text-gray-800">
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center p-8">
             <h2 className="text-2xl font-bold text-red-600 mb-4">❌ Error Loading Data</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className={`mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
             <button
               onClick={updateData}
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
@@ -690,13 +794,13 @@ export default function FPLDashboard() {
   const renderStatsCards = () => {
     switch(activeTab) {
       case 'players': 
-        return null; // ✅ PHASE 1: No stats cards for players tab
+        return null; // No stats cards for players tab
       case 'matching': 
-        return <MatchingStats players={players} integration={integration} />;
+        return <MatchingStats players={players} integration={integration} isDarkMode={isDarkMode} />;
       case 'optimizer': 
-        return <OptimizerStats />;
+        return <OptimizerStats isDarkMode={isDarkMode} />;
       case 'transfers': 
-        return <TransferStats players={players} />;
+        return <TransferStats players={players} isDarkMode={isDarkMode} />;
       default: 
         return null;
     }
@@ -705,9 +809,11 @@ export default function FPLDashboard() {
   // Main render
   return (
     <ErrorBoundary>
-      <div className="min-h-screen transition-colors bg-gray-50 text-gray-800">
+      <div className={`min-h-screen transition-colors ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
         
         <DashboardHeader
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
           lastUpdated={lastUpdated}
           players={players}
           updateData={updateData}
@@ -725,17 +831,21 @@ export default function FPLDashboard() {
           {activeTab === 'players' && (
             <>
               {/* Filters */}
-              <div className="p-4 rounded-lg mb-6 shadow-sm bg-white border border-gray-200">
+              <div className={`p-4 rounded-lg mb-6 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                   {/* Position Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Position
                     </label>
                     <select
                       value={filters.position}
                       onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
                     >
                       <option value="all">All Positions</option>
                       <option value="GKP">Goalkeeper</option>
@@ -747,13 +857,17 @@ export default function FPLDashboard() {
 
                   {/* Availability Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Availability
                     </label>
                     <select
                       value={filters.availability}
                       onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
                     >
                       <option value="all">All Players</option>
                       <option value="available">Free Agents</option>
@@ -763,13 +877,17 @@ export default function FPLDashboard() {
 
                   {/* Team Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Team
                     </label>
                     <select
                       value={filters.team}
                       onChange={(e) => setFilters(prev => ({ ...prev, team: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
                     >
                       <option value="all">All Teams</option>
                       {teams.map(team => (
@@ -778,9 +896,32 @@ export default function FPLDashboard() {
                     </select>
                   </div>
 
+                  {/* ✅ ADDED: Owner Filter */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Owner
+                    </label>
+                    <select
+                      value={filters.owner}
+                      onChange={(e) => setFilters(prev => ({ ...prev, owner: e.target.value }))}
+                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                    >
+                      <option value="all">All Owners</option>
+                      <option value="free_agents">Free Agents</option>
+                      <option value="ThatDerekGuy">My Players</option>
+                      {owners.filter(owner => owner !== 'ThatDerekGuy').map(owner => (
+                        <option key={owner} value={owner}>{owner}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Min Points Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Min ROS Points
                     </label>
                     <input
@@ -788,14 +929,18 @@ export default function FPLDashboard() {
                       step="0.1"
                       value={filters.minPoints}
                       onChange={(e) => setFilters(prev => ({ ...prev, minPoints: parseFloat(e.target.value) || 0 }))}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
                       placeholder="0.1"
                     />
                   </div>
 
                   {/* Search Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Search
                     </label>
                     <input
@@ -803,75 +948,103 @@ export default function FPLDashboard() {
                       value={filters.search}
                       onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                       placeholder="Player name, team..."
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* ✅ PHASE 1: Quick Action - Show Upgrades Only */}
-                  <div className="flex items-end">
-                    <button
-                      onClick={() => setShowUpgradesOnly(!showUpgradesOnly)}
-                      className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                        showUpgradesOnly 
-                          ? 'bg-orange-500 text-white' 
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                       }`}
-                    >
-                      {showUpgradesOnly ? '✅ Upgrades Only' : '🔍 Show Upgrades Only'}
-                    </button>
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Results Summary */}
               <div className="mb-4 flex items-center justify-between">
-                <div className="text-sm text-gray-600">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
-                  {showUpgradesOnly && <span className="ml-2 text-orange-600 font-medium">(Upgrades Only)</span>}
                 </div>
-                <div className="text-sm text-gray-500">
-                  Sorted by ROS Points (highest first)
+                <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Click column headers to sort
                 </div>
               </div>
 
               {/* Players Table */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className={isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}>
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Player
+                        {/* ✅ ADDED: Sortable headers */}
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('name')}
+                        >
+                          <div className="flex items-center">
+                            Player {renderSortIcon('name')}
+                          </div>
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Position
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('position')}
+                        >
+                          <div className="flex items-center">
+                            Position {renderSortIcon('position')}
+                          </div>
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Team
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('team')}
+                        >
+                          <div className="flex items-center">
+                            Team {renderSortIcon('team')}
+                          </div>
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          ROS Points
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('sleeper_points_ros')}
+                        >
+                          <div className="flex items-center">
+                            ROS Points {renderSortIcon('sleeper_points_ros')}
+                          </div>
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Next 5 GW
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('sleeper_points_next5')}
+                        >
+                          <div className="flex items-center">
+                            Next 5 GW {renderSortIcon('sleeper_points_next5')}
+                          </div>
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Ownership
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('owned_by')}
+                        >
+                          <div className="flex items-center">
+                            Ownership {renderSortIcon('owned_by')}
+                          </div>
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className={`divide-y ${isDarkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
                       {sortedPlayers.map((player, index) => (
-                        <tr key={`${player.sleeper_id || player.id || index}`} className="hover:bg-gray-50">
+                        <tr key={`${player.sleeper_id || player.id || index}`} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div>
-                                <div className="text-sm font-medium text-gray-900">
+                                <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                   {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
-                                  {/* ✅ PHASE 1: Removed match confidence badges */}
                                 </div>
                                 {player.injury_status && (
                                   <div className="text-xs text-red-600">
@@ -882,44 +1055,39 @@ export default function FPLDashboard() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              player.position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
-                              player.position === 'DEF' ? 'bg-blue-100 text-blue-800' :
-                              player.position === 'MID' ? 'bg-green-100 text-green-800' :
-                              player.position === 'FWD' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            {/* ✅ FIXED: Sleeper position colors */}
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSleeperPositionStyle(player.position)}`}>
                               {player.position || 'N/A'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                             {player.team || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {player.sleeper_points_ros ? player.sleeper_points_ros.toFixed(1) : 'N/A'}
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {/* ✅ FIXED: Use multiple point fields */}
+                            {(player.sleeper_points_ros || player.total_points) ? 
+                              (player.sleeper_points_ros || player.total_points).toFixed(1) : 
+                              'N/A'
+                            }
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {player.sleeper_points_next5 ? player.sleeper_points_next5.toFixed(1) : 'N/A'}
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {(player.sleeper_points_next5 || player.event_points) ? 
+                              (player.sleeper_points_next5 || player.event_points).toFixed(1) : 
+                              'N/A'
+                            }
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {player.owned_by ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {player.owned_by}
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                player.owned_by === 'ThatDerekGuy' 
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                  : 'bg-purple-100 text-purple-800 border border-purple-300'
+                              }`}>
+                                {player.owned_by === 'ThatDerekGuy' ? '👤 My Player' : player.owned_by}
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Free Agent
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {player.match_confidence ? (
-                              <span className="text-xs text-gray-500">
-                                Matched
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">
-                                No prediction
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
+                                🆓 Free Agent
                               </span>
                             )}
                           </td>
@@ -933,17 +1101,17 @@ export default function FPLDashboard() {
               {/* No Results Message */}
               {sortedPlayers.length === 0 && (
                 <div className="text-center py-8">
-                  <div className="text-gray-500 mb-2">No players match your current filters</div>
+                  <div className={`mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No players match your current filters</div>
                   <button
                     onClick={() => {
                       setFilters({
                         position: 'all',
                         availability: 'all',
                         team: 'all',
+                        owner: 'all',
                         minPoints: 0.1,
                         search: ''
                       });
-                      setShowUpgradesOnly(false);
                     }}
                     className="text-blue-500 hover:text-blue-600 text-sm underline"
                   >
@@ -956,9 +1124,9 @@ export default function FPLDashboard() {
 
           {/* Other tabs content - placeholder for now */}
           {activeTab === 'matching' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Player Matching Details</h3>
-              <p className="text-gray-600">
+            <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Player Matching Details</h3>
+              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
                 Detailed matching statistics and diagnostics will be displayed here.
                 Currently showing {players.filter(p => p.match_confidence).length} successfully matched players.
               </p>
@@ -966,9 +1134,9 @@ export default function FPLDashboard() {
           )}
 
           {activeTab === 'optimizer' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Formation Optimizer</h3>
-              <p className="text-gray-600">
+            <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Formation Optimizer</h3>
+              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
                 Formation optimization tools will be available here soon.
                 Analyze different formations and find the optimal lineup based on predicted points.
               </p>
@@ -976,9 +1144,9 @@ export default function FPLDashboard() {
           )}
 
           {activeTab === 'transfers' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Transfer Analysis</h3>
-              <p className="text-gray-600">
+            <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Transfer Analysis</h3>
+              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
                 Smart transfer recommendations and roster analysis will be displayed here.
                 Compare your current roster with available free agents to find optimal moves.
               </p>
