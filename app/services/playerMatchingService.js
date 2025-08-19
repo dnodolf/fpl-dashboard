@@ -19,6 +19,7 @@ export class PlayerMatchingService {
       'son heung min|TOT': 'heung-min son',
       'estevao|CHE': 'estevao',
       'igor jesus|NFO': 'igor jesus',
+      'jacob bruun larsen|BUR': 'bruun larsen',
       'martin zubimendi|ARS': 'martín zubimendi'
     };
 
@@ -29,7 +30,8 @@ export class PlayerMatchingService {
       'EVE': 'EVE', 'FUL': 'FUL', 'LIV': 'LIV', 'LUT': 'LUT',
       'MCI': 'MCI', 'MUN': 'MUN', 'NEW': 'NEW', 'NFO': 'NFO',
       'SHU': 'SHU', 'TOT': 'TOT', 'WHU': 'WHU', 'WOL': 'WOL',
-      'SUN': 'SUN', 'LEI': 'LEI', 'IPS': 'IPS', 'SOU': 'SOU'
+      'SUN': 'SUN', 'LEI': 'LEI', 'IPS': 'IPS', 'SOU': 'SOU',
+      'BURNLEY': 'BUR', 'WOLVES': 'WOL', 'WOLVERHAMPTON': 'WOL'
     };
 
     // Position mappings
@@ -107,13 +109,28 @@ export class PlayerMatchingService {
            `${this.getFFHPlayerName(ffhPlayer)}_${this.getFFHTeam(ffhPlayer)}`;
   }
 
-  // Calculate name similarity
+  // Calculate name similarity with enhanced similar surname detection
   calculateNameSimilarity(name1, name2) {
     if (!name1 || !name2) return 0;
     
     // Split names into parts
     const parts1 = name1.toLowerCase().split(' ').filter(p => p.length > 1);
     const parts2 = name2.toLowerCase().split(' ').filter(p => p.length > 1);
+    
+    // ENHANCED: Check for similar surname but different first name cases
+    if (parts1.length >= 2 && parts2.length >= 2) {
+      const lastName1 = parts1[parts1.length - 1];
+      const lastName2 = parts2[parts2.length - 1];
+      const firstName1 = parts1[0];
+      const firstName2 = parts2[0];
+      
+      // If surnames are similar but first names are completely different, penalize heavily
+      if (this.levenshteinSimilarity(lastName1, lastName2) > 0.7 && 
+          this.levenshteinSimilarity(firstName1, firstName2) < 0.3) {
+        console.log(`⚠️ Similar surname detected: "${name1}" vs "${name2}" - Reducing match score`);
+        return 0.2; // Very low score to prevent false matches
+      }
+    }
     
     // Check for any matching parts
     let bestMatch = 0;
