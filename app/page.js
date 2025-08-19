@@ -974,10 +974,10 @@ export default function FPLDashboard() {
               <div className="mb-4 flex items-center justify-between">
                 <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
-                  {/* Debug: Show free agent count */}
+                  {/* ✅ FIXED: Debug - correct free agent detection */}
                   <span className="ml-2 text-xs">
-                    (Free Agents: {players.filter(p => !p.owned_by).length}, 
-                     Owned: {players.filter(p => p.owned_by).length})
+                    (Free Agents: {players.filter(p => !p.owned_by || p.owned_by === 'Free Agent').length}, 
+                     Owned: {players.filter(p => p.owned_by && p.owned_by !== 'Free Agent').length})
                   </span>
                 </div>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
