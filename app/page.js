@@ -555,11 +555,7 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${freshnessStatus.color}-100 text-${freshnessStatus.color}-800`}>
                 🕒 {freshnessStatus.message}
               </span>
-              {cacheAge && (
-                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  (cached {formatCacheAge(cacheAge)})
-                </span>
-              )}
+
             </div>
           </div>
 
@@ -665,9 +661,11 @@ export default function FPLDashboard() {
       case 'team':
         return player.team || '';
       case 'sleeper_points_ros':
-        return player.sleeper_points_ros || player.total_points || 0;
+        // ✅ FIXED: Try multiple point fields in order
+        return player.sleeper_points_ros || player.ros_points || player.total_points || player.event_points || 0;
       case 'sleeper_points_next5':
-        return player.sleeper_points_next5 || player.event_points || 0;
+        // ✅ FIXED: Try multiple next 5 fields in order  
+        return player.sleeper_points_next5 || player.next5_points || player.event_points || player.form || 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -701,7 +699,7 @@ export default function FPLDashboard() {
     }
 
     // Min points filter - ✅ FIXED: Use multiple point fields
-    const playerPoints = player.sleeper_points_ros || player.total_points || 0;
+    const playerPoints = player.sleeper_points_ros || player.ros_points || player.total_points || player.event_points || 0;
     if (playerPoints < filters.minPoints) {
       return false;
     }
