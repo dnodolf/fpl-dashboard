@@ -724,6 +724,30 @@ export default function FPLDashboard() {
         // Estimate: season points / 38 * 5
         const seasonPoints = this.getSortValue(player, 'sleeper_points_ros');
         return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
+      case 'avg_minutes_next5':
+        // ✅ NEW: Calculate average minutes from FFH predictions
+        if (player.predictions && Array.isArray(player.predictions)) {
+          const next5Predictions = player.predictions.slice(0, 5);
+          if (next5Predictions.length > 0) {
+            const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
+            return totalMinutes / next5Predictions.length;
+          }
+        }
+        // Fallback: try to parse from ffh_gw_predictions if available
+        if (player.ffh_gw_predictions) {
+          try {
+            const gwPreds = JSON.parse(player.ffh_gw_predictions);
+            const predictionValues = Object.values(gwPreds).slice(0, 5);
+            if (predictionValues.length > 0 && predictionValues[0].xmins !== undefined) {
+              const totalMinutes = predictionValues.reduce((total, pred) => total + (pred.xmins || 0), 0);
+              return totalMinutes / predictionValues.length;
+            }
+          } catch (e) {
+            // Fall through to default
+          }
+        }
+        // Default assumption: 90 minutes if no data
+        return 90;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -1091,6 +1115,16 @@ export default function FPLDashboard() {
                             Next 5 GW {renderSortIcon('sleeper_points_next5')}
                           </div>
                         </th>
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('avg_minutes_next5')}
+                        >
+                          <div className="flex items-center">
+                            Avg Mins (Next 5) {renderSortIcon('avg_minutes_next5')}
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${isDarkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
@@ -1169,6 +1203,35 @@ export default function FPLDashboard() {
                               // Estimate: season points / 38 * 5
                               const seasonPoints = player.sleeper_season_total || (player.sleeper_season_avg * 38) || player.ffh_season_prediction || player.predicted_pts || player.total_points || 0;
                               return seasonPoints > 0 ? ((seasonPoints / 38) * 5).toFixed(1) : 'N/A';
+                            })()}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {(() => {
+                              // ✅ NEW: Calculate average minutes from FFH predictions
+                              if (player.predictions && Array.isArray(player.predictions)) {
+                                const next5Predictions = player.predictions.slice(0, 5);
+                                if (next5Predictions.length > 0) {
+                                  const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
+                                  const avgMinutes = totalMinutes / next5Predictions.length;
+                                  return avgMinutes > 0 ? avgMinutes.toFixed(0) : 'N/A';
+                                }
+                              }
+                              // Fallback: try to parse from ffh_gw_predictions if available
+                              if (player.ffh_gw_predictions) {
+                                try {
+                                  const gwPreds = JSON.parse(player.ffh_gw_predictions);
+                                  const predictionValues = Object.values(gwPreds).slice(0, 5);
+                                  if (predictionValues.length > 0 && predictionValues[0].xmins !== undefined) {
+                                    const totalMinutes = predictionValues.reduce((total, pred) => total + (pred.xmins || 0), 0);
+                                    const avgMinutes = totalMinutes / predictionValues.length;
+                                    return avgMinutes > 0 ? avgMinutes.toFixed(0) : 'N/A';
+                                  }
+                                } catch (e) {
+                                  // Fall through to default
+                                }
+                              }
+                              // Default: show 90 if no data available
+                              return '90';
                             })()}
                           </td>
                         </tr>
