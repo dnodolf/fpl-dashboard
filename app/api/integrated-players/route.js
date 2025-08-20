@@ -364,6 +364,30 @@ async function integratePlayersWithYourServices() {
       
       if (!sleeperPlayer.id) continue;
       
+      // ✅ DEBUG: Log Chris Richards specifically
+      if (sleeperPlayer.full_name === 'Chris Richards' || sleeperPlayer.id === '2168') {
+        console.log('🔍 DEBUG: Chris Richards matching details:');
+        console.log('- Sleeper ID:', sleeperPlayer.id);
+        console.log('- Sleeper Name:', sleeperPlayer.full_name);
+        console.log('- Sleeper Team:', sleeperPlayer.team_abbr);
+        console.log('- Sleeper Position:', sleeperPlayer.position);
+        console.log('- FFH Player Found:', !!ffhPlayer);
+        if (ffhPlayer) {
+          console.log('- FFH Name:', ffhPlayer.web_name);
+          console.log('- FFH Team Structure:', JSON.stringify(ffhPlayer.team, null, 2));
+          console.log('- FFH Club:', ffhPlayer.club);
+          console.log('- FFH Position ID:', ffhPlayer.position_id);
+          console.log('- FFH Predictions Array:', ffhPlayer.predictions ? ffhPlayer.predictions.length : 'MISSING');
+          console.log('- FFH Season Prediction:', ffhPlayer.season_prediction);
+          if (ffhPlayer.predictions && ffhPlayer.predictions.length > 0) {
+            console.log('- Sample FFH Prediction:', JSON.stringify(ffhPlayer.predictions[0], null, 2));
+          }
+        }
+        console.log('- Match Confidence:', confidence);
+        console.log('- Match Method:', method);
+        console.log('- Match Score:', matchResult.score);
+      }
+      
       matchingStats.total++;
       
       // Normalize position
@@ -394,7 +418,7 @@ async function integratePlayersWithYourServices() {
         age: sleeperPlayer.age || null
       };
 
-if (ffhPlayer) {
+      if (ffhPlayer) {
         // Found a match! Apply scoring conversion
         matchingStats.matched++;
         matchingStats.byMethod[method] = (matchingStats.byMethod[method] || 0) + 1;
@@ -487,8 +511,21 @@ if (ffhPlayer) {
         // FFH metadata
         enhancedPlayer.ffh_id = ffhPlayer.fpl_id || ffhPlayer.id;
         enhancedPlayer.ffh_web_name = ffhPlayer.web_name || ffhPlayer.name;
-        enhancedPlayer.ffh_team = ffhPlayer.club || ffhPlayer.team;
+        enhancedPlayer.ffh_team = extractFFHTeam(ffhPlayer);
         enhancedPlayer.ffh_position_id = ffhPlayer.position_id;
+        
+        // ✅ DEBUG: Log Chris Richards enhancement results
+        if (sleeperPlayer.full_name === 'Chris Richards' || sleeperPlayer.id === '2168') {
+          console.log('🔍 DEBUG: Chris Richards enhancement results:');
+          console.log('- Enhanced Position:', position);
+          console.log('- FFH Season Prediction:', ffhSeasonPrediction);
+          console.log('- Sleeper Season Total:', enhancedPlayer.sleeper_season_total);
+          console.log('- Avg Minutes Next 5:', enhancedPlayer.avg_minutes_next5);
+          console.log('- Predictions Array Length:', enhancedPlayer.predictions?.length);
+          if (enhancedPlayer.predictions && enhancedPlayer.predictions.length > 0) {
+            console.log('- First Prediction xmins:', enhancedPlayer.predictions[0].xmins);
+          }
+        }
         
         console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts (${confidence}), Avg Mins: ${enhancedPlayer.avg_minutes_next5 || 'N/A'}`);
         
@@ -497,7 +534,7 @@ if (ffhPlayer) {
         matchingStats.byMethod['No Match']++;
         matchingStats.byConfidence['None']++;
         
-        const estimatedPoints = { 'GK': 120, 'DEF': 110, 'MID': 90, 'FWD': 100 }[position] || 90;
+        const estimatedPoints = { 'GKP': 120, 'DEF': 110, 'MID': 90, 'FWD': 100 }[position] || 90;
         enhancedPlayer.sleeper_season_total = estimatedPoints;
         enhancedPlayer.sleeper_season_avg = estimatedPoints / 38;
         enhancedPlayer.ffh_season_prediction = 0;
@@ -505,6 +542,11 @@ if (ffhPlayer) {
         enhancedPlayer.ffh_matched = false;
         enhancedPlayer.scoring_conversion_applied = false;
         enhancedPlayer.avg_minutes_next5 = 0; // ✅ ADDED: Default for unmatched players
+        
+        // ✅ DEBUG: Log if Chris Richards wasn't matched
+        if (sleeperPlayer.full_name === 'Chris Richards' || sleeperPlayer.id === '2168') {
+          console.log('❌ DEBUG: Chris Richards was NOT matched to any FFH player!');
+        }
       }
       
       enhancedPlayers.push(enhancedPlayer);
