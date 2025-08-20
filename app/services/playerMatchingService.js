@@ -287,215 +287,292 @@ export class PlayerMatchingService {
   // ✅ UPDATED: MULTI-TIER MATCHING WITH STANDARDIZED DATA
   // ===============================
 
-  findBestFFHMatchOptimal(sleeperPlayer, availableFFHPlayers, diagnostics) {
-    if (!sleeperPlayer) return null;
+findBestFFHMatchOptimal(sleeperPlayer, availableFFHPlayers, diagnostics) {
+  if (!sleeperPlayer) return null;
 
-    // ✅ CRITICAL: Use standardized data extraction
-    const sleeperData = this.extractSleeperData(sleeperPlayer);
-    if (!sleeperData || !sleeperData.name) return null;
+  // ✅ CRITICAL: Use standardized data extraction
+  const sleeperData = this.extractSleeperData(sleeperPlayer);
+  if (!sleeperData || !sleeperData.name) return null;
 
-    const sleeperName = this.normalizeNameForMatching(sleeperData.name);
-    const sleeperTeam = this.normalizeTeamForMatching(sleeperData.team);
-    const sleeperKey = `${sleeperName}|${sleeperTeam}`;
+  const sleeperName = this.normalizeNameForMatching(sleeperData.name);
+  const sleeperTeam = this.normalizeTeamForMatching(sleeperData.team);
+  const sleeperKey = `${sleeperName}|${sleeperTeam}`;
 
-    // Enhanced debugging for problematic cases
-    const isChrisRichards = sleeperData.name.toLowerCase().includes('chris richards');
-    if (isChrisRichards) {
-      console.log('🔍 CHRIS RICHARDS DEBUG (STANDARDIZED):');
-      console.log('- Raw Sleeper:', sleeperData._raw.full_name, sleeperData._raw.team_abbr);
-      console.log('- Standardized:', sleeperData);
-      console.log('- Normalized Name:', sleeperName);
-      console.log('- Normalized Team:', sleeperTeam);
-      console.log('- Override Key:', sleeperKey);
-    }
-
-    // TIER 0: Manual Overrides (Highest Priority)
-    if (this.manualOverrides[sleeperKey]) {
-      const targetName = this.normalizeNameForMatching(this.manualOverrides[sleeperKey]);
-      const override = availableFFHPlayers.find(p => {
-        const ffhData = this.extractFFHData(p);
-        if (!ffhData) return false;
-        
-        const ffhName = this.normalizeNameForMatching(ffhData.name);
-        const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
-        
-        if (isChrisRichards) {
-          console.log(`  Override check: "${ffhName}" (${ffhTeam}) vs target "${targetName}"`);
-        }
-        
-        return ffhName === targetName || ffhName.includes(targetName) || targetName.includes(ffhName);
-      });
-      
-      if (override) {
-        const ffhData = this.extractFFHData(override);
-        if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Manual override matched!');
-        
-        diagnostics.push({
-          sleeper: `${sleeperData.name} (${sleeperTeam})`,
-          ffh: `${ffhData.name} (${ffhData.team})`,
-          method: 'Manual Override',
-          confidence: 'High',
-          score: 1.0
-        });
-        return override;
-      }
-    }
-
-    // ✅ TIER 1: Opta ID Match (FIXED FIELD MAPPING)
-    if (sleeperData.opta_id) {
-      const optaMatch = availableFFHPlayers.find(p => {
-        const ffhData = this.extractFFHData(p);
-        return ffhData && ffhData.opta_id && ffhData.opta_id === sleeperData.opta_id;
-      });
-      
-      if (optaMatch) {
-        const ffhData = this.extractFFHData(optaMatch);
-        if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Opta ID matched!');
-        
-        diagnostics.push({
-          sleeper: `${sleeperData.name} (${sleeperTeam})`,
-          ffh: `${ffhData.name} (${ffhData.team})`,
-          method: 'Opta ID',
-          confidence: 'High',
-          score: 1.0
-        });
-        return optaMatch;
-      }
-    }
-
-    // ✅ TIER 2: FPL ID Match (FIXED FIELD MAPPING)
-    if (sleeperData.rotowire_id) {
-      const fplMatch = availableFFHPlayers.find(p => {
-        const ffhData = this.extractFFHData(p);
-        return ffhData && ffhData.fpl_id && 
-               String(ffhData.fpl_id) === String(sleeperData.rotowire_id);
-      });
-      
-      if (fplMatch) {
-        const ffhData = this.extractFFHData(fplMatch);
-        if (isChrisRichards) console.log('✅ CHRIS RICHARDS: FPL ID matched!');
-        
-        diagnostics.push({
-          sleeper: `${sleeperData.name} (${sleeperTeam})`,
-          ffh: `${ffhData.name} (${ffhData.team})`,
-          method: 'FPL ID',
-          confidence: 'High',
-          score: 1.0
-        });
-        return fplMatch;
-      }
-    }
-
-    // TIER 3: Name + Team Match (Good for remaining players)
-    if (sleeperTeam) {
-      const teamMatches = availableFFHPlayers.filter(p => {
-        const ffhData = this.extractFFHData(p);
-        if (!ffhData) return false;
-        
-        const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
-        return ffhTeam === sleeperTeam;
-      });
-      
-      if (isChrisRichards) {
-        console.log(`- Team matches found: ${teamMatches.length}`);
-        teamMatches.forEach(tm => {
-          const ffhData = this.extractFFHData(tm);
-          console.log(`  - ${ffhData.name} (${ffhData.team})`);
-        });
-      }
-      
-      if (teamMatches.length > 0) {
-        let bestTeamMatch = null;
-        let bestTeamScore = 0;
-        
-        for (const ffhPlayer of teamMatches) {
-          const ffhData = this.extractFFHData(ffhPlayer);
-          if (!ffhData) continue;
-          
-          const ffhName = this.normalizeNameForMatching(ffhData.name);
-          const score = this.calculateNameSimilarity(sleeperName, ffhName);
-          
-          if (isChrisRichards) {
-            console.log(`    Name similarity: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)}`);
-          }
-          
-          if (score >= 0.6 && score > bestTeamScore) {
-            bestTeamScore = score;
-            bestTeamMatch = ffhPlayer;
-          }
-        }
-        
-        if (bestTeamMatch) {
-          const ffhData = this.extractFFHData(bestTeamMatch);
-          const confidence = this.assignConfidence(bestTeamScore);
-          
-          if (isChrisRichards) {
-            console.log(`✅ CHRIS RICHARDS: Best team match found with score ${bestTeamScore.toFixed(3)}`);
-          }
-          
-          diagnostics.push({
-            sleeper: `${sleeperData.name} (${sleeperTeam})`,
-            ffh: `${ffhData.name} (${ffhData.team})`,
-            method: 'Name+Team',
-            confidence,
-            score: bestTeamScore
-          });
-          return bestTeamMatch;
-        }
-      }
-    }
-
-    // TIER 4: Name Only Match (Last resort - very high threshold)
-    let bestMatch = null;
-    let bestScore = 0;
+  // Enhanced debugging for problematic cases
+  const isChrisRichards = sleeperData.name.toLowerCase().includes('chris richards');
+  if (isChrisRichards) {
+    console.log('🔍 CHRIS RICHARDS DEBUG (STANDARDIZED):');
+    console.log('- Raw Sleeper:', sleeperData._raw.full_name, sleeperData._raw.team_abbr);
+    console.log('- Standardized:', sleeperData);
+    console.log('- Normalized Name:', sleeperName);
+    console.log('- Normalized Team:', sleeperTeam);
+    console.log('- Override Key:', sleeperKey);
+    console.log('- Available FFH Players Count:', availableFFHPlayers.length);
     
-    for (const ffhPlayer of availableFFHPlayers) {
-      const ffhData = this.extractFFHData(ffhPlayer);
-      if (!ffhData) continue;
+    // DEBUG: Show first few FFH players with their data structure
+    console.log('- First 3 FFH players structure:');
+    availableFFHPlayers.slice(0, 3).forEach((p, idx) => {
+      console.log(`  [${idx}] Raw FFH:`, {
+        web_name: p.web_name,
+        name: p.name,
+        team: p.team,
+        opta_uuid: p.opta_uuid,
+        opta_id: p.opta_id,
+        fpl_id: p.fpl_id
+      });
+      const extracted = this.extractFFHData(p);
+      console.log(`  [${idx}] Extracted:`, extracted);
+    });
+    
+    // DEBUG: Look for any FFH player with matching Opta ID
+    const ffhWithSameOpta = availableFFHPlayers.filter(p => {
+      const ffhData = this.extractFFHData(p);
+      return ffhData && ffhData.opta_id === sleeperData.opta_id;
+    });
+    console.log(`- FFH players with matching Opta ID (${sleeperData.opta_id}):`, ffhWithSameOpta.length);
+    if (ffhWithSameOpta.length > 0) {
+      ffhWithSameOpta.forEach(p => {
+        const ffhData = this.extractFFHData(p);
+        console.log(`  - Found: ${ffhData.name} (${ffhData.team}) - Opta: ${ffhData.opta_id}`);
+      });
+    }
+  }
+
+  // TIER 0: Manual Overrides (Highest Priority)
+  if (this.manualOverrides[sleeperKey]) {
+    const targetName = this.normalizeNameForMatching(this.manualOverrides[sleeperKey]);
+    const override = availableFFHPlayers.find(p => {
+      const ffhData = this.extractFFHData(p);
+      if (!ffhData) return false;
       
       const ffhName = this.normalizeNameForMatching(ffhData.name);
-      const score = this.calculateNameSimilarity(sleeperName, ffhName);
+      const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
       
-      if (isChrisRichards && score > 0.1) {
-        console.log(`    Name-only: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)} (need >= 0.85)`);
-      }
-      
-      if (score >= 0.85 && score > bestScore) {
-        bestScore = score;
-        bestMatch = ffhPlayer;
-      }
-    }
-    
-    if (bestMatch) {
-      const ffhData = this.extractFFHData(bestMatch);
       if (isChrisRichards) {
-        console.log(`✅ CHRIS RICHARDS: Name-only match found with score ${bestScore.toFixed(3)}`);
+        console.log(`  Override check: "${ffhName}" (${ffhTeam}) vs target "${targetName}"`);
       }
+      
+      return ffhName === targetName || ffhName.includes(targetName) || targetName.includes(ffhName);
+    });
+    
+    if (override) {
+      const ffhData = this.extractFFHData(override);
+      if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Manual override matched!');
       
       diagnostics.push({
         sleeper: `${sleeperData.name} (${sleeperTeam})`,
         ffh: `${ffhData.name} (${ffhData.team})`,
-        method: 'Name Only',
-        confidence: 'Medium',
-        score: bestScore
+        method: 'Manual Override',
+        confidence: 'High',
+        score: 1.0
       });
-      return bestMatch;
+      return override;
+    } else if (isChrisRichards) {
+      console.log('❌ CHRIS RICHARDS: Manual override not found');
     }
+  }
 
-    // No match found
+  // ✅ TIER 1: Opta ID Match (FIXED FIELD MAPPING)
+  if (sleeperData.opta_id) {
     if (isChrisRichards) {
-      console.log('❌ CHRIS RICHARDS: No match found in any tier');
+      console.log(`🔍 CHRIS RICHARDS: Searching for Opta ID match: ${sleeperData.opta_id}`);
+    }
+    
+    const optaMatch = availableFFHPlayers.find(p => {
+      const ffhData = this.extractFFHData(p);
+      const hasMatch = ffhData && ffhData.opta_id && ffhData.opta_id === sleeperData.opta_id;
+      
+      if (isChrisRichards && ffhData) {
+        console.log(`  Checking: ${ffhData.name} - Opta: "${ffhData.opta_id}" vs "${sleeperData.opta_id}" = ${hasMatch}`);
+      }
+      
+      return hasMatch;
+    });
+    
+    if (optaMatch) {
+      const ffhData = this.extractFFHData(optaMatch);
+      if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Opta ID matched!');
+      
+      diagnostics.push({
+        sleeper: `${sleeperData.name} (${sleeperTeam})`,
+        ffh: `${ffhData.name} (${ffhData.team})`,
+        method: 'Opta ID',
+        confidence: 'High',
+        score: 1.0
+      });
+      return optaMatch;
+    } else if (isChrisRichards) {
+      console.log('❌ CHRIS RICHARDS: No Opta ID match found');
+    }
+  } else if (isChrisRichards) {
+    console.log('❌ CHRIS RICHARDS: No Opta ID in Sleeper data');
+  }
+
+  // ✅ TIER 2: FPL ID Match (FIXED FIELD MAPPING)
+  if (sleeperData.rotowire_id) {
+    if (isChrisRichards) {
+      console.log(`🔍 CHRIS RICHARDS: Searching for FPL ID match: ${sleeperData.rotowire_id}`);
+    }
+    
+    const fplMatch = availableFFHPlayers.find(p => {
+      const ffhData = this.extractFFHData(p);
+      const hasMatch = ffhData && ffhData.fpl_id && 
+             String(ffhData.fpl_id) === String(sleeperData.rotowire_id);
+             
+      if (isChrisRichards && ffhData) {
+        console.log(`  Checking: ${ffhData.name} - FPL: "${ffhData.fpl_id}" vs "${sleeperData.rotowire_id}" = ${hasMatch}`);
+      }
+      
+      return hasMatch;
+    });
+    
+    if (fplMatch) {
+      const ffhData = this.extractFFHData(fplMatch);
+      if (isChrisRichards) console.log('✅ CHRIS RICHARDS: FPL ID matched!');
+      
+      diagnostics.push({
+        sleeper: `${sleeperData.name} (${sleeperTeam})`,
+        ffh: `${ffhData.name} (${ffhData.team})`,
+        method: 'FPL ID',
+        confidence: 'High',
+        score: 1.0
+      });
+      return fplMatch;
+    } else if (isChrisRichards) {
+      console.log('❌ CHRIS RICHARDS: No FPL ID match found');
+    }
+  } else if (isChrisRichards) {
+    console.log('❌ CHRIS RICHARDS: No FPL/Rotowire ID in Sleeper data');
+  }
+
+  // TIER 3: Name + Team Match (Good for remaining players)
+  if (sleeperTeam) {
+    if (isChrisRichards) {
+      console.log(`🔍 CHRIS RICHARDS: Searching for team matches: ${sleeperTeam}`);
+    }
+    
+    const teamMatches = availableFFHPlayers.filter(p => {
+      const ffhData = this.extractFFHData(p);
+      if (!ffhData) return false;
+      
+      const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
+      const hasMatch = ffhTeam === sleeperTeam;
+      
+      if (isChrisRichards) {
+        console.log(`  Team check: ${ffhData.name} - "${ffhTeam}" vs "${sleeperTeam}" = ${hasMatch}`);
+      }
+      
+      return hasMatch;
+    });
+    
+    if (isChrisRichards) {
+      console.log(`- Team matches found: ${teamMatches.length}`);
+      teamMatches.forEach(tm => {
+        const ffhData = this.extractFFHData(tm);
+        console.log(`  - ${ffhData.name} (${ffhData.team})`);
+      });
+    }
+    
+    if (teamMatches.length > 0) {
+      let bestTeamMatch = null;
+      let bestTeamScore = 0;
+      
+      for (const ffhPlayer of teamMatches) {
+        const ffhData = this.extractFFHData(ffhPlayer);
+        if (!ffhData) continue;
+        
+        const ffhName = this.normalizeNameForMatching(ffhData.name);
+        const score = this.calculateNameSimilarity(sleeperName, ffhName);
+        
+        if (isChrisRichards) {
+          console.log(`    Name similarity: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)}`);
+        }
+        
+        if (score >= 0.6 && score > bestTeamScore) {
+          bestTeamScore = score;
+          bestTeamMatch = ffhPlayer;
+        }
+      }
+      
+      if (bestTeamMatch) {
+        const ffhData = this.extractFFHData(bestTeamMatch);
+        const confidence = this.assignConfidence(bestTeamScore);
+        
+        if (isChrisRichards) {
+          console.log(`✅ CHRIS RICHARDS: Best team match found with score ${bestTeamScore.toFixed(3)}`);
+        }
+        
+        diagnostics.push({
+          sleeper: `${sleeperData.name} (${sleeperTeam})`,
+          ffh: `${ffhData.name} (${ffhData.team})`,
+          method: 'Name+Team',
+          confidence,
+          score: bestTeamScore
+        });
+        return bestTeamMatch;
+      } else if (isChrisRichards) {
+        console.log('❌ CHRIS RICHARDS: No good team+name match found (scores too low)');
+      }
+    } else if (isChrisRichards) {
+      console.log('❌ CHRIS RICHARDS: No team matches found');
+    }
+  }
+
+  // TIER 4: Name Only Match (Last resort - very high threshold)
+  if (isChrisRichards) {
+    console.log('🔍 CHRIS RICHARDS: Trying name-only matching...');
+  }
+  
+  let bestMatch = null;
+  let bestScore = 0;
+  
+  for (const ffhPlayer of availableFFHPlayers) {
+    const ffhData = this.extractFFHData(ffhPlayer);
+    if (!ffhData) continue;
+    
+    const ffhName = this.normalizeNameForMatching(ffhData.name);
+    const score = this.calculateNameSimilarity(sleeperName, ffhName);
+    
+    if (isChrisRichards && score > 0.1) {
+      console.log(`    Name-only: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)} (need >= 0.85)`);
+    }
+    
+    if (score >= 0.85 && score > bestScore) {
+      bestScore = score;
+      bestMatch = ffhPlayer;
+    }
+  }
+  
+  if (bestMatch) {
+    const ffhData = this.extractFFHData(bestMatch);
+    if (isChrisRichards) {
+      console.log(`✅ CHRIS RICHARDS: Name-only match found with score ${bestScore.toFixed(3)}`);
     }
     
     diagnostics.push({
       sleeper: `${sleeperData.name} (${sleeperTeam})`,
-      ffh: 'No match found',
-      method: 'No Match',
-      confidence: 'None',
-      score: 0
+      ffh: `${ffhData.name} (${ffhData.team})`,
+      method: 'Name Only',
+      confidence: 'Medium',
+      score: bestScore
     });
-    return null;
+    return bestMatch;
   }
+
+  // No match found
+  if (isChrisRichards) {
+    console.log('❌ CHRIS RICHARDS: No match found in any tier');
+  }
+  
+  diagnostics.push({
+    sleeper: `${sleeperData.name} (${sleeperTeam})`,
+    ffh: 'No match found',
+    method: 'No Match',
+    confidence: 'None',
+    score: 0
+  });
+  return null;
+}
 
   // ===============================
   // MAIN MATCHING METHOD (unchanged)
