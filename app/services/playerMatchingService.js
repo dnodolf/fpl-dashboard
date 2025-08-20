@@ -501,130 +501,182 @@ export class PlayerMatchingService {
   // MAIN MATCHING METHOD (unchanged)
   // ===============================
 
-  async matchAllPlayers(sleeperPlayers, ffhPlayers) {
-    const diagnostics = [];
-    const matches = [];
+// ✅ FIXED: matchAllPlayers method with Chris Richards debugging
+async matchAllPlayers(sleeperPlayers, ffhPlayers) {
+  const diagnostics = [];
+  const matches = [];
+  const stats = {
+    total: sleeperPlayers.length,
+    matched: 0,
+    byMethod: {},
+    byConfidence: {}
+  };
 
-    // ✅ ADD THIS DEBUG CODE:
-    console.log('🔍 MATCHING SERVICE: Starting with', sleeperPlayers.length, 'players');
+  console.log('🔍 MATCHING SERVICE: Starting with', sleeperPlayers.length, 'players');
+  
+  // Check if Chris Richards is in the input
+  const chrisInInput = sleeperPlayers.find(p => 
+    p.id === '2168' || (p.name && p.name.toLowerCase().includes('chris richards'))
+  );
+  console.log('🔍 CHRIS RICHARDS IN SERVICE INPUT:', !!chrisInInput);
+  if (chrisInInput) {
+    console.log('- Service Input Data:', { 
+      id: chrisInInput.id, 
+      name: chrisInInput.name, 
+      team: chrisInInput.team_abbr || chrisInInput.team,
+      opta_id: chrisInInput.opta_id 
+    });
+  }
+
+  console.log(`🔄 STANDARDIZED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
+
+  // Track which FFH players have been used
+  const usedFFHPlayerIds = new Set();
+  
+  console.log('🔍 ABOUT TO PROCESS', sleeperPlayers.length, 'players in main loop');
+  
+  // ✅ FIXED: Process each player with enhanced debugging
+  for (let i = 0; i < sleeperPlayers.length; i++) {
+    const sleeperPlayer = sleeperPlayers[i];
     
-    // Check if Chris Richards is in the input
-    const chrisInInput = sleeperPlayers.find(p => 
-      p.id === '2168' || (p.name && p.name.toLowerCase().includes('chris richards'))
-    );
-    console.log('🔍 CHRIS RICHARDS IN SERVICE INPUT:', !!chrisInInput);
-    if (chrisInInput) {
-      console.log('- Service Input Data:', { 
-        id: chrisInInput.id, 
-        name: chrisInInput.name, 
-        team: chrisInInput.team_abbr || chrisInInput.team,
-        opta_id: chrisInInput.opta_id 
-      });
-    }
-    // ✅ END DEBUG CODE
-
-    const stats = {
-      total: sleeperPlayers.length,
-      matched: 0,
-      byMethod: {},
-      byConfidence: {}
-    };
-
-    console.log(`🔄 STANDARDIZED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
-
-    // Track which FFH players have been used
-    const usedFFHPlayerIds = new Set();
-    
-    for (const sleeperPlayer of sleeperPlayers) {
-      // Filter out already used FFH players
-
-    // ✅ ADD THIS DEBUG CODE:
-    const isChris = sleeperPlayer.id === '2168' || 
-                   (sleeperPlayer.name && sleeperPlayer.name.toLowerCase().includes('chris richards'));
+    // ✅ DEBUG: Chris Richards specific logging
+    const isChris = sleeperPlayer?.id === '2168' || 
+                   (sleeperPlayer?.name && sleeperPlayer.name.toLowerCase().includes('chris richards'));
     
     if (isChris) {
       console.log('🔍 PROCESSING CHRIS RICHARDS IN LOOP:');
       console.log('- Player data:', { 
         id: sleeperPlayer.id, 
         name: sleeperPlayer.name, 
-        team: sleeperPlayer.team_abbr || sleeperPlayer.team 
+        team: sleeperPlayer.team_abbr || sleeperPlayer.team,
+        opta_id: sleeperPlayer.opta_id
       });
+      console.log('- Loop index:', i);
     }
-    // ✅ END DEBUG CODE
 
-      const availableFFHPlayers = ffhPlayers.filter(p => {
-        const ffhId = this.getFFHPlayerId(p);
-        return !usedFFHPlayerIds.has(ffhId);
-      });
+    // ✅ FIXED: Safety check for undefined players
+    if (!sleeperPlayer || (!sleeperPlayer.name && !sleeperPlayer.full_name)) {
+      if (isChris) console.log('❌ CHRIS RICHARDS: Invalid player data, skipping');
+      continue;
+    }
 
-      if (availableFFHPlayers.length === 0) {
+    // Filter out already used FFH players
+    const availableFFHPlayers = ffhPlayers.filter(p => {
+      const ffhId = this.getFFHPlayerId(p);
+      return !usedFFHPlayerIds.has(ffhId);
+    });
+
+    if (isChris) {
+      console.log('- Available FFH players:', availableFFHPlayers.length);
+    }
+
+    if (availableFFHPlayers.length === 0) {
+      if (isChris) {
+        console.log('❌ CHRIS RICHARDS: No available FFH players remaining');
+      } else {
         console.log(`⚠️ No available FFH players remaining for ${sleeperPlayer.full_name || sleeperPlayer.name}`);
-        continue;
       }
+      diagnostics.push({
+        sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name}`,
+        ffh: 'No available FFH players remaining',
+        method: 'No Match',
+        confidence: 'None',
+        score: 0
+      });
+      continue;
+    }
 
-      const ffhMatch = this.findBestFFHMatchOptimal(
+    // ✅ FIXED: Enhanced error handling for matching
+    let ffhMatch = null;
+    try {
+      if (isChris) console.log('🔍 CHRIS RICHARDS: Calling findBestFFHMatchOptimal...');
+      
+      ffhMatch = this.findBestFFHMatchOptimal(
         sleeperPlayer, 
         availableFFHPlayers, 
         diagnostics
       );
       
-      if (ffhMatch) {
-        matches.push({
-          sleeperPlayer,
-          ffhPlayer: ffhMatch,
-          confidence: diagnostics[diagnostics.length - 1]?.confidence || 'Medium',
-          method: diagnostics[diagnostics.length - 1]?.method || 'Unknown',
-          score: diagnostics[diagnostics.length - 1]?.score || 0.5
-        });
-        
-        // Mark this FFH player as used
-        const ffhId = this.getFFHPlayerId(ffhMatch);
-        usedFFHPlayerIds.add(ffhId);
-        stats.matched++;
-        
-        console.log(`✅ ${diagnostics[diagnostics.length - 1]?.method}: ${sleeperPlayer.full_name || sleeperPlayer.name} → ${this.getFFHPlayerName(ffhMatch)}`);
-      } else {
-        console.log(`❌ No match: ${sleeperPlayer.full_name || sleeperPlayer.name}`);
+      if (isChris) {
+        console.log('🔍 CHRIS RICHARDS: Match result:', !!ffhMatch);
+        if (ffhMatch) {
+          console.log('- Matched to:', this.getFFHPlayerName(ffhMatch));
+        }
       }
+    } catch (matchError) {
+      console.error(`❌ Matching error for ${sleeperPlayer.name}:`, matchError);
+      if (isChris) {
+        console.error('❌ CHRIS RICHARDS: Matching failed with error:', matchError);
+      }
+      continue;
     }
-
-    // Update stats
-    const unmatchedCount = sleeperPlayers.length - matches.length;
-    if (unmatchedCount > 0) {
-      stats.byMethod['No Match'] = unmatchedCount;
-      stats.byConfidence['None'] = unmatchedCount;
-    }
-
-    matches.forEach(match => {
-      const method = match.method || 'Unknown';
-      const confidence = match.confidence || 'Unknown';
+    
+    if (ffhMatch) {
+      const lastDiagnostic = diagnostics[diagnostics.length - 1];
+      matches.push({
+        sleeperPlayer,
+        ffhPlayer: ffhMatch,
+        confidence: lastDiagnostic?.confidence || 'Medium',
+        method: lastDiagnostic?.method || 'Unknown',
+        score: lastDiagnostic?.score || 0.5
+      });
       
-      stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
-      stats.byConfidence[confidence] = (stats.byConfidence[confidence] || 0) + 1;
-    });
-
-    stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
-
-    console.log(`✅ STANDARDIZED MATCHING COMPLETE:`);
-    console.log(`  Total: ${stats.total} Sleeper players`);
-    console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
-    console.log(`  Methods:`, stats.byMethod);
-    console.log(`  Confidence:`, stats.byConfidence);
-
-    return {
-      matches,
-      diagnostics,
-      stats,
-      summary: {
-        totalSleeperPlayers: sleeperPlayers.length,
-        totalFFHPlayers: ffhPlayers.length,
-        matchedPlayers: stats.matched,
-        matchRate: `${stats.matchRate}%`,
-        uniqueFFHPlayersUsed: usedFFHPlayerIds.size,
-        duplicateCheck: 'PASS - Using standardized field mapping'
+      // Mark this FFH player as used
+      const ffhId = this.getFFHPlayerId(ffhMatch);
+      usedFFHPlayerIds.add(ffhId);
+      stats.matched++;
+      
+      const methodUsed = lastDiagnostic?.method || 'Unknown';
+      console.log(`✅ ${methodUsed}: ${sleeperPlayer.full_name || sleeperPlayer.name} → ${this.getFFHPlayerName(ffhMatch)}`);
+      
+      if (isChris) {
+        console.log('✅ CHRIS RICHARDS: Successfully matched!');
       }
-    };
+    } else {
+      console.log(`❌ No match: ${sleeperPlayer.full_name || sleeperPlayer.name}`);
+      if (isChris) {
+        console.log('❌ CHRIS RICHARDS: No match found');
+      }
+    }
   }
+
+  // Update stats
+  const unmatchedCount = sleeperPlayers.length - matches.length;
+  if (unmatchedCount > 0) {
+    stats.byMethod['No Match'] = unmatchedCount;
+    stats.byConfidence['None'] = unmatchedCount;
+  }
+
+  matches.forEach(match => {
+    const method = match.method || 'Unknown';
+    const confidence = match.confidence || 'Unknown';
+    
+    stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
+    stats.byConfidence[confidence] = (stats.byConfidence[confidence] || 0) + 1;
+  });
+
+  stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
+
+  console.log(`✅ STANDARDIZED MATCHING COMPLETE:`);
+  console.log(`  Total: ${stats.total} Sleeper players`);
+  console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
+  console.log(`  Methods:`, stats.byMethod);
+  console.log(`  Confidence:`, stats.byConfidence);
+
+  return {
+    matches,
+    diagnostics,
+    stats,
+    summary: {
+      totalSleeperPlayers: sleeperPlayers.length,
+      totalFFHPlayers: ffhPlayers.length,
+      matchedPlayers: stats.matched,
+      matchRate: `${stats.matchRate}%`,
+      uniqueFFHPlayersUsed: usedFFHPlayerIds.size,
+      duplicateCheck: 'PASS - Using standardized field mapping'
+    }
+  };
+}
 
   // ===============================
   // UTILITY METHODS
