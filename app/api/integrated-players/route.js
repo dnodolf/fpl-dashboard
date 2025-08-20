@@ -360,7 +360,7 @@ async function integratePlayersWithYourServices() {
         age: sleeperPlayer.age || null
       };
 
-      if (ffhPlayer) {
+if (ffhPlayer) {
         // Found a match! Apply scoring conversion
         matchingStats.matched++;
         matchingStats.byMethod[method] = (matchingStats.byMethod[method] || 0) + 1;
@@ -370,6 +370,44 @@ async function integratePlayersWithYourServices() {
         const ffhSeasonPrediction = ffhPlayer.season_prediction || 
                                    ffhPlayer.range_prediction || 
                                    ffhPlayer.predicted_pts || 0;
+        
+        // ✅ FIXED: Include the full predictions array with xmins data
+        if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
+          enhancedPlayer.predictions = ffhPlayer.predictions; // ✅ KEY FIX: Preserve predictions array
+          
+          const gwPredictions = {};
+          const sleeperGwPredictions = {};
+          
+          ffhPlayer.predictions.forEach(pred => {
+            if (pred.gw && pred.predicted_pts) {
+              const pts = typeof pred.predicted_pts === 'object' ? 
+                         pred.predicted_pts.predicted_pts : pred.predicted_pts;
+              if (typeof pts === 'number') {
+                gwPredictions[pred.gw] = pts;
+                sleeperGwPredictions[pred.gw] = fallbackConvertFFHToSleeper(pts, position);
+              }
+            }
+          });
+          
+          enhancedPlayer.ffh_gw_predictions = JSON.stringify(gwPredictions);
+          enhancedPlayer.sleeper_gw_predictions = JSON.stringify(sleeperGwPredictions);
+          
+          // ✅ ADDED: Calculate next 5 gameweeks predicted minutes
+          const next5Predictions = ffhPlayer.predictions.slice(0, 5);
+          if (next5Predictions.length > 0) {
+            const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
+            enhancedPlayer.avg_minutes_next5 = totalMinutes / next5Predictions.length;
+            
+            // Also add individual gameweek minute predictions
+            const gwMinutePredictions = {};
+            ffhPlayer.predictions.forEach(pred => {
+              if (pred.gw && pred.xmins) {
+                gwMinutePredictions[pred.gw] = pred.xmins;
+              }
+            });
+            enhancedPlayer.ffh_gw_minutes = JSON.stringify(gwMinutePredictions);
+          }
+        }
         
         // Apply scoring conversion
         let sleeperSeasonTotal;
@@ -412,33 +450,13 @@ async function integratePlayersWithYourServices() {
         // Add conversion ratio for transparency
         enhancedPlayer.sleeper_conversion_ratio = fallbackConvertFFHToSleeper(1, position);
         
-        // Extract and convert gameweek predictions
-        if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
-          const gwPredictions = {};
-          const sleeperGwPredictions = {};
-          
-          ffhPlayer.predictions.forEach(pred => {
-            if (pred.gw && pred.predicted_pts) {
-              const pts = typeof pred.predicted_pts === 'object' ? 
-                         pred.predicted_pts.predicted_pts : pred.predicted_pts;
-              if (typeof pts === 'number') {
-                gwPredictions[pred.gw] = pts;
-                sleeperGwPredictions[pred.gw] = fallbackConvertFFHToSleeper(pts, position);
-              }
-            }
-          });
-          
-          enhancedPlayer.ffh_gw_predictions = JSON.stringify(gwPredictions);
-          enhancedPlayer.sleeper_gw_predictions = JSON.stringify(sleeperGwPredictions);
-        }
-        
         // FFH metadata
         enhancedPlayer.ffh_id = ffhPlayer.fpl_id || ffhPlayer.id;
         enhancedPlayer.ffh_web_name = ffhPlayer.web_name || ffhPlayer.name;
         enhancedPlayer.ffh_team = ffhPlayer.club || ffhPlayer.team;
         enhancedPlayer.ffh_position_id = ffhPlayer.position_id;
         
-        console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts (${confidence})`);
+        console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts (${confidence}), Avg Mins: ${enhancedPlayer.avg_minutes_next5 || 'N/A'}`);
         
       } else {
         // No FFH match found
@@ -452,6 +470,7 @@ async function integratePlayersWithYourServices() {
         enhancedPlayer.match_confidence = 'None';
         enhancedPlayer.ffh_matched = false;
         enhancedPlayer.scoring_conversion_applied = false;
+        enhancedPlayer.avg_minutes_next5 = 0; // ✅ ADDED: Default for unmatched players
       }
       
       enhancedPlayers.push(enhancedPlayer);

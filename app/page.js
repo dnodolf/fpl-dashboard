@@ -684,7 +684,7 @@ export default function FPLDashboard() {
     setSortConfig({ key, direction });
   };
 
-  // ✅ REVERTED: Use original working point field names
+// ✅ FIXED: Sorting function with proper scope
   const getSortValue = (player, key) => {
     switch (key) {
       case 'name':
@@ -722,15 +722,33 @@ export default function FPLDashboard() {
           }
         }
         // Estimate: season points / 38 * 5
-        const seasonPoints = this.getSortValue(player, 'sleeper_points_ros');
+        const seasonPoints = getSortValue(player, 'sleeper_points_ros'); // ✅ FIXED: Recursive call without 'this'
         return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
       case 'avg_minutes_next5':
+        // ✅ FIXED: Try pre-calculated average first
+        if (player.avg_minutes_next5 && player.avg_minutes_next5 > 0) {
+          return player.avg_minutes_next5;
+        }
+        
         // ✅ FIXED: Calculate average minutes from FFH predictions array
         if (player.predictions && Array.isArray(player.predictions)) {
           const next5Predictions = player.predictions.slice(0, 5);
           if (next5Predictions.length > 0) {
             const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
             return totalMinutes / next5Predictions.length;
+          }
+        }
+        
+        // ✅ ADDED: Fallback to FFH gameweek minute predictions
+        if (player.ffh_gw_minutes) {
+          try {
+            const gwMinutes = JSON.parse(player.ffh_gw_minutes);
+            const next5Minutes = Object.values(gwMinutes).slice(0, 5);
+            if (next5Minutes.length > 0) {
+              return next5Minutes.reduce((a, b) => a + b, 0) / next5Minutes.length;
+            }
+          } catch (e) {
+            // Continue to default
           }
         }
         
@@ -1193,9 +1211,16 @@ export default function FPLDashboard() {
                               return seasonPoints > 0 ? ((seasonPoints / 38) * 5).toFixed(1) : 'N/A';
                             })()}
                           </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+<td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                             {(() => {
-                              // ✅ FIXED: Calculate average minutes from FFH predictions array
+                              // ✅ FIXED: Better predicted minutes calculation with multiple fallbacks
+                              
+                              // First try: Use pre-calculated average from integration
+                              if (player.avg_minutes_next5 && player.avg_minutes_next5 > 0) {
+                                return player.avg_minutes_next5.toFixed(0);
+                              }
+                              
+                              // Second try: Calculate from predictions array with xmins
                               if (player.predictions && Array.isArray(player.predictions)) {
                                 const next5Predictions = player.predictions.slice(0, 5);
                                 if (next5Predictions.length > 0) {
@@ -1205,8 +1230,52 @@ export default function FPLDashboard() {
                                 }
                               }
                               
-                              // Default to 0 if no prediction data
-                              return '0';
+                              // Third try: Parse FFH gameweek minute predictions
+                              if (player.ffh_gw_minutes) {
+                                try {
+                                  const gwMinutes = JSON.parse(player.ffh_gw_minutes);
+                                  const next5Minutes = Object.values(gwMinutes).slice(0, 5);
+                                  if (next5Minutes.length > 0) {
+                                    const avgMinutes = next5Minutes.reduce((a, b) => a + b, 0) / next5Minutes.length;
+                                    return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
+                                  }
+                                } catch (e) {
+                                  // Continue to next option
+                                }
+                              }
+                              
+                              // Fourth try: Estimate from points (rough approximation)
+                              if (player.sleeper_gw_predictions || player.ffh_gw_predictions) {
+                                try {
+                                  const predStr = player.sleeper_gw_predictions || player.ffh_gw_predictions;
+                                  const gwPreds = JSON.parse(predStr);
+                                  const next5Points = Object.values(gwPreds).slice(0, 5);
+                                  if (next5Points.length > 0) {
+                                    const avgPoints = next5Points.reduce((a, b) => a + b, 0) / next5Points.length;
+                                    const position = player.position || 'MID';
+                                    
+                                    // Rough estimation based on position and points
+                                    if (avgPoints > 3) { // Likely starter
+                                      if (position === 'GKP') return '90';
+                                      if (position === 'DEF') return '85';
+                                      if (position === 'MID') return '80';
+                                      if (position === 'FWD') return '75';
+                                    } else if (avgPoints > 1.5) { // Regular player
+                                      if (position === 'GKP') return '45';
+                                      if (position === 'DEF') return '70';
+                                      if (position === 'MID') return '65';
+                                      if (position === 'FWD') return '60';
+                                    } else if (avgPoints > 0.5) { // Substitute
+                                      return '25';
+                                    }
+                                  }
+                                } catch (e) {
+                                  // Continue to default
+                                }
+                              }
+                              
+                              // Final fallback: Show 0 or N/A for unmatched players
+                              return player.ffh_matched ? '0' : 'N/A';
                             })()}
                           </td>
                         </tr>
