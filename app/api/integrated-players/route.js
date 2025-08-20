@@ -617,13 +617,18 @@ export async function POST(request) {
 
     console.log('🔄 Integration request:', { forceRefresh, clearCache });
 
+    // ✅ TEMPORARY: Force cache clear for debugging
+    console.log('🗑️ FORCING CACHE CLEAR FOR DEBUG');
+    cachedData = null;
+    cacheTimestamp = null;
+
     if (clearCache) {
       cachedData = null;
       cacheTimestamp = null;
       console.log('🗑️ Cache cleared');
     }
 
-    // Check cache
+    // Check cache (will be bypassed due to force clear above)
     const now = Date.now();
     if (!forceRefresh && cachedData && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
       console.log('⚡ Serving from cache');
@@ -633,6 +638,8 @@ export async function POST(request) {
         cacheAge: Math.round((now - cacheTimestamp) / 1000)
       });
     }
+
+    console.log('🚀 Running fresh integration...');
 
     // Perform integration
     const result = await integratePlayersWithYourServices();
