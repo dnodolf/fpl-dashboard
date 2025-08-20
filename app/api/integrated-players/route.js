@@ -301,9 +301,12 @@ async function integratePlayersWithYourServices() {
   
   try {
     // Import your services
+    console.log('🔧 Importing services...');
     const services = await importYourServices();
+    console.log('✅ Services import complete:', { available: services.available });
     
     // Fetch data from both sources
+    console.log('📡 Fetching data from APIs...');
     const [sleeperData, ffhData] = await Promise.all([
       fetchSleeperData(),
       fetchFFHData()
@@ -311,6 +314,42 @@ async function integratePlayersWithYourServices() {
 
     console.log(`📊 Data fetched - Sleeper: ${sleeperData.totalPlayers}, FFH: ${ffhData.totalPlayers}`);
     console.log(`🔧 Services available: ${services.available ? 'Yes' : 'No (using fallbacks)'}`);
+
+    // ✅ DEBUG: Check if Chris Richards is in Sleeper data
+    const chrisRichards = Object.entries(sleeperData.players).find(([id, player]) => 
+      player.full_name === 'Chris Richards' || id === '2168'
+    );
+    if (chrisRichards) {
+      console.log('🔍 DEBUG: Found Chris Richards in Sleeper data:');
+      console.log('- ID:', chrisRichards[0]);
+      console.log('- Data:', JSON.stringify(chrisRichards[1], null, 2));
+    } else {
+      console.log('❌ DEBUG: Chris Richards NOT found in Sleeper data!');
+      // Log a few sample players to see the structure
+      const samplePlayers = Object.entries(sleeperData.players).slice(0, 3);
+      console.log('📝 Sample Sleeper players:', samplePlayers.map(([id, p]) => ({ id, name: p.full_name, team: p.team_abbr })));
+    }
+
+    // ✅ DEBUG: Check if Chris Richards equivalent is in FFH data
+    const ffhRichards = ffhData.players.find(player => 
+      player.web_name === 'Richards' && 
+      (player.team?.code_name === 'CRY' || player.club === 'Crystal Palace')
+    );
+    if (ffhRichards) {
+      console.log('🔍 DEBUG: Found Richards in FFH data:');
+      console.log('- Name:', ffhRichards.web_name);
+      console.log('- Team:', ffhRichards.team);
+      console.log('- Club:', ffhRichards.club);
+      console.log('- FPL ID:', ffhRichards.fpl_id);
+      console.log('- Predictions:', ffhRichards.predictions ? ffhRichards.predictions.length : 'NONE');
+    } else {
+      console.log('❌ DEBUG: Richards NOT found in FFH data!');
+      // Log a few Crystal Palace players
+      const cryPlayers = ffhData.players.filter(p => 
+        p.team?.code_name === 'CRY' || p.club === 'Crystal Palace'
+      ).slice(0, 5);
+      console.log('📝 Sample CRY players:', cryPlayers.map(p => ({ name: p.web_name, team: p.team, club: p.club })));
+    }
 
     const enhancedPlayers = [];
     const matchingStats = {
@@ -327,6 +366,9 @@ async function integratePlayersWithYourServices() {
       name: player.full_name,
       team: player.team_abbr
     }));
+
+    console.log('🔄 Starting player matching process...');
+    console.log(`📊 Processing ${sleeperPlayersArray.length} Sleeper players against ${ffhData.players.length} FFH players`);
 
     let matchResults = [];
     
@@ -617,18 +659,13 @@ export async function POST(request) {
 
     console.log('🔄 Integration request:', { forceRefresh, clearCache });
 
-    // ✅ TEMPORARY: Force cache clear for debugging
-    console.log('🗑️ FORCING CACHE CLEAR FOR DEBUG');
-    cachedData = null;
-    cacheTimestamp = null;
-
     if (clearCache) {
       cachedData = null;
       cacheTimestamp = null;
       console.log('🗑️ Cache cleared');
     }
 
-    // Check cache (will be bypassed due to force clear above)
+    // Check cache
     const now = Date.now();
     if (!forceRefresh && cachedData && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
       console.log('⚡ Serving from cache');
@@ -638,8 +675,6 @@ export async function POST(request) {
         cacheAge: Math.round((now - cacheTimestamp) / 1000)
       });
     }
-
-    console.log('🚀 Running fresh integration...');
 
     // Perform integration
     const result = await integratePlayersWithYourServices();
