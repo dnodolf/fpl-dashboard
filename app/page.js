@@ -725,7 +725,16 @@ export default function FPLDashboard() {
         const seasonPoints = this.getSortValue(player, 'sleeper_points_ros');
         return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
       case 'avg_minutes_next5':
-        // ✅ NEW: Calculate average minutes from FFH predictions
+        // ✅ FIXED: Calculate average minutes from FFH predictions
+        // Try different possible field structures for FFH data
+        if (player.ffh_predictions && Array.isArray(player.ffh_predictions)) {
+          const next5Predictions = player.ffh_predictions.slice(0, 5);
+          if (next5Predictions.length > 0) {
+            const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
+            return totalMinutes / next5Predictions.length;
+          }
+        }
+        
         if (player.predictions && Array.isArray(player.predictions)) {
           const next5Predictions = player.predictions.slice(0, 5);
           if (next5Predictions.length > 0) {
@@ -733,21 +742,28 @@ export default function FPLDashboard() {
             return totalMinutes / next5Predictions.length;
           }
         }
-        // Fallback: try to parse from ffh_gw_predictions if available
+        
+        // Try to parse from ffh_gw_predictions JSON if available
         if (player.ffh_gw_predictions) {
           try {
             const gwPreds = JSON.parse(player.ffh_gw_predictions);
-            const predictionValues = Object.values(gwPreds).slice(0, 5);
-            if (predictionValues.length > 0 && predictionValues[0].xmins !== undefined) {
-              const totalMinutes = predictionValues.reduce((total, pred) => total + (pred.xmins || 0), 0);
-              return totalMinutes / predictionValues.length;
+            const predictionArray = Object.values(gwPreds).slice(0, 5);
+            if (predictionArray.length > 0 && predictionArray[0].xmins !== undefined) {
+              const totalMinutes = predictionArray.reduce((total, pred) => total + (pred.xmins || 0), 0);
+              return totalMinutes / predictionArray.length;
             }
           } catch (e) {
-            // Fall through to default
+            // Continue to next attempt
           }
         }
-        // Default assumption: 90 minutes if no data
-        return 90;
+        
+        // Check if it's stored as a direct field
+        if (player.xmins !== undefined) {
+          return player.xmins;
+        }
+        
+        // Default to 0 if no data available
+        return 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -1207,31 +1223,48 @@ export default function FPLDashboard() {
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                             {(() => {
-                              // ✅ NEW: Calculate average minutes from FFH predictions
+                              // ✅ FIXED: Calculate average minutes from FFH predictions
+                              // Try different possible field structures for FFH data
+                              if (player.ffh_predictions && Array.isArray(player.ffh_predictions)) {
+                                const next5Predictions = player.ffh_predictions.slice(0, 5);
+                                if (next5Predictions.length > 0) {
+                                  const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
+                                  const avgMinutes = totalMinutes / next5Predictions.length;
+                                  return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
+                                }
+                              }
+                              
                               if (player.predictions && Array.isArray(player.predictions)) {
                                 const next5Predictions = player.predictions.slice(0, 5);
                                 if (next5Predictions.length > 0) {
                                   const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
                                   const avgMinutes = totalMinutes / next5Predictions.length;
-                                  return avgMinutes > 0 ? avgMinutes.toFixed(0) : 'N/A';
+                                  return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
                                 }
                               }
-                              // Fallback: try to parse from ffh_gw_predictions if available
+                              
+                              // Try to parse from ffh_gw_predictions JSON if available
                               if (player.ffh_gw_predictions) {
                                 try {
                                   const gwPreds = JSON.parse(player.ffh_gw_predictions);
-                                  const predictionValues = Object.values(gwPreds).slice(0, 5);
-                                  if (predictionValues.length > 0 && predictionValues[0].xmins !== undefined) {
-                                    const totalMinutes = predictionValues.reduce((total, pred) => total + (pred.xmins || 0), 0);
-                                    const avgMinutes = totalMinutes / predictionValues.length;
-                                    return avgMinutes > 0 ? avgMinutes.toFixed(0) : 'N/A';
+                                  const predictionArray = Object.values(gwPreds).slice(0, 5);
+                                  if (predictionArray.length > 0 && predictionArray[0].xmins !== undefined) {
+                                    const totalMinutes = predictionArray.reduce((total, pred) => total + (pred.xmins || 0), 0);
+                                    const avgMinutes = totalMinutes / predictionArray.length;
+                                    return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
                                   }
                                 } catch (e) {
-                                  // Fall through to default
+                                  // Continue to next attempt
                                 }
                               }
-                              // Default: show 90 if no data available
-                              return '90';
+                              
+                              // Check if it's stored as a direct field
+                              if (player.xmins !== undefined) {
+                                return player.xmins.toFixed(0);
+                              }
+                              
+                              // Default to 0 if no data available
+                              return '0';
                             })()}
                           </td>
                         </tr>
