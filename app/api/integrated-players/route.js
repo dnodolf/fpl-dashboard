@@ -37,9 +37,32 @@ async function importYourServices() {
   }
 }
 
+// ✅ FIXED: Add this helper function to your integrated-players/route.js
+// Place this before the integratePlayersWithYourServices function
+
+function extractFFHTeam(ffhPlayer) {
+  // Handle different possible team data structures
+  if (ffhPlayer.team?.code_name) {
+    return ffhPlayer.team.code_name;
+  }
+  if (ffhPlayer.team_short_name) {
+    return ffhPlayer.team_short_name;
+  }
+  if (ffhPlayer.club) {
+    return ffhPlayer.club;
+  }
+  if (ffhPlayer.team) {
+    return ffhPlayer.team;
+  }
+  return null;
+}
+
 /**
  * Fallback matching function using your algorithm logic
  */
+// ✅ FIXED: Update the fallbackFindBestMatch function 
+// Replace the existing team comparison section with this:
+
 function fallbackFindBestMatch(sleeperPlayer, ffhPlayers) {
   if (!sleeperPlayer?.full_name && !sleeperPlayer?.name) {
     return { player: null, method: 'No Match', confidence: 'None', score: 0 };
@@ -48,20 +71,24 @@ function fallbackFindBestMatch(sleeperPlayer, ffhPlayers) {
   const sleeperName = (sleeperPlayer.full_name || sleeperPlayer.name || '').toLowerCase().trim();
   let bestMatch = null;
   let bestScore = 0;
+  let bestMethod = 'No Match';
 
   for (const ffhPlayer of ffhPlayers) {
     const ffhName = (ffhPlayer.web_name || ffhPlayer.name || '').toLowerCase().trim();
     
-    // Enhanced similarity calculation (from your service logic)
+    // Enhanced similarity calculation
     let score = 0;
+    let method = 'Name Similarity';
     
     // Exact match
     if (sleeperName === ffhName) {
       score = 1.0;
+      method = 'Exact Name Match';
     }
     // Substring match
     else if (sleeperName.includes(ffhName) || ffhName.includes(sleeperName)) {
       score = 0.8;
+      method = 'Name Substring';
     }
     // Word overlap
     else {
@@ -79,19 +106,23 @@ function fallbackFindBestMatch(sleeperPlayer, ffhPlayers) {
       if (sleeperWords.length > 0 && ffhWords.length > 0) {
         score = matches / Math.max(sleeperWords.length, ffhWords.length);
       }
+      method = 'Word Overlap';
     }
     
-    // Team boost (from your logic)
+    // ✅ FIXED: Team boost with better team extraction
     const sleeperTeam = (sleeperPlayer.team_abbr || sleeperPlayer.team || '').toUpperCase();
-    const ffhTeam = (ffhPlayer.club || ffhPlayer.team || '').toUpperCase();
+    const ffhTeam = extractFFHTeam(ffhPlayer)?.toUpperCase();
+    
     if (sleeperTeam && ffhTeam && sleeperTeam === ffhTeam) {
       score = Math.min(score + 0.2, 1.0);
+      method = method + ' + Team';
     }
     
     // Lowered threshold to match your relaxed service (0.4 instead of 0.7)
     if (score > bestScore && score >= 0.4) {
       bestScore = score;
       bestMatch = ffhPlayer;
+      bestMethod = method;
     }
   }
 
@@ -99,7 +130,7 @@ function fallbackFindBestMatch(sleeperPlayer, ffhPlayers) {
     const confidence = bestScore >= 0.85 ? 'High' : bestScore >= 0.65 ? 'Medium' : 'Low';
     return {
       player: bestMatch,
-      method: 'Name Similarity',
+      method: bestMethod,
       confidence,
       score: bestScore
     };
@@ -135,18 +166,21 @@ function fallbackConvertFFHToSleeper(ffhPrediction, position) {
 /**
  * Extract position from various data formats (from your service)
  */
+// ✅ FIXED: Update the normalizePosition function in your integrated-players route
+// Replace the existing normalizePosition function with this improved version
+
 function normalizePosition(player) {
   // From FFH position_id
   if (player.position_id) {
-    const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+    const positions = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
     return positions[player.position_id] || 'MID';
   }
   
   // From Sleeper fantasy_positions
   if (player.fantasy_positions && Array.isArray(player.fantasy_positions)) {
     const pos = player.fantasy_positions[0];
-    if (pos === 'G') return 'GK';
-    if (pos === 'D') return 'DEF';
+    if (pos === 'G') return 'GKP';
+    if (pos === 'D') return 'DEF';  // ✅ FIXED: Chris Richards case
     if (pos === 'M') return 'MID';
     if (pos === 'F') return 'FWD';
   }
@@ -154,8 +188,8 @@ function normalizePosition(player) {
   // From position string
   if (player.position) {
     const pos = player.position.toString().toUpperCase();
-    if (pos.includes('GK') || pos.includes('KEEPER')) return 'GK';
-    if (pos.includes('DEF') || pos === 'D') return 'DEF';
+    if (pos.includes('GK') || pos.includes('KEEPER')) return 'GKP';
+    if (pos.includes('DEF') || pos === 'D') return 'DEF';  // ✅ FIXED: Handle 'D'
     if (pos.includes('MID') || pos === 'M') return 'MID';
     if (pos.includes('FWD') || pos === 'F' || pos.includes('FORWARD')) return 'FWD';
   }
