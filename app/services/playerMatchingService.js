@@ -504,6 +504,25 @@ export class PlayerMatchingService {
   async matchAllPlayers(sleeperPlayers, ffhPlayers) {
     const diagnostics = [];
     const matches = [];
+
+    // ✅ ADD THIS DEBUG CODE:
+    console.log('🔍 MATCHING SERVICE: Starting with', sleeperPlayers.length, 'players');
+    
+    // Check if Chris Richards is in the input
+    const chrisInInput = sleeperPlayers.find(p => 
+      p.id === '2168' || (p.name && p.name.toLowerCase().includes('chris richards'))
+    );
+    console.log('🔍 CHRIS RICHARDS IN SERVICE INPUT:', !!chrisInInput);
+    if (chrisInInput) {
+      console.log('- Service Input Data:', { 
+        id: chrisInInput.id, 
+        name: chrisInInput.name, 
+        team: chrisInInput.team_abbr || chrisInInput.team,
+        opta_id: chrisInInput.opta_id 
+      });
+    }
+    // ✅ END DEBUG CODE
+
     const stats = {
       total: sleeperPlayers.length,
       matched: 0,
@@ -518,6 +537,21 @@ export class PlayerMatchingService {
     
     for (const sleeperPlayer of sleeperPlayers) {
       // Filter out already used FFH players
+
+    // ✅ ADD THIS DEBUG CODE:
+    const isChris = sleeperPlayer.id === '2168' || 
+                   (sleeperPlayer.name && sleeperPlayer.name.toLowerCase().includes('chris richards'));
+    
+    if (isChris) {
+      console.log('🔍 PROCESSING CHRIS RICHARDS IN LOOP:');
+      console.log('- Player data:', { 
+        id: sleeperPlayer.id, 
+        name: sleeperPlayer.name, 
+        team: sleeperPlayer.team_abbr || sleeperPlayer.team 
+      });
+    }
+    // ✅ END DEBUG CODE
+
       const availableFFHPlayers = ffhPlayers.filter(p => {
         const ffhId = this.getFFHPlayerId(p);
         return !usedFFHPlayerIds.has(ffhId);
