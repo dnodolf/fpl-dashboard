@@ -367,6 +367,26 @@ async function integratePlayersWithYourServices() {
       team: player.team_abbr
     }));
 
+    // ✅ DEBUG: Check Chris Richards in the array
+const chrisInArray = sleeperPlayersArray.find(p => 
+  p.id === '2168' || (p.name && p.name.toLowerCase().includes('chris richards'))
+);
+
+console.log('🔍 CHRIS RICHARDS IN ARRAY:', !!chrisInArray);
+if (chrisInArray) {
+  console.log('- Array Data:', JSON.stringify(chrisInArray, null, 2));
+} else {
+  console.log('❌ Chris Richards NOT in sleeperPlayersArray!');
+  
+  // Check raw data
+  const chrisRaw = Object.entries(sleeperData.players).find(([id, player]) => 
+    id === '2168' || player.full_name === 'Chris Richards'
+  );
+  if (chrisRaw) {
+    console.log('- Raw Chris:', { id: chrisRaw[0], name: chrisRaw[1].full_name, team: chrisRaw[1].team_abbr });
+  }
+}
+
     console.log('🔄 Starting player matching process...');
     console.log(`📊 Processing ${sleeperPlayersArray.length} Sleeper players against ${ffhData.players.length} FFH players`);
 
