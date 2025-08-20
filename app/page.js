@@ -725,16 +725,7 @@ export default function FPLDashboard() {
         const seasonPoints = this.getSortValue(player, 'sleeper_points_ros');
         return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
       case 'avg_minutes_next5':
-        // ✅ FIXED: Calculate average minutes from FFH predictions
-        // Try different possible field structures for FFH data
-        if (player.ffh_predictions && Array.isArray(player.ffh_predictions)) {
-          const next5Predictions = player.ffh_predictions.slice(0, 5);
-          if (next5Predictions.length > 0) {
-            const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
-            return totalMinutes / next5Predictions.length;
-          }
-        }
-        
+        // ✅ FIXED: Calculate average minutes from FFH predictions array
         if (player.predictions && Array.isArray(player.predictions)) {
           const next5Predictions = player.predictions.slice(0, 5);
           if (next5Predictions.length > 0) {
@@ -743,26 +734,7 @@ export default function FPLDashboard() {
           }
         }
         
-        // Try to parse from ffh_gw_predictions JSON if available
-        if (player.ffh_gw_predictions) {
-          try {
-            const gwPreds = JSON.parse(player.ffh_gw_predictions);
-            const predictionArray = Object.values(gwPreds).slice(0, 5);
-            if (predictionArray.length > 0 && predictionArray[0].xmins !== undefined) {
-              const totalMinutes = predictionArray.reduce((total, pred) => total + (pred.xmins || 0), 0);
-              return totalMinutes / predictionArray.length;
-            }
-          } catch (e) {
-            // Continue to next attempt
-          }
-        }
-        
-        // Check if it's stored as a direct field
-        if (player.xmins !== undefined) {
-          return player.xmins;
-        }
-        
-        // Default to 0 if no data available
+        // Default to 0 if no prediction data
         return 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
@@ -1223,17 +1195,7 @@ export default function FPLDashboard() {
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                             {(() => {
-                              // ✅ FIXED: Calculate average minutes from FFH predictions
-                              // Try different possible field structures for FFH data
-                              if (player.ffh_predictions && Array.isArray(player.ffh_predictions)) {
-                                const next5Predictions = player.ffh_predictions.slice(0, 5);
-                                if (next5Predictions.length > 0) {
-                                  const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
-                                  const avgMinutes = totalMinutes / next5Predictions.length;
-                                  return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
-                                }
-                              }
-                              
+                              // ✅ FIXED: Calculate average minutes from FFH predictions array
                               if (player.predictions && Array.isArray(player.predictions)) {
                                 const next5Predictions = player.predictions.slice(0, 5);
                                 if (next5Predictions.length > 0) {
@@ -1243,27 +1205,7 @@ export default function FPLDashboard() {
                                 }
                               }
                               
-                              // Try to parse from ffh_gw_predictions JSON if available
-                              if (player.ffh_gw_predictions) {
-                                try {
-                                  const gwPreds = JSON.parse(player.ffh_gw_predictions);
-                                  const predictionArray = Object.values(gwPreds).slice(0, 5);
-                                  if (predictionArray.length > 0 && predictionArray[0].xmins !== undefined) {
-                                    const totalMinutes = predictionArray.reduce((total, pred) => total + (pred.xmins || 0), 0);
-                                    const avgMinutes = totalMinutes / predictionArray.length;
-                                    return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
-                                  }
-                                } catch (e) {
-                                  // Continue to next attempt
-                                }
-                              }
-                              
-                              // Check if it's stored as a direct field
-                              if (player.xmins !== undefined) {
-                                return player.xmins.toFixed(0);
-                              }
-                              
-                              // Default to 0 if no data available
+                              // Default to 0 if no prediction data
                               return '0';
                             })()}
                           </td>
