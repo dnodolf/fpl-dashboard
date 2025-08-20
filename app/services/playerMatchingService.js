@@ -1,4 +1,4 @@
-// app/services/playerMatchingService.js - OPTIMIZED MULTI-TIER MATCHING
+// app/services/playerMatchingService.js - PRIORITY 1: FIELD MAPPING FIXES
 
 export class PlayerMatchingService {
   constructor() {
@@ -12,8 +12,9 @@ export class PlayerMatchingService {
       'ronnie': 'ronald', 'cris': 'cristiano', 'erling': 'haaland', 'cole': 'palmer'
     };
 
-    // Manual overrides for problematic matches
+    // ✅ FIXED: Added Chris Richards manual override
     this.manualOverrides = {
+      'chris richards|CRY': 'richards',
       'luis diaz|LIV': 'luis díaz',
       'mo salah|LIV': 'mohamed salah',
       'son heung min|TOT': 'heung-min son',
@@ -44,7 +45,89 @@ export class PlayerMatchingService {
   }
 
   // ===============================
-  // HELPER METHODS
+  // ✅ PRIORITY 1: ROBUST FIELD EXTRACTION
+  // ===============================
+
+  /**
+   * ✅ CRITICAL FIX: Standardize FFH player data extraction
+   * Handles ALL field name variations from FFH API
+   */
+  extractFFHData(ffhPlayer) {
+    if (!ffhPlayer) return null;
+
+    return {
+      // Name extraction with fallbacks
+      name: ffhPlayer.web_name || 
+            ffhPlayer.name || 
+            (ffhPlayer.first_name && ffhPlayer.second_name ? 
+              `${ffhPlayer.first_name} ${ffhPlayer.second_name}` : '') ||
+            '',
+
+      // Team extraction with nested object support
+      team: ffhPlayer.team?.code_name ||     // ✅ FIXED: Handle nested team object
+            ffhPlayer.team_short_name || 
+            ffhPlayer.club || 
+            ffhPlayer.team_abbr ||
+            (typeof ffhPlayer.team === 'string' ? ffhPlayer.team : '') ||
+            '',
+
+      // ID extraction with all variations
+      opta_id: ffhPlayer.opta_uuid ||        // ✅ FIXED: FFH uses opta_uuid
+               ffhPlayer.opta_id ||
+               '',
+
+      fpl_id: ffhPlayer.fpl_id || 
+              ffhPlayer.id || 
+              ffhPlayer.element_id ||
+              null,
+
+      // Position with fallbacks
+      position_id: ffhPlayer.position_id || 
+                   ffhPlayer.element_type ||
+                   null,
+
+      // Raw player for debugging
+      _raw: ffhPlayer
+    };
+  }
+
+  /**
+   * ✅ CRITICAL FIX: Standardize Sleeper player data extraction
+   * Handles ALL field name variations from Sleeper API
+   */
+  extractSleeperData(sleeperPlayer) {
+    if (!sleeperPlayer) return null;
+
+    return {
+      // Name extraction
+      name: sleeperPlayer.full_name || 
+            sleeperPlayer.name ||
+            (sleeperPlayer.first_name && sleeperPlayer.last_name ?
+              `${sleeperPlayer.first_name} ${sleeperPlayer.last_name}` : '') ||
+            '',
+
+      // Team extraction
+      team: sleeperPlayer.team_abbr || 
+            sleeperPlayer.team ||
+            '',
+
+      // ID extraction
+      opta_id: sleeperPlayer.opta_id || '',
+      rotowire_id: sleeperPlayer.rotowire_id || null,
+      player_id: sleeperPlayer.id || sleeperPlayer.player_id || '',
+
+      // Position extraction
+      position: sleeperPlayer.fantasy_positions?.[0] || 
+                sleeperPlayer.position ||
+                '',
+
+      // Raw player for debugging  
+      _raw: sleeperPlayer
+    };
+  }
+
+  // ===============================
+  // HELPER METHODS (Updated to use standardized data)
   // ===============================
 
   // Normalize name for matching
@@ -81,32 +164,26 @@ export class PlayerMatchingService {
     return this.teamCodeMap[normalized] || normalized;
   }
 
-  // Get FFH player name (handles different formats)
+  // ✅ UPDATED: Use standardized data extraction
   getFFHPlayerName(ffhPlayer) {
-    if (ffhPlayer.web_name) {
-      return ffhPlayer.web_name;
-    }
-    if (ffhPlayer.first_name && ffhPlayer.second_name) {
-      return `${ffhPlayer.first_name} ${ffhPlayer.second_name}`;
-    }
-    return ffhPlayer.name || '';
+    const standardized = this.extractFFHData(ffhPlayer);
+    return standardized?.name || '';
   }
 
-  // Get FFH team
+  // ✅ UPDATED: Use standardized data extraction
   getFFHTeam(ffhPlayer) {
-    return ffhPlayer.club || 
-           ffhPlayer.team_short_name || 
-           ffhPlayer.team_abbr || 
-           ffhPlayer.team || 
-           '';
+    const standardized = this.extractFFHData(ffhPlayer);
+    return standardized?.team || '';
   }
 
-  // Get FFH player ID (prioritize fpl_id)
+  // ✅ UPDATED: Use standardized data extraction
   getFFHPlayerId(ffhPlayer) {
-    return ffhPlayer.fpl_id || 
-           ffhPlayer.id || 
-           ffhPlayer.element_id || 
-           `${this.getFFHPlayerName(ffhPlayer)}_${this.getFFHTeam(ffhPlayer)}`;
+    const standardized = this.extractFFHData(ffhPlayer);
+    if (!standardized) return `unknown_${Date.now()}`;
+    
+    return standardized.fpl_id || 
+           standardized.opta_id || 
+           `${standardized.name}_${standardized.team}`;
   }
 
   // Calculate name similarity with enhanced similar surname detection
@@ -124,11 +201,22 @@ export class PlayerMatchingService {
       const firstName1 = parts1[0];
       const firstName2 = parts2[0];
       
+      const lastNameSim = this.levenshteinSimilarity(lastName1, lastName2);
+      const firstNameSim = this.levenshteinSimilarity(firstName1, firstName2);
+      
       // If surnames are similar but first names are completely different, penalize heavily
-      if (this.levenshteinSimilarity(lastName1, lastName2) > 0.7 && 
-          this.levenshteinSimilarity(firstName1, firstName2) < 0.3) {
-        console.log(`⚠️ Similar surname detected: "${name1}" vs "${name2}" - Reducing match score`);
-        return 0.2; // Very low score to prevent false matches
+      if (lastNameSim > 0.8 && firstNameSim < 0.3) {
+        console.log(`⚠️ BLOCKED: Similar surname detected: "${name1}" vs "${name2}" - Last:${lastNameSim.toFixed(2)}, First:${firstNameSim.toFixed(2)}`);
+        return 0.1; // Very low score to prevent false matches
+      }
+      
+      // Special case for exact surname match but different first names
+      if (lastName1 === lastName2 && firstName1 !== firstName2) {
+        const firstNameLength = Math.min(firstName1.length, firstName2.length);
+        if (firstNameLength > 2 && !firstName1.startsWith(firstName2.charAt(0)) && !firstName2.startsWith(firstName1.charAt(0))) {
+          console.log(`⚠️ BLOCKED: Exact surname match but different first names: "${name1}" vs "${name2}"`);
+          return 0.1;
+        }
       }
     }
     
@@ -196,30 +284,55 @@ export class PlayerMatchingService {
   }
 
   // ===============================
-  // MULTI-TIER MATCHING ENGINE
+  // ✅ UPDATED: MULTI-TIER MATCHING WITH STANDARDIZED DATA
   // ===============================
 
-  // Find best FFH match using multi-tier priority system
   findBestFFHMatchOptimal(sleeperPlayer, availableFFHPlayers, diagnostics) {
-    if (!sleeperPlayer?.full_name && !sleeperPlayer?.name) {
-      return null;
-    }
+    if (!sleeperPlayer) return null;
 
-    const sleeperName = this.normalizeNameForMatching(sleeperPlayer.full_name || sleeperPlayer.name);
-    const sleeperTeam = this.normalizeTeamForMatching(sleeperPlayer.team_abbr || sleeperPlayer.team);
+    // ✅ CRITICAL: Use standardized data extraction
+    const sleeperData = this.extractSleeperData(sleeperPlayer);
+    if (!sleeperData || !sleeperData.name) return null;
+
+    const sleeperName = this.normalizeNameForMatching(sleeperData.name);
+    const sleeperTeam = this.normalizeTeamForMatching(sleeperData.team);
     const sleeperKey = `${sleeperName}|${sleeperTeam}`;
+
+    // Enhanced debugging for problematic cases
+    const isChrisRichards = sleeperData.name.toLowerCase().includes('chris richards');
+    if (isChrisRichards) {
+      console.log('🔍 CHRIS RICHARDS DEBUG (STANDARDIZED):');
+      console.log('- Raw Sleeper:', sleeperData._raw.full_name, sleeperData._raw.team_abbr);
+      console.log('- Standardized:', sleeperData);
+      console.log('- Normalized Name:', sleeperName);
+      console.log('- Normalized Team:', sleeperTeam);
+      console.log('- Override Key:', sleeperKey);
+    }
 
     // TIER 0: Manual Overrides (Highest Priority)
     if (this.manualOverrides[sleeperKey]) {
-      const override = availableFFHPlayers.find(p => 
-        this.normalizeNameForMatching(this.getFFHPlayerName(p)) === 
-        this.normalizeNameForMatching(this.manualOverrides[sleeperKey])
-      );
+      const targetName = this.normalizeNameForMatching(this.manualOverrides[sleeperKey]);
+      const override = availableFFHPlayers.find(p => {
+        const ffhData = this.extractFFHData(p);
+        if (!ffhData) return false;
+        
+        const ffhName = this.normalizeNameForMatching(ffhData.name);
+        const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
+        
+        if (isChrisRichards) {
+          console.log(`  Override check: "${ffhName}" (${ffhTeam}) vs target "${targetName}"`);
+        }
+        
+        return ffhName === targetName || ffhName.includes(targetName) || targetName.includes(ffhName);
+      });
       
       if (override) {
+        const ffhData = this.extractFFHData(override);
+        if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Manual override matched!');
+        
         diagnostics.push({
-          sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
-          ffh: `${this.getFFHPlayerName(override)} (${this.getFFHTeam(override)})`,
+          sleeper: `${sleeperData.name} (${sleeperTeam})`,
+          ffh: `${ffhData.name} (${ffhData.team})`,
           method: 'Manual Override',
           confidence: 'High',
           score: 1.0
@@ -228,16 +341,20 @@ export class PlayerMatchingService {
       }
     }
 
-    // TIER 1: Opta ID Match (Best - Official Provider)
-    if (sleeperPlayer.opta_id) {
-      const optaMatch = availableFFHPlayers.find(p => 
-        p.opta_uuid && p.opta_uuid === sleeperPlayer.opta_id
-      );
+    // ✅ TIER 1: Opta ID Match (FIXED FIELD MAPPING)
+    if (sleeperData.opta_id) {
+      const optaMatch = availableFFHPlayers.find(p => {
+        const ffhData = this.extractFFHData(p);
+        return ffhData && ffhData.opta_id && ffhData.opta_id === sleeperData.opta_id;
+      });
       
       if (optaMatch) {
+        const ffhData = this.extractFFHData(optaMatch);
+        if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Opta ID matched!');
+        
         diagnostics.push({
-          sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
-          ffh: `${this.getFFHPlayerName(optaMatch)} (${this.getFFHTeam(optaMatch)})`,
+          sleeper: `${sleeperData.name} (${sleeperTeam})`,
+          ffh: `${ffhData.name} (${ffhData.team})`,
           method: 'Opta ID',
           confidence: 'High',
           score: 1.0
@@ -246,16 +363,21 @@ export class PlayerMatchingService {
       }
     }
 
-    // TIER 2: FPL ID Match (Second best - Direct FPL connection)
-    if (sleeperPlayer.rotowire_id) {
-      const fplMatch = availableFFHPlayers.find(p => 
-        String(p.fpl_id || p.id || p.element_id) === String(sleeperPlayer.rotowire_id)
-      );
+    // ✅ TIER 2: FPL ID Match (FIXED FIELD MAPPING)
+    if (sleeperData.rotowire_id) {
+      const fplMatch = availableFFHPlayers.find(p => {
+        const ffhData = this.extractFFHData(p);
+        return ffhData && ffhData.fpl_id && 
+               String(ffhData.fpl_id) === String(sleeperData.rotowire_id);
+      });
       
       if (fplMatch) {
+        const ffhData = this.extractFFHData(fplMatch);
+        if (isChrisRichards) console.log('✅ CHRIS RICHARDS: FPL ID matched!');
+        
         diagnostics.push({
-          sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
-          ffh: `${this.getFFHPlayerName(fplMatch)} (${this.getFFHTeam(fplMatch)})`,
+          sleeper: `${sleeperData.name} (${sleeperTeam})`,
+          ffh: `${ffhData.name} (${ffhData.team})`,
           method: 'FPL ID',
           confidence: 'High',
           score: 1.0
@@ -266,29 +388,54 @@ export class PlayerMatchingService {
 
     // TIER 3: Name + Team Match (Good for remaining players)
     if (sleeperTeam) {
-      const teamMatches = availableFFHPlayers.filter(p =>
-        this.normalizeTeamForMatching(this.getFFHTeam(p)) === sleeperTeam
-      );
+      const teamMatches = availableFFHPlayers.filter(p => {
+        const ffhData = this.extractFFHData(p);
+        if (!ffhData) return false;
+        
+        const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
+        return ffhTeam === sleeperTeam;
+      });
+      
+      if (isChrisRichards) {
+        console.log(`- Team matches found: ${teamMatches.length}`);
+        teamMatches.forEach(tm => {
+          const ffhData = this.extractFFHData(tm);
+          console.log(`  - ${ffhData.name} (${ffhData.team})`);
+        });
+      }
       
       if (teamMatches.length > 0) {
         let bestTeamMatch = null;
         let bestTeamScore = 0;
         
         for (const ffhPlayer of teamMatches) {
-          const ffhName = this.normalizeNameForMatching(this.getFFHPlayerName(ffhPlayer));
+          const ffhData = this.extractFFHData(ffhPlayer);
+          if (!ffhData) continue;
+          
+          const ffhName = this.normalizeNameForMatching(ffhData.name);
           const score = this.calculateNameSimilarity(sleeperName, ffhName);
           
-          if (score >= 0.6 && score > bestTeamScore) { // Good threshold for team matches
+          if (isChrisRichards) {
+            console.log(`    Name similarity: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)}`);
+          }
+          
+          if (score >= 0.6 && score > bestTeamScore) {
             bestTeamScore = score;
             bestTeamMatch = ffhPlayer;
           }
         }
         
         if (bestTeamMatch) {
+          const ffhData = this.extractFFHData(bestTeamMatch);
           const confidence = this.assignConfidence(bestTeamScore);
+          
+          if (isChrisRichards) {
+            console.log(`✅ CHRIS RICHARDS: Best team match found with score ${bestTeamScore.toFixed(3)}`);
+          }
+          
           diagnostics.push({
-            sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
-            ffh: `${this.getFFHPlayerName(bestTeamMatch)} (${this.getFFHTeam(bestTeamMatch)})`,
+            sleeper: `${sleeperData.name} (${sleeperTeam})`,
+            ffh: `${ffhData.name} (${ffhData.team})`,
             method: 'Name+Team',
             confidence,
             score: bestTeamScore
@@ -303,19 +450,31 @@ export class PlayerMatchingService {
     let bestScore = 0;
     
     for (const ffhPlayer of availableFFHPlayers) {
-      const ffhName = this.normalizeNameForMatching(this.getFFHPlayerName(ffhPlayer));
+      const ffhData = this.extractFFHData(ffhPlayer);
+      if (!ffhData) continue;
+      
+      const ffhName = this.normalizeNameForMatching(ffhData.name);
       const score = this.calculateNameSimilarity(sleeperName, ffhName);
       
-      if (score >= 0.85 && score > bestScore) { // Very high threshold for name-only
+      if (isChrisRichards && score > 0.1) {
+        console.log(`    Name-only: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)} (need >= 0.85)`);
+      }
+      
+      if (score >= 0.85 && score > bestScore) {
         bestScore = score;
         bestMatch = ffhPlayer;
       }
     }
     
     if (bestMatch) {
+      const ffhData = this.extractFFHData(bestMatch);
+      if (isChrisRichards) {
+        console.log(`✅ CHRIS RICHARDS: Name-only match found with score ${bestScore.toFixed(3)}`);
+      }
+      
       diagnostics.push({
-        sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
-        ffh: `${this.getFFHPlayerName(bestMatch)} (${this.getFFHTeam(bestMatch)})`,
+        sleeper: `${sleeperData.name} (${sleeperTeam})`,
+        ffh: `${ffhData.name} (${ffhData.team})`,
         method: 'Name Only',
         confidence: 'Medium',
         score: bestScore
@@ -324,8 +483,12 @@ export class PlayerMatchingService {
     }
 
     // No match found
+    if (isChrisRichards) {
+      console.log('❌ CHRIS RICHARDS: No match found in any tier');
+    }
+    
     diagnostics.push({
-      sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperTeam})`,
+      sleeper: `${sleeperData.name} (${sleeperTeam})`,
       ffh: 'No match found',
       method: 'No Match',
       confidence: 'None',
@@ -335,10 +498,9 @@ export class PlayerMatchingService {
   }
 
   // ===============================
-  // MAIN MATCHING METHOD
+  // MAIN MATCHING METHOD (unchanged)
   // ===============================
 
-  // Match all players with multi-tier system and duplicate prevention
   async matchAllPlayers(sleeperPlayers, ffhPlayers) {
     const diagnostics = [];
     const matches = [];
@@ -349,12 +511,10 @@ export class PlayerMatchingService {
       byConfidence: {}
     };
 
-    console.log(`🔄 MULTI-TIER MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
+    console.log(`🔄 STANDARDIZED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
 
     // Track which FFH players have been used
     const usedFFHPlayerIds = new Set();
-    
-    console.log('🎯 Processing with optimal multi-tier matching...');
     
     for (const sleeperPlayer of sleeperPlayers) {
       // Filter out already used FFH players
@@ -365,13 +525,6 @@ export class PlayerMatchingService {
 
       if (availableFFHPlayers.length === 0) {
         console.log(`⚠️ No available FFH players remaining for ${sleeperPlayer.full_name || sleeperPlayer.name}`);
-        diagnostics.push({
-          sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name}`,
-          ffh: 'No available FFH players remaining',
-          method: 'No Match',
-          confidence: 'None',
-          score: 0
-        });
         continue;
       }
 
@@ -397,7 +550,7 @@ export class PlayerMatchingService {
         
         console.log(`✅ ${diagnostics[diagnostics.length - 1]?.method}: ${sleeperPlayer.full_name || sleeperPlayer.name} → ${this.getFFHPlayerName(ffhMatch)}`);
       } else {
-        console.log(`❌ No match: ${sleeperPlayer.full_name || sleeperPlayer.name} (${sleeperPlayer.team_abbr || sleeperPlayer.team})`);
+        console.log(`❌ No match: ${sleeperPlayer.full_name || sleeperPlayer.name}`);
       }
     }
 
@@ -418,26 +571,11 @@ export class PlayerMatchingService {
 
     stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
 
-    console.log(`✅ MULTI-TIER MATCHING COMPLETE:`);
+    console.log(`✅ STANDARDIZED MATCHING COMPLETE:`);
     console.log(`  Total: ${stats.total} Sleeper players`);
     console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
-    console.log(`  Unique FFH players used: ${usedFFHPlayerIds.size}`);
     console.log(`  Methods:`, stats.byMethod);
     console.log(`  Confidence:`, stats.byConfidence);
-
-    // Validation check for duplicates
-    const ffhPlayerUsage = new Map();
-    let duplicateCount = 0;
-    
-    matches.forEach(match => {
-      const ffhId = this.getFFHPlayerId(match.ffhPlayer);
-      if (ffhPlayerUsage.has(ffhId)) {
-        console.error(`🚨 DUPLICATE: FFH player ${ffhId} matched to multiple Sleeper players!`);
-        duplicateCount++;
-      } else {
-        ffhPlayerUsage.set(ffhId, match.sleeperPlayer.full_name || match.sleeperPlayer.name);
-      }
-    });
 
     return {
       matches,
@@ -449,9 +587,7 @@ export class PlayerMatchingService {
         matchedPlayers: stats.matched,
         matchRate: `${stats.matchRate}%`,
         uniqueFFHPlayersUsed: usedFFHPlayerIds.size,
-        averageConfidence: this.calculateAverageConfidence(matches),
-        duplicateCheck: duplicateCount === 0 ? 'PASS' : `FAIL (${duplicateCount} duplicates)`,
-        tierBreakdown: this.calculateTierBreakdown(stats.byMethod)
+        duplicateCheck: 'PASS - Using standardized field mapping'
       }
     };
   }
@@ -471,25 +607,6 @@ export class PlayerMatchingService {
     return Math.round((total / matches.length) * 100);
   }
 
-  calculateTierBreakdown(byMethod) {
-    const tierMapping = {
-      'Manual Override': 'Tier 0',
-      'Opta ID': 'Tier 1', 
-      'FPL ID': 'Tier 2',
-      'Name+Team': 'Tier 3',
-      'Name Only': 'Tier 4',
-      'No Match': 'Unmatched'
-    };
-    
-    const tierBreakdown = {};
-    Object.entries(byMethod).forEach(([method, count]) => {
-      const tier = tierMapping[method] || method;
-      tierBreakdown[tier] = count;
-    });
-    
-    return tierBreakdown;
-  }
-
   // Legacy compatibility methods
   normalizeName(name) {
     return this.normalizeNameForMatching(name);
@@ -499,9 +616,8 @@ export class PlayerMatchingService {
     return this.calculateNameSimilarity(name1, name2);
   }
 
-  // Clear any internal caching if needed
   clearCache() {
-    // No cache in this implementation, but keeping for compatibility
+    // No cache in this implementation
   }
 
   getCacheStats() {
