@@ -1175,6 +1175,10 @@ export default function FPLDashboard() {
         }
         
         return 0;
+      case 'current_ppg':
+        return player.current_ppg || 0;
+      case 'predicted_ppg':
+        return player.predicted_ppg || 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -1209,9 +1213,18 @@ export default function FPLDashboard() {
 
     // Owner filter
     if (filters.owner !== 'all') {
-      if (filters.owner === 'Free Agent' && player.owned_by && player.owned_by !== 'Free Agent') return false;
-      if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') return false;
-      if (filters.owner !== 'Free Agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) return false;
+      if (filters.owner === 'my_players_and_free_agents') {
+        // Show only my players OR free agents
+        const isMyPlayer = player.owned_by === 'ThatDerekGuy';
+        const isFreeAgent = !player.owned_by || player.owned_by === 'Free Agent';
+        if (!isMyPlayer && !isFreeAgent) return false;
+      } else if (filters.owner === 'Free Agent' && player.owned_by && player.owned_by !== 'Free Agent') {
+        return false;
+      } else if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') {
+        return false;
+      } else if (filters.owner !== 'Free Agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) {
+        return false;
+      }
     }
 
     // Min points filter
@@ -1417,7 +1430,9 @@ export default function FPLDashboard() {
                       }`}
                     >
                       <option value="all">All Owners</option>
-                      <option value="ThatDerekGuy">My Players</option>
+                      <option value="my_players_and_free_agents">My Players + FAs</option>
+                      <option value="ThatDerekGuy">My Players Only</option>
+                      <option value="Free Agent">Free Agents Only</option>
                       {owners.map(owner => (
                         <option key={owner} value={owner}>{owner}</option>
                       ))}
@@ -1553,6 +1568,26 @@ export default function FPLDashboard() {
                             Avg Mins (Next 5) {renderSortIcon('avg_minutes_next5')}
                           </div>
                         </th>
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('current_ppg')}
+                        >
+                          <div className="flex items-center">
+                            PPG (Current) {renderSortIcon('current_ppg')}
+                          </div>
+                        </th>
+                        <th 
+                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handleSort('predicted_ppg')}
+                        >
+                          <div className="flex items-center">
+                            PPG (Predicted) {renderSortIcon('predicted_ppg')}
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${isDarkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
@@ -1580,21 +1615,21 @@ export default function FPLDashboard() {
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                             {TEAM_DISPLAY_NAMES[player.team] || player.team || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {player.owned_by ? (
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                player.owned_by === 'ThatDerekGuy' 
-                                  ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                  : 'bg-purple-100 text-purple-800 border border-purple-300'
-                              }`}>
-                                {player.owned_by === 'ThatDerekGuy' ? '👤 My Player' : player.owned_by}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
-                                🆓 Free Agent
-                              </span>
-                            )}
-                          </td>
+<td className="px-6 py-4 whitespace-nowrap text-sm">
+  {player.owned_by && player.owned_by !== 'Free Agent' && player.owned_by !== '' ? (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      player.owned_by === 'ThatDerekGuy' 
+        ? 'bg-indigo-100 text-indigo-900 border border-indigo-400'  // Deep indigo for "My Player"
+        : 'bg-orange-100 text-orange-900 border border-orange-400'   // Orange for other owners
+    }`}>
+      {player.owned_by === 'ThatDerekGuy' ? '👤 My Player' : player.owned_by}
+    </span>
+  ) : (
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
+      ⚡ Free Agent
+    </span>
+  )}
+</td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {(() => {
                               if (player.sleeper_season_total) return player.sleeper_season_total.toFixed(1);
@@ -1694,6 +1729,12 @@ export default function FPLDashboard() {
                               // Final fallback: Show 0 or N/A for unmatched players
                               return player.ffh_matched ? '0' : 'N/A';
                             })()}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {player.current_ppg ? player.current_ppg.toFixed(1) : 'N/A'}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {player.predicted_ppg ? player.predicted_ppg.toFixed(1) : 'N/A'}
                           </td>
                         </tr>
                       ))}

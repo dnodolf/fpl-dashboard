@@ -263,7 +263,7 @@ async function integratePlayersWithOptaMatching() {
         age: sleeperPlayer.age || null
       };
 
-      if (ffhPlayer) {
+if (ffhPlayer) {
         // Extract FFH predictions
         const ffhSeasonPrediction = ffhPlayer.season_prediction || 
                                    ffhPlayer.range_prediction || 
@@ -306,6 +306,16 @@ async function integratePlayersWithOptaMatching() {
           }
         }
         
+        // Extract PPG data from FFH player
+        if (ffhPlayer.player && ffhPlayer.player.form_data && typeof ffhPlayer.player.form_data.ppg === 'number') {
+          enhancedPlayer.current_ppg = ffhPlayer.player.form_data.ppg;
+        }
+        
+        // Extract predicted season PPG
+        if (typeof ffhPlayer.season_prediction_avg === 'number') {
+          enhancedPlayer.predicted_ppg = ffhPlayer.season_prediction_avg;
+        }
+        
         // Apply scoring conversion
         let sleeperSeasonTotal;
         if (services.available && services.scoring?.enhancePlayerWithScoringConversion) {
@@ -341,7 +351,7 @@ async function integratePlayersWithOptaMatching() {
         enhancedPlayer.ffh_team = extractFFHTeam(ffhPlayer);
         enhancedPlayer.ffh_position_id = ffhPlayer.position_id;
         
-        console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts, Avg Mins: ${enhancedPlayer.avg_minutes_next5 || 'N/A'}`);
+        console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts, Avg Mins: ${enhancedPlayer.avg_minutes_next5 || 'N/A'}, PPG: ${enhancedPlayer.current_ppg || 'N/A'} → ${enhancedPlayer.predicted_ppg || 'N/A'}`);
       }
       
       enhancedPlayers.push(enhancedPlayer);
