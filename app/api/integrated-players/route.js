@@ -392,18 +392,18 @@ if (chrisInArray) {
 
     let matchResults = [];
     
-    if (services.available && services.matching) {
-      // Use your enhanced matching service
-      console.log('🎯 Using your PlayerMatchingService...');
-      try {
-        const matchingResult = await services.matching.matchAllPlayers(sleeperPlayersArray, ffhData.players);
-        matchResults = matchingResult.matches || [];
-        console.log(`✅ Your service matched: ${matchResults.length} players`);
-      } catch (serviceError) {
-        console.warn('Your service failed, using fallback:', serviceError.message);
-        // Fall through to manual matching
-      }
-    }
+if (services.available && services.matching) {
+  // Use your enhanced matching service
+  console.log('🎯 Using your PlayerMatchingService...');
+  try {
+    const matchingResult = await services.matching.matchAllPlayers(sleeperPlayersArray, ffhData.players, true);
+    matchResults = matchingResult.matches || [];
+    console.log(`✅ Your service matched: ${matchResults.length} players`);
+  } catch (serviceError) {
+    console.warn('Your service failed, using fallback:', serviceError.message);
+    // Fall through to manual matching
+  }
+}
     
     // If service matching failed or unavailable, use fallback
     if (matchResults.length === 0) {
