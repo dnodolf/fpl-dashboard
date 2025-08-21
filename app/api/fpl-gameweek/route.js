@@ -112,7 +112,7 @@ function analyzeCurrentGameweek(bootstrapData, fixturesData) {
           day: 'numeric' 
         });
       } else if (now >= deadline && finishedCount < currentGwFixtures.length) {
-        // After deadline, games still playing - live
+        // After deadline, games still playing - live (this is actionable)
         status = 'live';
         statusDisplay = `🔴 GW ${currentEvent.id} (Live)`;
         displayDate = lastKickoff.toLocaleDateString('en-US', { 
@@ -126,22 +126,42 @@ function analyzeCurrentGameweek(bootstrapData, fixturesData) {
           finished: finishedCount
         };
       } else {
-        // All games finished or event marked as finished
-        status = currentEvent.finished ? 'completed' : 'live';
-        statusDisplay = currentEvent.finished ? 
-          `✅ GW ${currentEvent.id} (Completed)` : 
-          `🔴 GW ${currentEvent.id} (Live)`;
-        displayDate = lastKickoff.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric' 
-        });
-        if (!currentEvent.finished) {
-          fixtures = {
-            first: firstKickoff,
-            last: lastKickoff,
-            count: currentGwFixtures.length,
-            finished: finishedCount
+        // All games finished - this gameweek is completed, find next actionable one
+        const nextEvent = bootstrapData.events?.find(event => 
+          event.id > currentEvent.id && !event.finished
+        );
+        
+        if (nextEvent) {
+          // Return next upcoming gameweek instead of completed one
+          const nextDeadline = new Date(nextEvent.deadline_time);
+          return {
+            number: nextEvent.id,
+            status: 'upcoming',
+            statusDisplay: `🏁 GW ${nextEvent.id} (Upcoming)`,
+            date: nextDeadline.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric' 
+            }),
+            fullDate: nextEvent.deadline_time,
+            name: nextEvent.name,
+            deadline: nextEvent.deadline_time,
+            deadlineFormatted: nextDeadline.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            fixtures: null,
+            source: 'fpl_api'
           };
+        } else {
+          // No next event found, fall back to current completed one
+          status = 'completed';
+          statusDisplay = `✅ GW ${currentEvent.id} (Completed)`;
+          displayDate = lastKickoff.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          });
         }
       }
     } else {

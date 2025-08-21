@@ -134,7 +134,7 @@ class GameweekService {
       { gw: 10, start: '2025-11-01', end: '2025-11-03', deadline: '2025-11-01T17:30:00Z' }
     ];
 
-    // Find the current gameweek
+    // Find the current actionable gameweek (skip completed ones)
     let currentGameweek = null;
     
     for (let i = 0; i < gameweekDates.length; i++) {
@@ -144,7 +144,7 @@ class GameweekService {
       const deadlineTime = new Date(gw.deadline).getTime();
       
       if (currentTime < deadlineTime) {
-        // Upcoming gameweek
+        // Upcoming gameweek - this is what we want to show for planning
         currentGameweek = {
           number: gw.gw,
           status: 'upcoming',
@@ -162,7 +162,7 @@ class GameweekService {
         };
         break;
       } else if (currentTime >= deadlineTime && currentTime <= endTime) {
-        // Live gameweek
+        // Live gameweek - this is what we want to show for tracking
         currentGameweek = {
           number: gw.gw,
           status: 'live',
@@ -180,11 +180,12 @@ class GameweekService {
         };
         break;
       }
+      // Skip completed gameweeks - we don't want to show them
     }
 
-    // If no current gameweek found, default to next available
+    // If no actionable gameweek found, find the next upcoming one
     if (!currentGameweek) {
-      const nextGw = gameweekDates.find(gw => new Date(gw.start).getTime() > currentTime) || gameweekDates[0];
+      const nextGw = gameweekDates.find(gw => new Date(gw.start).getTime() > currentTime) || gameweekDates[1]; // Default to GW2
       currentGameweek = {
         number: nextGw.gw,
         status: 'upcoming',
