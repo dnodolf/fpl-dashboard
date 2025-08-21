@@ -573,7 +573,14 @@ const TransferStats = ({ players, isDarkMode }) => {
 };
 
 // ----------------- NEW: UNMATCHED PLAYERS TABLE COMPONENT -----------------
+// Enhanced UnmatchedPlayersTable with search and pagination
+
 const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+
   const unmatchedPlayers = optaAnalysis?.unmatchedSleeperWithOpta || [];
   
   if (unmatchedPlayers.length === 0) {
@@ -590,75 +597,316 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
     );
   }
 
+  // Filter players based on search term
+  const filteredPlayers = unmatchedPlayers.filter(player => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const searchableText = [
+      player.name || '',
+      player.team || '',
+      player.position || '',
+      player.opta_id || ''
+    ].join(' ').toLowerCase();
+    
+    return searchableText.includes(searchLower);
+  });
+
+  // Sort players
+  const sortedPlayers = [...filteredPlayers].sort((a, b) => {
+    const getValue = (player, key) => {
+      switch (key) {
+        case 'name': return (player.name || '').toLowerCase();
+        case 'position': return player.position || '';
+        case 'team': return player.team || '';
+        case 'opta_id': return player.opta_id || '';
+        default: return '';
+      }
+    };
+
+    const aValue = getValue(a, sortConfig.key);
+    const bValue = getValue(b, sortConfig.key);
+    
+    if (sortConfig.direction === 'asc') {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(sortedPlayers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPlayers = sortedPlayers.slice(startIndex, endIndex);
+
+  // Handle sort
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  // Render sort icon
+  const renderSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return <span className="text-gray-400 ml-1">↕️</span>;
+    }
+    return sortConfig.direction === 'asc' ? 
+      <span className="text-blue-500 ml-1">↑</span> : 
+      <span className="text-blue-500 ml-1">↓</span>;
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      if (startPage > 1) {
+        pages.push(1);
+        if (startPage > 2) pages.push('...');
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
   return (
     <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      {/* Header with Search and Controls */}
       <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-          Unmatched Sleeper Players ({unmatchedPlayers.length})
-        </h3>
-        <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          These Sleeper players have Opta IDs but no corresponding FFH player was found.
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Unmatched Sleeper Players ({filteredPlayers.length}{searchTerm && ` of ${unmatchedPlayers.length}`})
+            </h3>
+            <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              These Sleeper players have Opta IDs but no corresponding FFH player was found.
+            </p>
+          </div>
+          
+          {/* Search and Items Per Page */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search Input */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search players..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page when searching
+                }}
+                className={`w-full sm:w-64 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            {/* Items Per Page */}
+            <select
+              value={itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+              className={`px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+              <option value={filteredPlayers.length}>Show all ({filteredPlayers.length})</option>
+            </select>
+          </div>
+        </div>
       </div>
       
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className={isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}>
             <tr>
-              <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                isDarkMode ? 'text-gray-300' : 'text-gray-500'
-              }`}>
-                Player
+              <th 
+                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center">
+                  Player {renderSortIcon('name')}
+                </div>
               </th>
-              <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                isDarkMode ? 'text-gray-300' : 'text-gray-500'
-              }`}>
-                Position
+              <th 
+                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+                onClick={() => handleSort('position')}
+              >
+                <div className="flex items-center">
+                  Position {renderSortIcon('position')}
+                </div>
               </th>
-              <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                isDarkMode ? 'text-gray-300' : 'text-gray-500'
-              }`}>
-                Team
+              <th 
+                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+                onClick={() => handleSort('team')}
+              >
+                <div className="flex items-center">
+                  Team {renderSortIcon('team')}
+                </div>
               </th>
-              <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                isDarkMode ? 'text-gray-300' : 'text-gray-500'
-              }`}>
-                Opta ID
+              <th 
+                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+                onClick={() => handleSort('opta_id')}
+              >
+                <div className="flex items-center">
+                  Opta ID {renderSortIcon('opta_id')}
+                </div>
               </th>
             </tr>
           </thead>
           <tbody className={`divide-y ${isDarkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-            {unmatchedPlayers.slice(0, 50).map((player, index) => (
-              <tr key={`unmatched-${index}`} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {player.name || 'Unknown'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    getSleeperPositionStyle(player.position)
-                  }`}>
-                    {player.position || 'N/A'}
-                  </span>
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                  {player.team || 'N/A'}
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {player.opta_id || 'N/A'}
+            {currentPlayers.length > 0 ? (
+              currentPlayers.map((player, index) => (
+                <tr key={`unmatched-${startIndex + index}`} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {player.name || 'Unknown'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      getSleeperPositionStyle(player.position)
+                    }`}>
+                      {player.position || 'N/A'}
+                    </span>
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                    {player.team || 'N/A'}
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {player.opta_id || 'N/A'}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className={`px-6 py-4 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {searchTerm ? `No players found matching "${searchTerm}"` : 'No unmatched players'}
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
       
-      {unmatchedPlayers.length > 50 && (
-        <div className={`px-6 py-3 border-t ${isDarkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Showing first 50 unmatched players. Total: {unmatchedPlayers.length}
-          </p>
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div className={`px-6 py-3 border-t flex items-center justify-between ${isDarkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
+          {/* Results Info */}
+          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Showing {startIndex + 1} to {Math.min(endIndex, sortedPlayers.length)} of {sortedPlayers.length} results
+            {searchTerm && ` (filtered from ${unmatchedPlayers.length} total)`}
+          </div>
+          
+          {/* Pagination Controls */}
+          <div className="flex items-center gap-2">
+            {/* Previous Button */}
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                currentPage === 1
+                  ? 'opacity-50 cursor-not-allowed'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-600'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+              }`}
+            >
+              Previous
+            </button>
+            
+            {/* Page Numbers */}
+            <div className="flex items-center gap-1">
+              {getPageNumbers().map((page, index) => (
+                <button
+                  key={index}
+                  onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                  disabled={page === '...'}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    page === currentPage
+                      ? 'bg-blue-500 text-white'
+                      : page === '...'
+                      ? 'opacity-50 cursor-not-allowed'
+                      : isDarkMode
+                        ? 'text-gray-300 hover:text-white hover:bg-gray-600'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            
+            {/* Next Button */}
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                currentPage === totalPages
+                  ? 'opacity-50 cursor-not-allowed'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-600'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+              }`}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
