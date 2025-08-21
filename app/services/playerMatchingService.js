@@ -48,48 +48,52 @@ export class PlayerMatchingService {
   // ✅ PRIORITY 1: ROBUST FIELD EXTRACTION
   // ===============================
 
-  /**
-   * ✅ CRITICAL FIX: Standardize FFH player data extraction
-   * Handles ALL field name variations from FFH API
-   */
-  extractFFHData(ffhPlayer) {
-    if (!ffhPlayer) return null;
+/**
+ * ✅ CRITICAL FIX: Standardize FFH player data extraction
+ * Handles ALL field name variations from FFH API
+ */
+extractFFHData(ffhPlayer) {
+  if (!ffhPlayer) return null;
 
-    return {
-      // Name extraction with fallbacks
-      name: ffhPlayer.web_name || 
-            ffhPlayer.name || 
-            (ffhPlayer.first_name && ffhPlayer.second_name ? 
-              `${ffhPlayer.first_name} ${ffhPlayer.second_name}` : '') ||
-            '',
+  return {
+    // Name extraction with fallbacks
+    name: ffhPlayer.web_name || 
+          ffhPlayer.name || 
+          (ffhPlayer.first_name && ffhPlayer.second_name ? 
+            `${ffhPlayer.first_name} ${ffhPlayer.second_name}` : '') ||
+          '',
 
-      // Team extraction with nested object support
-      team: ffhPlayer.team?.code_name ||     // ✅ FIXED: Handle nested team object
-            ffhPlayer.team_short_name || 
-            ffhPlayer.club || 
-            ffhPlayer.team_abbr ||
-            (typeof ffhPlayer.team === 'string' ? ffhPlayer.team : '') ||
-            '',
+    // Team extraction with nested object support
+    team: ffhPlayer.team?.code_name ||     // ✅ FIXED: Handle nested team object
+          ffhPlayer.team_short_name || 
+          ffhPlayer.club || 
+          ffhPlayer.team_abbr ||
+          (typeof ffhPlayer.team === 'string' ? ffhPlayer.team : '') ||
+          '',
 
-      // ID extraction with all variations
-      opta_id: ffhPlayer.opta_uuid ||        // ✅ FIXED: FFH uses opta_uuid
-               ffhPlayer.opta_id ||
-               '',
+    // ✅ CRITICAL FIX: Opta ID extraction from nested player object
+    opta_id: ffhPlayer.opta_uuid ||        // Direct field
+             ffhPlayer.opta_id ||          // Direct field
+             ffhPlayer.player?.opta_uuid || // ✅ NEW: Nested in player object
+             ffhPlayer.player?.opta_id ||   // ✅ NEW: Alternative nested field
+             '',
 
-      fpl_id: ffhPlayer.fpl_id || 
-              ffhPlayer.id || 
-              ffhPlayer.element_id ||
-              null,
+    fpl_id: ffhPlayer.fpl_id || 
+            ffhPlayer.id || 
+            ffhPlayer.element_id ||
+            ffhPlayer.player?.fpl_id ||    // ✅ NEW: Nested FPL ID
+            null,
 
-      // Position with fallbacks
-      position_id: ffhPlayer.position_id || 
-                   ffhPlayer.element_type ||
-                   null,
+    // Position with fallbacks
+    position_id: ffhPlayer.position_id || 
+                 ffhPlayer.element_type ||
+                 ffhPlayer.player?.position_id ||  // ✅ NEW: Nested position
+                 null,
 
-      // Raw player for debugging
-      _raw: ffhPlayer
-    };
-  }
+    // Raw player for debugging
+    _raw: ffhPlayer
+  };
+}
 
   /**
    * ✅ CRITICAL FIX: Standardize Sleeper player data extraction
