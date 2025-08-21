@@ -1,30 +1,8 @@
-// app/services/playerMatchingService.js - OPTA-ONLY ANALYSIS
+// app/services/playerMatchingService.js - SIMPLIFIED OPTA-ONLY MATCHING
 
 export class PlayerMatchingService {
   constructor() {
-    // Name aliases for better matching
-    this.nameAliases = {
-      'mo': 'mohamed', 'joao': 'joão', 'charly': 'carlos', 'will': 'william',
-      'bill': 'william', 'harry': 'harold', 'tom': 'thomas', 'nick': 'nicholas',
-      'alex': 'alexander', 'matt': 'matthew', 'matty': 'matthew', 'joe': 'joseph',
-      'jota': 'diogo', 'leo': 'leonardo', 'eddie': 'edward', 'phil': 'philip',
-      'mikey': 'michael', 'ben': 'benjamin', 'kyle': 'kyle', 'kev': 'kevin',
-      'ronnie': 'ronald', 'cris': 'cristiano', 'erling': 'haaland', 'cole': 'palmer'
-    };
-
-    // ✅ FIXED: Added Chris Richards manual override
-    this.manualOverrides = {
-      'chris richards|CRY': 'richards',
-      'luis diaz|LIV': 'luis díaz',
-      'mo salah|LIV': 'mohamed salah',
-      'son heung min|TOT': 'heung-min son',
-      'estevao|CHE': 'estevao',
-      'igor jesus|NFO': 'igor jesus',
-      'jacob bruun larsen|BUR': 'bruun larsen',
-      'martin zubimendi|ARS': 'martín zubimendi'
-    };
-
-    // Team code mappings
+    // Team code mappings for field extraction
     this.teamCodeMap = {
       'ARS': 'ARS', 'AVL': 'AVL', 'BOU': 'BOU', 'BRE': 'BRE',
       'BHA': 'BHA', 'BUR': 'BUR', 'CHE': 'CHE', 'CRY': 'CRY',
@@ -34,123 +12,116 @@ export class PlayerMatchingService {
       'SUN': 'SUN', 'LEI': 'LEI', 'IPS': 'IPS', 'SOU': 'SOU',
       'BURNLEY': 'BUR', 'WOLVES': 'WOL', 'WOLVERHAMPTON': 'WOL'
     };
-
-    // Position mappings
-    this.positionMap = {
-      'GKP': 1, 'GK': 1, 'G': 1,
-      'DEF': 2, 'D': 2,
-      'MID': 3, 'M': 3,
-      'FWD': 4, 'F': 4
-    };
   }
 
   // ===============================
-  // ✅ PRIORITY 1: ROBUST FIELD EXTRACTION
+  // DATA EXTRACTION METHODS
   // ===============================
 
-/**
- * ✅ CRITICAL FIX: Standardize FFH player data extraction
- * Handles ALL field name variations from FFH API
- */
-extractFFHData(ffhPlayer) {
-  if (!ffhPlayer) return null;
+  /**
+   * Extract standardized FFH player data
+   */
+  extractFFHData(ffhPlayer) {
+    if (!ffhPlayer) return null;
 
-  return {
-    // Name extraction with fallbacks
-    name: ffhPlayer.web_name || 
-          ffhPlayer.name || 
-          (ffhPlayer.first_name && ffhPlayer.second_name ? 
-            `${ffhPlayer.first_name} ${ffhPlayer.second_name}` : '') ||
-          '',
+    return {
+      name: ffhPlayer.web_name || 
+            ffhPlayer.name || 
+            (ffhPlayer.first_name && ffhPlayer.second_name ? 
+              `${ffhPlayer.first_name} ${ffhPlayer.second_name}` : '') ||
+            '',
 
-    // Team extraction with nested object support
-    team: ffhPlayer.team?.code_name ||     // ✅ FIXED: Handle nested team object
-          ffhPlayer.team_short_name || 
-          ffhPlayer.club || 
-          ffhPlayer.team_abbr ||
-          (typeof ffhPlayer.team === 'string' ? ffhPlayer.team : '') ||
-          '',
+      team: ffhPlayer.team?.code_name ||
+            ffhPlayer.team_short_name || 
+            ffhPlayer.club || 
+            ffhPlayer.team_abbr ||
+            (typeof ffhPlayer.team === 'string' ? ffhPlayer.team : '') ||
+            '',
 
-    // ✅ CRITICAL FIX: Opta ID extraction from nested player object
-    opta_id: ffhPlayer.opta_uuid ||        // Direct field
-             ffhPlayer.opta_id ||          // Direct field
-             ffhPlayer.player?.opta_uuid || // ✅ NEW: Nested in player object
-             ffhPlayer.player?.opta_id ||   // ✅ NEW: Alternative nested field
-             '',
+      opta_id: ffhPlayer.opta_uuid ||
+               ffhPlayer.opta_id ||
+               ffhPlayer.player?.opta_uuid ||
+               ffhPlayer.player?.opta_id ||
+               '',
 
-    fpl_id: ffhPlayer.fpl_id || 
-            ffhPlayer.id || 
-            ffhPlayer.element_id ||
-            ffhPlayer.player?.fpl_id ||    // ✅ NEW: Nested FPL ID
-            null,
+      fpl_id: ffhPlayer.fpl_id || 
+              ffhPlayer.id || 
+              ffhPlayer.element_id ||
+              ffhPlayer.player?.fpl_id ||
+              null,
 
-    // Position with fallbacks
-    position_id: ffhPlayer.position_id || 
-                 ffhPlayer.element_type ||
-                 ffhPlayer.player?.position_id ||  // ✅ NEW: Nested position
-                 null,
+      position_id: ffhPlayer.position_id || 
+                   ffhPlayer.element_type ||
+                   ffhPlayer.player?.position_id ||
+                   null,
 
-    // Raw player for debugging
-    _raw: ffhPlayer
-  };
-}
+      _raw: ffhPlayer
+    };
+  }
 
   /**
-   * ✅ CRITICAL FIX: Standardize Sleeper player data extraction
-   * Handles ALL field name variations from Sleeper API
+   * Extract standardized Sleeper player data
    */
   extractSleeperData(sleeperPlayer) {
     if (!sleeperPlayer) return null;
 
     return {
-      // Name extraction
       name: sleeperPlayer.full_name || 
             sleeperPlayer.name ||
             (sleeperPlayer.first_name && sleeperPlayer.last_name ?
               `${sleeperPlayer.first_name} ${sleeperPlayer.last_name}` : '') ||
             '',
 
-      // Team extraction
       team: sleeperPlayer.team_abbr || 
             sleeperPlayer.team ||
             '',
 
-      // ID extraction
       opta_id: sleeperPlayer.opta_id || '',
       rotowire_id: sleeperPlayer.rotowire_id || null,
       player_id: sleeperPlayer.id || sleeperPlayer.player_id || '',
 
-      // Position extraction
       position: sleeperPlayer.fantasy_positions?.[0] || 
                 sleeperPlayer.position ||
                 '',
 
-      // Raw player for debugging  
       _raw: sleeperPlayer
     };
   }
 
+  /**
+   * Get FFH player ID for deduplication
+   */
+  getFFHPlayerId(ffhPlayer) {
+    const standardized = this.extractFFHData(ffhPlayer);
+    if (!standardized) return `unknown_${Date.now()}`;
+    
+    return standardized.fpl_id || 
+           standardized.opta_id || 
+           `${standardized.name}_${standardized.team}`;
+  }
+
   // ===============================
-  // 🎯 NEW: OPTA-ONLY ANALYSIS METHODS
+  // MAIN OPTA-ONLY MATCHING METHOD
   // ===============================
 
   /**
-   * Analyze how many matches we'd get with Opta IDs only
+   * Pure Opta ID matching - simplified and fast
    */
-  analyzeOptaOnlyMatching(sleeperPlayers, ffhPlayers) {
-    console.log('\n🔍 OPTA-ONLY MATCHING ANALYSIS');
-    console.log('=====================================');
-
+  async matchAllPlayers(sleeperPlayers, ffhPlayers) {
+    console.log('🎯 OPTA-ONLY MATCHING: Starting with', sleeperPlayers.length, 'Sleeper players');
+    
     const stats = {
       sleeperWithOpta: 0,
       ffhWithOpta: 0,
-      optaOnlyMatches: 0,
-      matchedPlayers: [],
+      optaMatches: 0,
       unmatchedSleeperWithOpta: [],
       duplicateOptas: new Map()
     };
 
-    // Count Sleeper players with Opta IDs
+    const matches = [];
+    const usedFFHIds = new Set();
+    
+    // Build Sleeper Opta map and count
     const sleeperOptaMap = new Map();
     sleeperPlayers.forEach((player, index) => {
       const sleeperData = this.extractSleeperData(player);
@@ -166,47 +137,58 @@ extractFFHData(ffhPlayer) {
           stats.duplicateOptas.get(sleeperData.opta_id).push({
             name: sleeperData.name,
             team: sleeperData.team,
+            position: sleeperData.position,
             index
           });
         } else {
           sleeperOptaMap.set(sleeperData.opta_id, {
             name: sleeperData.name,
             team: sleeperData.team,
-            index
+            position: sleeperData.position,
+            index,
+            player: player
           });
         }
       }
     });
 
-    // Count FFH players with Opta IDs and build map
+    // Build FFH Opta map and count
     const ffhOptaMap = new Map();
     ffhPlayers.forEach((player, index) => {
       const ffhData = this.extractFFHData(player);
       if (ffhData && ffhData.opta_id) {
         stats.ffhWithOpta++;
-        ffhOptaMap.set(ffhData.opta_id, {
-          name: ffhData.name,
-          team: ffhData.team,
-          fpl_id: ffhData.fpl_id,
-          index
-        });
+        ffhOptaMap.set(ffhData.opta_id, player);
       }
     });
 
-    // Find Opta-only matches
+    // Match players via Opta ID
     for (const [optaId, sleeperInfo] of sleeperOptaMap) {
       if (ffhOptaMap.has(optaId)) {
-        stats.optaOnlyMatches++;
-        const ffhInfo = ffhOptaMap.get(optaId);
-        stats.matchedPlayers.push({
-          opta_id: optaId,
-          sleeper: sleeperInfo,
-          ffh: ffhInfo
-        });
+        const ffhPlayer = ffhOptaMap.get(optaId);
+        const ffhId = this.getFFHPlayerId(ffhPlayer);
+        
+        // Ensure no duplicates
+        if (!usedFFHIds.has(ffhId)) {
+          matches.push({
+            sleeperPlayer: sleeperInfo.player,
+            ffhPlayer,
+            confidence: 'High',
+            method: 'Opta ID',
+            score: 1.0,
+            opta_id: optaId
+          });
+          usedFFHIds.add(ffhId);
+          stats.optaMatches++;
+        }
       } else {
+        // Track unmatched Sleeper players with Opta IDs
         stats.unmatchedSleeperWithOpta.push({
           opta_id: optaId,
-          ...sleeperInfo
+          name: sleeperInfo.name,
+          team: sleeperInfo.team,
+          position: sleeperInfo.position,
+          player: sleeperInfo.player
         });
       }
     }
@@ -214,806 +196,77 @@ extractFFHData(ffhPlayer) {
     // Calculate rates
     const sleeperOptaRate = Math.round((stats.sleeperWithOpta / sleeperPlayers.length) * 100);
     const ffhOptaRate = Math.round((stats.ffhWithOpta / ffhPlayers.length) * 100);
-    const optaMatchRate = sleeperPlayers.length > 0 ? 
-      Math.round((stats.optaOnlyMatches / sleeperPlayers.length) * 100) : 0;
+    const optaMatchRate = stats.ffhWithOpta > 0 ? 
+      Math.round((stats.optaMatches / stats.ffhWithOpta) * 100) : 0;
 
-    console.log(`📊 OPTA ID COVERAGE:`);
-    console.log(`  Sleeper players with Opta ID: ${stats.sleeperWithOpta}/${sleeperPlayers.length} (${sleeperOptaRate}%)`);
-    console.log(`  FFH players with Opta ID: ${stats.ffhWithOpta}/${ffhPlayers.length} (${ffhOptaRate}%)`);
-    
-    console.log(`\n🎯 OPTA-ONLY MATCHING RESULTS:`);
-    console.log(`  Successful matches: ${stats.optaOnlyMatches}/${sleeperPlayers.length} (${optaMatchRate}%)`);
-    console.log(`  Unmatched Sleeper players with Opta: ${stats.unmatchedSleeperWithOpta.length}`);
+    console.log(`📊 OPTA COVERAGE:`);
+    console.log(`  Sleeper with Opta: ${stats.sleeperWithOpta}/${sleeperPlayers.length} (${sleeperOptaRate}%)`);
+    console.log(`  FFH with Opta: ${stats.ffhWithOpta}/${ffhPlayers.length} (${ffhOptaRate}%)`);
+    console.log(`  Successful matches: ${stats.optaMatches}/${stats.ffhWithOpta} (${optaMatchRate}%)`);
+    console.log(`  Unmatched Sleeper with Opta: ${stats.unmatchedSleeperWithOpta.length}`);
 
     // Show sample matches
-    console.log(`\n✅ SAMPLE OPTA MATCHES (first 10):`);
-    stats.matchedPlayers.slice(0, 10).forEach(match => {
-      console.log(`  ${match.sleeper.name} (${match.sleeper.team}) → ${match.ffh.name} (${match.ffh.team}) [${match.opta_id}]`);
+    console.log(`✅ SAMPLE MATCHES (first 5):`);
+    matches.slice(0, 5).forEach(match => {
+      const sleeperData = this.extractSleeperData(match.sleeperPlayer);
+      const ffhData = this.extractFFHData(match.ffhPlayer);
+      console.log(`  ${sleeperData.name} (${sleeperData.team}) → ${ffhData.name} (${ffhData.team})`);
     });
 
-    // Show unmatched players with Opta IDs
     if (stats.unmatchedSleeperWithOpta.length > 0) {
-      console.log(`\n❌ UNMATCHED SLEEPER PLAYERS WITH OPTA (first 10):`);
-      stats.unmatchedSleeperWithOpta.slice(0, 10).forEach(player => {
-        console.log(`  ${player.name} (${player.team}) - Opta: ${player.opta_id}`);
+      console.log(`❌ UNMATCHED SLEEPER PLAYERS (first 5):`);
+      stats.unmatchedSleeperWithOpta.slice(0, 5).forEach(player => {
+        console.log(`  ${player.name} (${player.team}) - ${player.position}`);
       });
     }
-
-    // Show duplicate Opta IDs
-    if (stats.duplicateOptas.size > 0) {
-      console.log(`\n⚠️ DUPLICATE OPTA IDS IN SLEEPER:`);
-      for (const [optaId, players] of stats.duplicateOptas) {
-        console.log(`  ${optaId}:`);
-        players.forEach(p => console.log(`    - ${p.name} (${p.team})`));
-      }
-    }
-
-    // Special check for Chris Richards
-    const chrisRichards = sleeperPlayers.find(p => 
-      p.id === '2168' || (p.name && p.name.toLowerCase().includes('chris richards'))
-    );
-    if (chrisRichards) {
-      const chrisData = this.extractSleeperData(chrisRichards);
-      console.log(`\n🎯 CHRIS RICHARDS OPTA ANALYSIS:`);
-      console.log(`  Has Opta ID: ${!!chrisData.opta_id} (${chrisData.opta_id})`);
-      if (chrisData.opta_id) {
-        const hasFFHMatch = ffhOptaMap.has(chrisData.opta_id);
-        console.log(`  FFH match via Opta: ${hasFFHMatch}`);
-        if (hasFFHMatch) {
-          const ffhMatch = ffhOptaMap.get(chrisData.opta_id);
-          console.log(`  Would match to: ${ffhMatch.name} (${ffhMatch.team})`);
-        }
-      }
-    }
-
-    console.log('\n=====================================\n');
-
-    return stats;
-  }
-
-  /**
-   * Test simplified Opta-only matching approach
-   */
-  testOptaOnlyMatching(sleeperPlayers, ffhPlayers) {
-    console.log('\n🧪 TESTING OPTA-ONLY MATCHING APPROACH');
-    console.log('=====================================');
-
-    const matches = [];
-    const usedFFHIds = new Set();
-    
-    // Build FFH Opta map
-    const ffhOptaMap = new Map();
-    ffhPlayers.forEach(player => {
-      const ffhData = this.extractFFHData(player);
-      if (ffhData && ffhData.opta_id) {
-        ffhOptaMap.set(ffhData.opta_id, player);
-      }
-    });
-
-    // Match each Sleeper player
-    sleeperPlayers.forEach(sleeperPlayer => {
-      const sleeperData = this.extractSleeperData(sleeperPlayer);
-      
-      if (sleeperData && sleeperData.opta_id && ffhOptaMap.has(sleeperData.opta_id)) {
-        const ffhPlayer = ffhOptaMap.get(sleeperData.opta_id);
-        const ffhId = this.getFFHPlayerId(ffhPlayer);
-        
-        // Ensure no duplicates
-        if (!usedFFHIds.has(ffhId)) {
-          matches.push({
-            sleeperPlayer,
-            ffhPlayer,
-            confidence: 'High',
-            method: 'Opta ID Only',
-            score: 1.0,
-            opta_id: sleeperData.opta_id
-          });
-          usedFFHIds.add(ffhId);
-        }
-      }
-    });
-
-    const matchRate = Math.round((matches.length / sleeperPlayers.length) * 100);
-    
-    console.log(`🎯 OPTA-ONLY RESULTS:`);
-    console.log(`  Matched: ${matches.length}/${sleeperPlayers.length} (${matchRate}%)`);
-    console.log(`  All matches have HIGH confidence`);
-    console.log(`  Zero false positives (exact Opta ID match)`);
-
-    // Check for Chris Richards
-    const chrisMatch = matches.find(m => 
-      m.sleeperPlayer.id === '2168' || 
-      (m.sleeperPlayer.name && m.sleeperPlayer.name.toLowerCase().includes('chris richards'))
-    );
-    
-    if (chrisMatch) {
-      console.log(`\n✅ CHRIS RICHARDS MATCHED via Opta-only:`);
-      console.log(`  Sleeper: ${chrisMatch.sleeperPlayer.name} (${chrisMatch.sleeperPlayer.team_abbr})`);
-      console.log(`  FFH: ${this.getFFHPlayerName(chrisMatch.ffhPlayer)}`);
-      console.log(`  Opta ID: ${chrisMatch.opta_id}`);
-    } else {
-      console.log(`\n❌ CHRIS RICHARDS: Not matched via Opta-only`);
-    }
-
-    console.log('\n=====================================\n');
 
     return {
       matches,
-      matchRate,
-      totalMatched: matches.length,
-      isSimplified: true
-    };
-  }
-
-  // ===============================
-  // HELPER METHODS (Updated to use standardized data)
-  // ===============================
-
-  // Normalize name for matching
-  normalizeNameForMatching(name) {
-    if (!name) return '';
-    
-    let normalized = name.toLowerCase()
-      .trim()
-      .replace(/[àáâãäå]/g, 'a')
-      .replace(/[èéêë]/g, 'e')
-      .replace(/[ìíîï]/g, 'i')
-      .replace(/[òóôõö]/g, 'o')
-      .replace(/[ùúûü]/g, 'u')
-      .replace(/[ñ]/g, 'n')
-      .replace(/[ç]/g, 'c')
-      .replace(/[ý]/g, 'y')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // Apply name aliases
-    Object.entries(this.nameAliases).forEach(([alias, full]) => {
-      const regex = new RegExp(`\\b${alias}\\b`, 'g');
-      normalized = normalized.replace(regex, full);
-    });
-
-    return normalized;
-  }
-
-  // Normalize team for matching
-  normalizeTeamForMatching(team) {
-    if (!team) return '';
-    const normalized = team.toUpperCase().trim();
-    return this.teamCodeMap[normalized] || normalized;
-  }
-
-  // ✅ UPDATED: Use standardized data extraction
-  getFFHPlayerName(ffhPlayer) {
-    const standardized = this.extractFFHData(ffhPlayer);
-    return standardized?.name || '';
-  }
-
-  // ✅ UPDATED: Use standardized data extraction
-  getFFHTeam(ffhPlayer) {
-    const standardized = this.extractFFHData(ffhPlayer);
-    return standardized?.team || '';
-  }
-
-  // ✅ UPDATED: Use standardized data extraction
-  getFFHPlayerId(ffhPlayer) {
-    const standardized = this.extractFFHData(ffhPlayer);
-    if (!standardized) return `unknown_${Date.now()}`;
-    
-    return standardized.fpl_id || 
-           standardized.opta_id || 
-           `${standardized.name}_${standardized.team}`;
-  }
-
-  // Calculate name similarity with enhanced similar surname detection
-  calculateNameSimilarity(name1, name2) {
-    if (!name1 || !name2) return 0;
-    
-    // Split names into parts
-    const parts1 = name1.toLowerCase().split(' ').filter(p => p.length > 1);
-    const parts2 = name2.toLowerCase().split(' ').filter(p => p.length > 1);
-    
-    // ENHANCED: Check for similar surname but different first name cases
-    if (parts1.length >= 2 && parts2.length >= 2) {
-      const lastName1 = parts1[parts1.length - 1];
-      const lastName2 = parts2[parts2.length - 1];
-      const firstName1 = parts1[0];
-      const firstName2 = parts2[0];
-      
-      const lastNameSim = this.levenshteinSimilarity(lastName1, lastName2);
-      const firstNameSim = this.levenshteinSimilarity(firstName1, firstName2);
-      
-      // If surnames are similar but first names are completely different, penalize heavily
-      if (lastNameSim > 0.8 && firstNameSim < 0.3) {
-        console.log(`⚠️ BLOCKED: Similar surname detected: "${name1}" vs "${name2}" - Last:${lastNameSim.toFixed(2)}, First:${firstNameSim.toFixed(2)}`);
-        return 0.1; // Very low score to prevent false matches
-      }
-      
-      // Special case for exact surname match but different first names
-      if (lastName1 === lastName2 && firstName1 !== firstName2) {
-        const firstNameLength = Math.min(firstName1.length, firstName2.length);
-        if (firstNameLength > 2 && !firstName1.startsWith(firstName2.charAt(0)) && !firstName2.startsWith(firstName1.charAt(0))) {
-          console.log(`⚠️ BLOCKED: Exact surname match but different first names: "${name1}" vs "${name2}"`);
-          return 0.1;
-        }
-      }
-    }
-    
-    // Check for any matching parts
-    let bestMatch = 0;
-    
-    for (const part1 of parts1) {
-      for (const part2 of parts2) {
-        // Exact match
-        if (part1 === part2 && part1.length > 2) {
-          return 0.9;
-        }
-        
-        // Substring match
-        if ((part1.includes(part2) || part2.includes(part1)) && Math.min(part1.length, part2.length) > 2) {
-          bestMatch = Math.max(bestMatch, 0.8);
-        }
-        
-        // Levenshtein for individual parts
-        const similarity = this.levenshteinSimilarity(part1, part2);
-        if (similarity > 0.7 && Math.min(part1.length, part2.length) > 2) {
-          bestMatch = Math.max(bestMatch, similarity * 0.7);
-        }
-      }
-    }
-    
-    return bestMatch;
-  }
-
-  // Levenshtein distance helper
-  levenshteinSimilarity(str1, str2) {
-    const len1 = str1.length;
-    const len2 = str2.length;
-    
-    if (len1 === 0) return len2 === 0 ? 1 : 0;
-    if (len2 === 0) return 0;
-
-    const matrix = Array(len1 + 1).fill().map(() => Array(len2 + 1).fill(0));
-    
-    for (let i = 0; i <= len1; i++) matrix[i][0] = i;
-    for (let j = 0; j <= len2; j++) matrix[0][j] = j;
-    
-    for (let i = 1; i <= len1; i++) {
-      for (let j = 1; j <= len2; j++) {
-        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] + cost
-        );
-      }
-    }
-    
-    const distance = matrix[len1][len2];
-    const maxLength = Math.max(len1, len2);
-    return (maxLength - distance) / maxLength;
-  }
-
-  // Assign confidence based on score
-  assignConfidence(score) {
-    if (score >= 0.85) return 'High';
-    if (score >= 0.65) return 'Medium';
-    if (score >= 0.4) return 'Low';
-    return 'None';
-  }
-
-  // ===============================
-  // ✅ UPDATED: MULTI-TIER MATCHING WITH STANDARDIZED DATA
-  // ===============================
-
-findBestFFHMatchOptimal(sleeperPlayer, availableFFHPlayers, diagnostics) {
-  if (!sleeperPlayer) return null;
-
-  // ✅ CRITICAL: Use standardized data extraction
-  const sleeperData = this.extractSleeperData(sleeperPlayer);
-  if (!sleeperData || !sleeperData.name) return null;
-
-  const sleeperName = this.normalizeNameForMatching(sleeperData.name);
-  const sleeperTeam = this.normalizeTeamForMatching(sleeperData.team);
-  const sleeperKey = `${sleeperName}|${sleeperTeam}`;
-
-  // Enhanced debugging for problematic cases
-  const isChrisRichards = sleeperData.name.toLowerCase().includes('chris richards');
-  if (isChrisRichards) {
-    console.log('🔍 CHRIS RICHARDS DEBUG (STANDARDIZED):');
-    console.log('- Raw Sleeper:', sleeperData._raw.full_name, sleeperData._raw.team_abbr);
-    console.log('- Standardized:', sleeperData);
-    console.log('- Normalized Name:', sleeperName);
-    console.log('- Normalized Team:', sleeperTeam);
-    console.log('- Override Key:', sleeperKey);
-    console.log('- Available FFH Players Count:', availableFFHPlayers.length);
-  }
-
-  // TIER 0: Manual Overrides (Highest Priority)
-  if (this.manualOverrides[sleeperKey]) {
-    const targetName = this.normalizeNameForMatching(this.manualOverrides[sleeperKey]);
-    const override = availableFFHPlayers.find(p => {
-      const ffhData = this.extractFFHData(p);
-      if (!ffhData) return false;
-      
-      const ffhName = this.normalizeNameForMatching(ffhData.name);
-      const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
-      
-      if (isChrisRichards) {
-        console.log(`  Override check: "${ffhName}" (${ffhTeam}) vs target "${targetName}"`);
-      }
-      
-      return ffhName === targetName || ffhName.includes(targetName) || targetName.includes(ffhName);
-    });
-    
-    if (override) {
-      const ffhData = this.extractFFHData(override);
-      if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Manual override matched!');
-      
-      diagnostics.push({
-        sleeper: `${sleeperData.name} (${sleeperTeam})`,
-        ffh: `${ffhData.name} (${ffhData.team})`,
-        method: 'Manual Override',
-        confidence: 'High',
-        score: 1.0
-      });
-      return override;
-    } else if (isChrisRichards) {
-      console.log('❌ CHRIS RICHARDS: Manual override not found');
-    }
-  }
-
-  // ✅ TIER 1: Opta ID Match (ENHANCED DEBUGGING)
-  if (sleeperData.opta_id) {
-    if (isChrisRichards) {
-      console.log(`🔍 CHRIS RICHARDS: Searching for Opta ID match: ${sleeperData.opta_id}`);
-    }
-    
-    const optaMatch = availableFFHPlayers.find(p => {
-      const ffhData = this.extractFFHData(p);
-      const hasMatch = ffhData && ffhData.opta_id && ffhData.opta_id === sleeperData.opta_id;
-      
-      if (isChrisRichards && ffhData) {
-        console.log(`  Checking: ${ffhData.name} - Opta: "${ffhData.opta_id}" vs "${sleeperData.opta_id}" = ${hasMatch}`);
-      }
-      
-      return hasMatch;
-    });
-    
-    if (optaMatch) {
-      const ffhData = this.extractFFHData(optaMatch);
-      if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Opta ID matched!');
-      
-      diagnostics.push({
-        sleeper: `${sleeperData.name} (${sleeperTeam})`,
-        ffh: `${ffhData.name} (${ffhData.team})`,
-        method: 'Opta ID',
-        confidence: 'High',
-        score: 1.0
-      });
-      return optaMatch;
-    } else if (isChrisRichards) {
-      console.log('❌ CHRIS RICHARDS: No Opta ID match found');
-    }
-  } else if (isChrisRichards) {
-    console.log('❌ CHRIS RICHARDS: No Opta ID in Sleeper data');
-  }
-
-  // ✅ TIER 2: FPL ID Match (FIXED FIELD MAPPING)
-  if (sleeperData.rotowire_id) {
-    if (isChrisRichards) {
-      console.log(`🔍 CHRIS RICHARDS: Searching for FPL ID match: ${sleeperData.rotowire_id}`);
-    }
-    
-    const fplMatch = availableFFHPlayers.find(p => {
-      const ffhData = this.extractFFHData(p);
-      const hasMatch = ffhData && ffhData.fpl_id && 
-             String(ffhData.fpl_id) === String(sleeperData.rotowire_id);
-             
-      if (isChrisRichards && ffhData) {
-        console.log(`  Checking: ${ffhData.name} - FPL: "${ffhData.fpl_id}" vs "${sleeperData.rotowire_id}" = ${hasMatch}`);
-      }
-      
-      return hasMatch;
-    });
-    
-    if (fplMatch) {
-      const ffhData = this.extractFFHData(fplMatch);
-      if (isChrisRichards) console.log('✅ CHRIS RICHARDS: FPL ID matched!');
-      
-      diagnostics.push({
-        sleeper: `${sleeperData.name} (${sleeperTeam})`,
-        ffh: `${ffhData.name} (${ffhData.team})`,
-        method: 'FPL ID',
-        confidence: 'High',
-        score: 1.0
-      });
-      return fplMatch;
-    } else if (isChrisRichards) {
-      console.log('❌ CHRIS RICHARDS: No FPL ID match found');
-    }
-  } else if (isChrisRichards) {
-    console.log('❌ CHRIS RICHARDS: No FPL/Rotowire ID in Sleeper data');
-  }
-
-  // TIER 3: Name + Team Match (Good for remaining players)
-  if (sleeperTeam) {
-    if (isChrisRichards) {
-      console.log(`🔍 CHRIS RICHARDS: Searching for team matches: ${sleeperTeam}`);
-    }
-    
-    const teamMatches = availableFFHPlayers.filter(p => {
-      const ffhData = this.extractFFHData(p);
-      if (!ffhData) return false;
-      
-      const ffhTeam = this.normalizeTeamForMatching(ffhData.team);
-      const hasMatch = ffhTeam === sleeperTeam;
-      
-      if (isChrisRichards) {
-        console.log(`  Team check: ${ffhData.name} - "${ffhTeam}" vs "${sleeperTeam}" = ${hasMatch}`);
-      }
-      
-      return hasMatch;
-    });
-    
-    if (isChrisRichards) {
-      console.log(`- Team matches found: ${teamMatches.length}`);
-      teamMatches.forEach(tm => {
-        const ffhData = this.extractFFHData(tm);
-        console.log(`  - ${ffhData.name} (${ffhData.team})`);
-      });
-    }
-    
-    if (teamMatches.length > 0) {
-      let bestTeamMatch = null;
-      let bestTeamScore = 0;
-      
-      for (const ffhPlayer of teamMatches) {
-        const ffhData = this.extractFFHData(ffhPlayer);
-        if (!ffhData) continue;
-        
-        const ffhName = this.normalizeNameForMatching(ffhData.name);
-        const score = this.calculateNameSimilarity(sleeperName, ffhName);
-        
-        if (isChrisRichards) {
-          console.log(`    Name similarity: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)}`);
-        }
-        
-        if (score >= 0.6 && score > bestTeamScore) {
-          bestTeamScore = score;
-          bestTeamMatch = ffhPlayer;
-        }
-      }
-      
-      if (bestTeamMatch) {
-        const ffhData = this.extractFFHData(bestTeamMatch);
-        const confidence = this.assignConfidence(bestTeamScore);
-        
-        if (isChrisRichards) {
-          console.log(`✅ CHRIS RICHARDS: Best team match found with score ${bestTeamScore.toFixed(3)}`);
-        }
-        
-        diagnostics.push({
-          sleeper: `${sleeperData.name} (${sleeperTeam})`,
-          ffh: `${ffhData.name} (${ffhData.team})`,
-          method: 'Name+Team',
-          confidence,
-          score: bestTeamScore
-        });
-        return bestTeamMatch;
-      } else if (isChrisRichards) {
-        console.log('❌ CHRIS RICHARDS: No good team+name match found (scores too low)');
-      }
-    } else if (isChrisRichards) {
-      console.log('❌ CHRIS RICHARDS: No team matches found');
-    }
-  }
-
-  // TIER 4: Name Only Match (Last resort - very high threshold)
-  if (isChrisRichards) {
-    console.log('🔍 CHRIS RICHARDS: Trying name-only matching...');
-  }
-  
-  let bestMatch = null;
-  let bestScore = 0;
-  
-  for (const ffhPlayer of availableFFHPlayers) {
-    const ffhData = this.extractFFHData(ffhPlayer);
-    if (!ffhData) continue;
-    
-    const ffhName = this.normalizeNameForMatching(ffhData.name);
-    const score = this.calculateNameSimilarity(sleeperName, ffhName);
-    
-    if (isChrisRichards && score > 0.1) {
-      console.log(`    Name-only: "${sleeperName}" vs "${ffhName}" = ${score.toFixed(3)} (need >= 0.85)`);
-    }
-    
-    if (score >= 0.85 && score > bestScore) {
-      bestScore = score;
-      bestMatch = ffhPlayer;
-    }
-  }
-  
-  if (bestMatch) {
-    const ffhData = this.extractFFHData(bestMatch);
-    if (isChrisRichards) {
-      console.log(`✅ CHRIS RICHARDS: Name-only match found with score ${bestScore.toFixed(3)}`);
-    }
-    
-    diagnostics.push({
-      sleeper: `${sleeperData.name} (${sleeperTeam})`,
-      ffh: `${ffhData.name} (${ffhData.team})`,
-      method: 'Name Only',
-      confidence: 'Medium',
-      score: bestScore
-    });
-    return bestMatch;
-  }
-
-  // No match found
-  if (isChrisRichards) {
-    console.log('❌ CHRIS RICHARDS: No match found in any tier');
-  }
-  
-  diagnostics.push({
-    sleeper: `${sleeperData.name} (${sleeperTeam})`,
-    ffh: 'No match found',
-    method: 'No Match',
-    confidence: 'None',
-    score: 0
-  });
-  return null;
-}
-
-  // ===============================
-  // MAIN MATCHING METHOD - UPDATED WITH OPTA ANALYSIS
-  // ===============================
-
-// ✅ UPDATED: matchAllPlayers with Opta analysis option
-async matchAllPlayers(sleeperPlayers, ffhPlayers, useOptaOnly = false) {
-  console.log('🔍 MATCHING SERVICE: Starting with', sleeperPlayers.length, 'players');
-  
-  // 🎯 NEW: Run Opta analysis first
-  console.log('\n🔬 RUNNING OPTA ANALYSIS...');
-  const optaAnalysis = this.analyzeOptaOnlyMatching(sleeperPlayers, ffhPlayers);
-  
-  // 🎯 NEW: Test pure Opta-only approach
-  if (useOptaOnly) {
-    console.log('🎯 USING OPTA-ONLY MATCHING (simplified approach)');
-    const optaOnlyResults = this.testOptaOnlyMatching(sleeperPlayers, ffhPlayers);
-    
-    return {
-      matches: optaOnlyResults.matches,
-      diagnostics: [], // Simplified approach doesn't need complex diagnostics
       stats: {
         total: sleeperPlayers.length,
-        matched: optaOnlyResults.totalMatched,
-        matchRate: optaOnlyResults.matchRate,
-        byMethod: { 'Opta ID Only': optaOnlyResults.totalMatched },
-        byConfidence: { 'High': optaOnlyResults.totalMatched }
+        matched: stats.optaMatches,
+        matchRate: Math.round((stats.optaMatches / sleeperPlayers.length) * 100),
+        byMethod: { 'Opta ID': stats.optaMatches },
+        byConfidence: { 'High': stats.optaMatches }
+      },
+      optaAnalysis: {
+        sleeperWithOpta: stats.sleeperWithOpta,
+        sleeperOptaRate,
+        ffhWithOpta: stats.ffhWithOpta,
+        ffhOptaRate,
+        optaMatches: stats.optaMatches,
+        optaMatchRate,
+        unmatchedSleeperWithOpta: stats.unmatchedSleeperWithOpta,
+        duplicateOptas: stats.duplicateOptas
       },
       summary: {
         totalSleeperPlayers: sleeperPlayers.length,
         totalFFHPlayers: ffhPlayers.length,
-        matchedPlayers: optaOnlyResults.totalMatched,
-        matchRate: `${optaOnlyResults.matchRate}%`,
-        uniqueFFHPlayersUsed: optaOnlyResults.totalMatched,
-        duplicateCheck: 'PASS - Opta ID only matching',
-        approach: 'SIMPLIFIED - Opta IDs only'
-      },
-      optaAnalysis // Include the analysis for review
+        matchedPlayers: stats.optaMatches,
+        matchRate: `${optaMatchRate}%`,
+        uniqueFFHPlayersUsed: stats.optaMatches,
+        approach: 'OPTA-ONLY - Simplified & Fast'
+      }
     };
   }
-
-  // Continue with existing multi-tier approach if not using Opta-only
-  const diagnostics = [];
-  const matches = [];
-  const stats = {
-    total: sleeperPlayers.length,
-    matched: 0,
-    byMethod: {},
-    byConfidence: {}
-  };
-  
-  // ✅ ENHANCED: Check if Chris Richards is in the input with detailed debugging
-  const chrisInInput = sleeperPlayers.find(p => 
-    p.id === '2168' || (p.name && p.name.toLowerCase().includes('chris richards'))
-  );
-  console.log('🔍 CHRIS RICHARDS IN SERVICE INPUT:', !!chrisInInput);
-  if (chrisInInput) {
-    console.log('- Service Input Data:', { 
-      id: chrisInInput.id, 
-      name: chrisInInput.name, 
-      team: chrisInInput.team_abbr || chrisInInput.team,
-      opta_id: chrisInInput.opta_id 
-    });
-    console.log('- Input Array Index:', sleeperPlayers.indexOf(chrisInInput));
-  }
-
-  console.log(`🔄 STANDARDIZED MATCHING: Processing ${sleeperPlayers.length} Sleeper players against ${ffhPlayers.length} FFH players`);
-
-  // Track which FFH players have been used
-  const usedFFHPlayerIds = new Set();
-  
-  console.log('🔍 ABOUT TO PROCESS', sleeperPlayers.length, 'players in main loop');
-  
-// ✅ SIMPLIFIED: Process each player with minimal logging to avoid timeouts
-for (let i = 0; i < sleeperPlayers.length; i++) {
-  const sleeperPlayer = sleeperPlayers[i];
-  
-  // ✅ SIMPLIFIED: Only log every 100 players to reduce timeout risk
-  if (i % 100 === 0) {
-    console.log(`🔄 Processing index ${i}/${sleeperPlayers.length}`);
-  }
-  
-  // ✅ ENHANCED: Check for Chris Richards at each iteration
-  const isChris = sleeperPlayer?.id === '2168' || 
-                 (sleeperPlayer?.name && sleeperPlayer.name.toLowerCase().includes('chris richards')) ||
-                 (sleeperPlayer?.full_name && sleeperPlayer.full_name.toLowerCase().includes('chris richards'));
-  
-  if (isChris) {
-    console.log(`🎯 FOUND CHRIS RICHARDS AT INDEX ${i}:`, {
-      id: sleeperPlayer.id,
-      name: sleeperPlayer.name || sleeperPlayer.full_name,
-      team: sleeperPlayer.team_abbr || sleeperPlayer.team
-    });
-  }
-
-  // ✅ ENHANCED: Safety check with detailed logging for Chris
-  if (!sleeperPlayer || (!sleeperPlayer.name && !sleeperPlayer.full_name)) {
-    if (isChris) {
-      console.log('❌ CHRIS RICHARDS: Invalid player data, skipping');
-    }
-    continue;
-  }
-
-  // Filter out already used FFH players
-  const availableFFHPlayers = ffhPlayers.filter(p => {
-    const ffhId = this.getFFHPlayerId(p);
-    return !usedFFHPlayerIds.has(ffhId);
-  });
-
-  if (availableFFHPlayers.length === 0) {
-    if (isChris) {
-      console.log('❌ CHRIS RICHARDS: No available FFH players remaining');
-    }
-    diagnostics.push({
-      sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name}`,
-      ffh: 'No available FFH players remaining',
-      method: 'No Match',
-      confidence: 'None',
-      score: 0
-    });
-    continue;
-  }
-
-  // ✅ ENHANCED: Error handling for matching with Chris Richards tracking
-  let ffhMatch = null;
-  try {
-    if (isChris) console.log('🎯 CHRIS RICHARDS: Calling findBestFFHMatchOptimal...');
-    
-    ffhMatch = this.findBestFFHMatchOptimal(
-      sleeperPlayer, 
-      availableFFHPlayers, 
-      diagnostics
-    );
-    
-    if (isChris) {
-      console.log('🎯 CHRIS RICHARDS: Match result:', !!ffhMatch);
-      if (ffhMatch) {
-        console.log('- Matched to:', this.getFFHPlayerName(ffhMatch));
-      }
-    }
-  } catch (matchError) {
-    console.error(`❌ Matching error for ${sleeperPlayer.name || sleeperPlayer.full_name}:`, matchError);
-    if (isChris) {
-      console.error('❌ CHRIS RICHARDS: Matching failed with error:', matchError);
-    }
-    continue;
-  }
-  
-  if (ffhMatch) {
-    const lastDiagnostic = diagnostics[diagnostics.length - 1];
-    matches.push({
-      sleeperPlayer,
-      ffhPlayer: ffhMatch,
-      confidence: lastDiagnostic?.confidence || 'Medium',
-      method: lastDiagnostic?.method || 'Unknown',
-      score: lastDiagnostic?.score || 0.5
-    });
-    
-    // Mark this FFH player as used
-    const ffhId = this.getFFHPlayerId(ffhMatch);
-    usedFFHPlayerIds.add(ffhId);
-    stats.matched++;
-    
-    const methodUsed = lastDiagnostic?.method || 'Unknown';
-    
-    // ✅ SIMPLIFIED: Only log successful matches for Chris or key milestones
-    if (isChris || stats.matched % 50 === 0) {
-      console.log(`✅ ${methodUsed}: ${sleeperPlayer.full_name || sleeperPlayer.name} → ${this.getFFHPlayerName(ffhMatch)}`);
-    }
-    
-    if (isChris) {
-      console.log('🎯 CHRIS RICHARDS: Successfully matched!');
-    }
-  } else {
-    // ✅ SIMPLIFIED: Only log failures for Chris
-    if (isChris) {
-      console.log(`❌ CHRIS RICHARDS: No match found at index ${i}`);
-    }
-  }
-}
-
-  // ✅ NEW: Final check for Chris Richards in results
-  const chrisInMatches = matches.find(m => 
-    m.sleeperPlayer?.id === '2168' || 
-    (m.sleeperPlayer?.name && m.sleeperPlayer.name.toLowerCase().includes('chris richards'))
-  );
-  console.log('🔍 CHRIS RICHARDS IN FINAL MATCHES:', !!chrisInMatches);
-
-  // Update stats
-  const unmatchedCount = sleeperPlayers.length - matches.length;
-  if (unmatchedCount > 0) {
-    stats.byMethod['No Match'] = unmatchedCount;
-    stats.byConfidence['None'] = unmatchedCount;
-  }
-
-  matches.forEach(match => {
-    const method = match.method || 'Unknown';
-    const confidence = match.confidence || 'Unknown';
-    
-    stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
-    stats.byConfidence[confidence] = (stats.byConfidence[confidence] || 0) + 1;
-  });
-
-  stats.matchRate = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
-
-  console.log(`✅ STANDARDIZED MATCHING COMPLETE:`);
-  console.log(`  Total: ${stats.total} Sleeper players`);
-  console.log(`  Matched: ${stats.matched} players (${stats.matchRate}%)`);
-  console.log(`  Methods:`, stats.byMethod);
-  console.log(`  Confidence:`, stats.byConfidence);
-
-  return {
-    matches,
-    diagnostics,
-    stats,
-    summary: {
-      totalSleeperPlayers: sleeperPlayers.length,
-      totalFFHPlayers: ffhPlayers.length,
-      matchedPlayers: stats.matched,
-      matchRate: `${stats.matchRate}%`,
-      uniqueFFHPlayersUsed: usedFFHPlayerIds.size,
-      duplicateCheck: 'PASS - Using standardized field mapping',
-      approach: 'MULTI-TIER - Manual + Opta + FPL + Name matching'
-    },
-    optaAnalysis // Include the analysis for comparison
-  };
-}
 
   // ===============================
   // UTILITY METHODS
   // ===============================
 
   calculateAverageConfidence(matches) {
-    if (matches.length === 0) return 0;
-    
-    const confidenceValues = { 'High': 1, 'Medium': 0.7, 'Low': 0.4, 'None': 0 };
-    const total = matches.reduce((sum, match) => {
-      return sum + (confidenceValues[match.confidence] || 0);
-    }, 0);
-    
-    return Math.round((total / matches.length) * 100);
+    // All Opta matches are High confidence
+    return 100;
   }
 
   // Legacy compatibility methods
   normalizeName(name) {
-    return this.normalizeNameForMatching(name);
+    return name?.toLowerCase().trim() || '';
   }
 
   similarity(name1, name2) {
-    return this.calculateNameSimilarity(name1, name2);
+    // Not used in Opta-only matching
+    return name1 === name2 ? 1.0 : 0.0;
   }
 
   clearCache() {
