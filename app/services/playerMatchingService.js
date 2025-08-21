@@ -376,41 +376,72 @@ findBestFFHMatchOptimal(sleeperPlayer, availableFFHPlayers, diagnostics) {
     }
   }
 
-  // ✅ TIER 1: Opta ID Match (FIXED FIELD MAPPING)
-  if (sleeperData.opta_id) {
-    if (isChrisRichards) {
-      console.log(`🔍 CHRIS RICHARDS: Searching for Opta ID match: ${sleeperData.opta_id}`);
-    }
+// ✅ TIER 1: Opta ID Match (ENHANCED DEBUGGING)
+if (sleeperData.opta_id) {
+  if (isChrisRichards) {
+    console.log(`🔍 CHRIS RICHARDS: Searching for Opta ID match: ${sleeperData.opta_id}`);
     
-    const optaMatch = availableFFHPlayers.find(p => {
+    // ✅ NEW: Check FFH players from Crystal Palace specifically
+    const cryPlayers = availableFFHPlayers.filter(p => {
       const ffhData = this.extractFFHData(p);
-      const hasMatch = ffhData && ffhData.opta_id && ffhData.opta_id === sleeperData.opta_id;
-      
-      if (isChrisRichards && ffhData) {
-        console.log(`  Checking: ${ffhData.name} - Opta: "${ffhData.opta_id}" vs "${sleeperData.opta_id}" = ${hasMatch}`);
-      }
-      
-      return hasMatch;
+      return ffhData && ffhData.team === 'CRY';
     });
     
-    if (optaMatch) {
-      const ffhData = this.extractFFHData(optaMatch);
-      if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Opta ID matched!');
-      
-      diagnostics.push({
-        sleeper: `${sleeperData.name} (${sleeperTeam})`,
-        ffh: `${ffhData.name} (${ffhData.team})`,
-        method: 'Opta ID',
-        confidence: 'High',
-        score: 1.0
+    console.log(`🔍 CHRIS RICHARDS: Found ${cryPlayers.length} Crystal Palace players in FFH`);
+    cryPlayers.forEach((p, idx) => {
+      const ffhData = this.extractFFHData(p);
+      console.log(`  CRY Player ${idx}: ${ffhData.name} - Raw structure:`, {
+        web_name: p.web_name,
+        opta_uuid: p.opta_uuid,
+        opta_id: p.opta_id,
+        player_opta_uuid: p.player?.opta_uuid,
+        player_opta_id: p.player?.opta_id,
+        hasPlayerObject: !!p.player,
+        playerKeys: p.player ? Object.keys(p.player).filter(k => k.includes('opta')) : []
       });
-      return optaMatch;
-    } else if (isChrisRichards) {
-      console.log('❌ CHRIS RICHARDS: No Opta ID match found');
-    }
-  } else if (isChrisRichards) {
-    console.log('❌ CHRIS RICHARDS: No Opta ID in Sleeper data');
+    });
+    
+    // ✅ NEW: Look specifically for "Richards" in Crystal Palace
+    const richardsInCRY = cryPlayers.filter(p => {
+      const ffhData = this.extractFFHData(p);
+      return ffhData.name.toLowerCase().includes('richards');
+    });
+    
+    console.log(`🔍 CHRIS RICHARDS: Found ${richardsInCRY.length} "Richards" players in CRY`);
+    richardsInCRY.forEach(p => {
+      console.log(`  Richards player full structure:`, JSON.stringify(p, null, 2));
+    });
   }
+  
+  const optaMatch = availableFFHPlayers.find(p => {
+    const ffhData = this.extractFFHData(p);
+    const hasMatch = ffhData && ffhData.opta_id && ffhData.opta_id === sleeperData.opta_id;
+    
+    if (isChrisRichards && ffhData) {
+      console.log(`  Checking: ${ffhData.name} - Opta: "${ffhData.opta_id}" vs "${sleeperData.opta_id}" = ${hasMatch}`);
+    }
+    
+    return hasMatch;
+  });
+  
+  if (optaMatch) {
+    const ffhData = this.extractFFHData(optaMatch);
+    if (isChrisRichards) console.log('✅ CHRIS RICHARDS: Opta ID matched!');
+    
+    diagnostics.push({
+      sleeper: `${sleeperData.name} (${sleeperTeam})`,
+      ffh: `${ffhData.name} (${ffhData.team})`,
+      method: 'Opta ID',
+      confidence: 'High',
+      score: 1.0
+    });
+    return optaMatch;
+  } else if (isChrisRichards) {
+    console.log('❌ CHRIS RICHARDS: No Opta ID match found');
+  }
+} else if (isChrisRichards) {
+  console.log('❌ CHRIS RICHARDS: No Opta ID in Sleeper data');
+}
 
   // ✅ TIER 2: FPL ID Match (FIXED FIELD MAPPING)
   if (sleeperData.rotowire_id) {
