@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import GameweekService from './services/gameweekService';
 
 // ----------------- EPL TEAMS FILTER -----------------
 const EPL_TEAMS = [
@@ -69,87 +70,21 @@ const ErrorBoundary = ({ children }) => {
 };
 
 // ----------------- CURRENT GAMEWEEK FUNCTION -----------------
-const getCurrentGameweek = () => {
-  const now = new Date();
-  const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-  
-  // Complete 38-gameweek schedule for 2025-26 season based on Fantrax schedule
-  const gameweekDates = [
-    { gw: 1, start: '2025-08-15', end: '2025-08-18' },
-    { gw: 2, start: '2025-08-22', end: '2025-08-25' },
-    { gw: 3, start: '2025-08-30', end: '2025-09-01' },
-    { gw: 4, start: '2025-09-13', end: '2025-09-15' },
-    { gw: 5, start: '2025-09-20', end: '2025-09-22' },
-    { gw: 6, start: '2025-09-27', end: '2025-09-29' },
-    { gw: 7, start: '2025-10-04', end: '2025-10-06' },
-    { gw: 8, start: '2025-10-18', end: '2025-10-20' },
-    { gw: 9, start: '2025-10-25', end: '2025-10-27' },
-    { gw: 10, start: '2025-11-01', end: '2025-11-03' },
-    { gw: 11, start: '2025-11-08', end: '2025-11-10' },
-    { gw: 12, start: '2025-11-22', end: '2025-11-24' },
-    { gw: 13, start: '2025-11-29', end: '2025-12-01' },
-    { gw: 14, start: '2025-12-03', end: '2025-12-05' },
-    { gw: 15, start: '2025-12-06', end: '2025-12-08' },
-    { gw: 16, start: '2025-12-13', end: '2025-12-15' },
-    { gw: 17, start: '2025-12-20', end: '2025-12-22' },
-    { gw: 18, start: '2025-12-26', end: '2025-12-28' },
-    { gw: 19, start: '2025-12-29', end: '2025-12-30' },
-    { gw: 20, start: '2026-01-01', end: '2026-01-02' },
-    { gw: 21, start: '2026-01-14', end: '2026-01-16' },
-    { gw: 22, start: '2026-01-18', end: '2026-01-20' },
-    { gw: 23, start: '2026-01-25', end: '2026-01-27' },
-    { gw: 24, start: '2026-02-01', end: '2026-02-03' },
-    { gw: 25, start: '2026-02-22', end: '2026-02-24' },
-    { gw: 26, start: '2026-02-25', end: '2026-02-26' },
-    { gw: 27, start: '2026-03-03', end: '2026-03-05' },
-    { gw: 28, start: '2026-03-08', end: '2026-03-10' },
-    { gw: 29, start: '2026-03-15', end: '2026-03-17' },
-    { gw: 30, start: '2026-04-04', end: '2026-04-06' },
-    { gw: 31, start: '2026-04-11', end: '2026-04-13' },
-    { gw: 32, start: '2026-04-18', end: '2026-04-20' },
-    { gw: 33, start: '2026-04-25', end: '2026-04-27' },
-    { gw: 34, start: '2026-05-02', end: '2026-05-04' },
-    { gw: 35, start: '2026-05-09', end: '2026-05-11' },
-    { gw: 36, start: '2026-05-16', end: '2026-05-18' },
-    { gw: 37, start: '2026-05-23', end: '2026-05-25' },
-    { gw: 38, start: '2026-05-24', end: '2026-05-24' }
-  ];
-
-  // Find current gameweek
-  for (let i = 0; i < gameweekDates.length; i++) {
-    const gw = gameweekDates[i];
-    
-    if (currentDate < gw.start) {
-      // Upcoming gameweek
-      const startDate = new Date(gw.start);
-      return {
-        number: gw.gw,
-        status: 'upcoming',
-        statusDisplay: `🏁 GW ${gw.gw} (Upcoming)`,
-        date: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        fullDate: gw.start
-      };
-    } else if (currentDate >= gw.start && currentDate <= gw.end) {
-      // Live gameweek
-      const endDate = new Date(gw.end);
-      return {
-        number: gw.gw,
-        status: 'live',
-        statusDisplay: `🔴 GW ${gw.gw} (Live)`,
-        date: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        fullDate: gw.end
-      };
-    }
+const getCurrentGameweek = async () => {
+  try {
+    return await GameweekService.getCurrentGameweek();
+  } catch (error) {
+    console.error('Error getting current gameweek:', error);
+    // Return a safe fallback
+    return {
+      number: 2,
+      status: 'upcoming',
+      statusDisplay: '🏁 GW 2 (Upcoming)',
+      date: 'Aug 22',
+      fullDate: '2025-08-22',
+      source: 'error_fallback'
+    };
   }
-
-  // Default to GW 1 if before season start
-  return {
-    number: 1,
-    status: 'upcoming',
-    statusDisplay: '🏁 GW 1 (Upcoming)',
-    date: 'Aug 15',
-    fullDate: '2025-08-15'
-  };
 };
 
 // ----------------- CACHE MANAGER -----------------
@@ -980,9 +915,67 @@ const MatchingTabContent = ({ players, integration, isDarkMode }) => {
   );
 };
 
+// ----------------- ENHANCED GAMEWEEK DISPLAY COMPONENT -----------------
+const GameweekDisplay = ({ gameweek, isDarkMode }) => {
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'upcoming': return '🏁';
+      case 'live': return '🔴';
+      case 'completed': return '✅';
+      default: return '⚽';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'upcoming': return isDarkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200';
+      case 'live': return isDarkMode ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200';
+      case 'completed': return isDarkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-200';
+      default: return isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200';
+    }
+  };
+
+  const getTextColor = (status) => {
+    switch (status) {
+      case 'upcoming': return isDarkMode ? 'text-blue-100' : 'text-blue-900';
+      case 'live': return isDarkMode ? 'text-red-100' : 'text-red-900';
+      case 'completed': return isDarkMode ? 'text-green-100' : 'text-green-900';
+      default: return isDarkMode ? 'text-gray-100' : 'text-gray-900';
+    }
+  };
+
+  const getSubTextColor = (status) => {
+    switch (status) {
+      case 'upcoming': return isDarkMode ? 'text-blue-200' : 'text-blue-600';
+      case 'live': return isDarkMode ? 'text-red-200' : 'text-red-600';
+      case 'completed': return isDarkMode ? 'text-green-200' : 'text-green-600';
+      default: return isDarkMode ? 'text-gray-200' : 'text-gray-600';
+    }
+  };
+
+  return (
+    <div className={`${getStatusColor(gameweek.status)} border rounded-lg px-3 py-2`}>
+      <div className={`text-sm font-medium ${getTextColor(gameweek.status)}`}>
+        {getStatusIcon(gameweek.status)} GW {gameweek.number} ({gameweek.status === 'upcoming' ? 'Upcoming' : gameweek.status === 'live' ? 'Live' : 'Completed'})
+      </div>
+      <div className={`text-xs ${getSubTextColor(gameweek.status)}`}>
+        {gameweek.status === 'upcoming' ? 'Starts' : gameweek.status === 'live' ? 'Ends' : 'Finished'}: {gameweek.date}
+        {gameweek.deadlineFormatted && gameweek.status === 'upcoming' && (
+          <div className="mt-1">Deadline: {gameweek.deadlineFormatted}</div>
+        )}
+        {gameweek.fixtures && gameweek.status === 'live' && (
+          <div className="mt-1">{gameweek.fixtures.finished}/{gameweek.fixtures.count} matches finished</div>
+        )}
+        {gameweek.source && gameweek.source !== 'fpl_api' && (
+          <div className="mt-1 opacity-75">⚠️ {gameweek.source}</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ----------------- DASHBOARD HEADER COMPONENT -----------------
-const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, updateData, activeTab, setActiveTab }) => {
-  const currentGameweek = getCurrentGameweek();
+const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
   const cacheAge = CacheManager.getAge();
 
@@ -1004,14 +997,7 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
 
           <div className="flex items-center gap-4">
             {/* Current Gameweek with Enhanced Display */}
-            <div className={`${isDarkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'} border rounded-lg px-3 py-2`}>
-              <div className={`text-sm font-medium ${isDarkMode ? 'text-blue-100' : 'text-blue-900'}`}>
-                {currentGameweek.statusDisplay}
-              </div>
-              <div className={`text-xs ${isDarkMode ? 'text-blue-200' : 'text-blue-600'}`}>
-                {currentGameweek.status === 'upcoming' ? 'Starts' : 'Ends'}: {currentGameweek.date}
-              </div>
-            </div>
+            <GameweekDisplay gameweek={currentGameweek} isDarkMode={isDarkMode} />
 
             {/* Dark Mode Toggle */}
             <button
@@ -1074,7 +1060,40 @@ export default function FPLDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' });
   
+  // Current gameweek state
+  const [currentGameweek, setCurrentGameweek] = useState({
+    number: 2,
+    status: 'upcoming', 
+    statusDisplay: '🏁 GW 2 (Upcoming)',
+    date: 'Aug 22',
+    fullDate: '2025-08-22',
+    source: 'loading'
+  });
+  
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
+
+  // Load gameweek data
+  useEffect(() => {
+    const loadGameweek = async () => {
+      try {
+        const gameweek = await getCurrentGameweek();
+        setCurrentGameweek(gameweek);
+        
+        // Log source for debugging
+        console.log(`📅 Gameweek loaded from: ${gameweek.source || 'unknown'}`);
+        
+        // If we have deadline info, show it in console for verification
+        if (gameweek.deadline) {
+          console.log(`⏰ GW${gameweek.number} deadline: ${gameweek.deadlineFormatted || gameweek.deadline}`);
+        }
+      } catch (error) {
+        console.error('Failed to load gameweek:', error);
+        // Keep the fallback currentGameweek state
+      }
+    };
+
+    loadGameweek();
+  }, []);
 
   // Update data function
   const updateData = (type = 'manual', forceRefresh = true, useCache = false) => {
@@ -1211,6 +1230,8 @@ export default function FPLDashboard() {
     }
 
     // Search filter
+    if (filters.search)
+      // Search filter
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       const searchableText = [
@@ -1323,6 +1344,7 @@ export default function FPLDashboard() {
           updateData={updateData}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          currentGameweek={currentGameweek}
         />
 
         {/* Main Content */}
@@ -1454,7 +1476,6 @@ export default function FPLDashboard() {
                   Click column headers to sort
                 </div>
               </div>
-
               {/* Players Table */}
               <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                 <div className="overflow-x-auto">
