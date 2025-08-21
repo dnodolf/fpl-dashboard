@@ -627,88 +627,132 @@ async matchAllPlayers(sleeperPlayers, ffhPlayers) {
   
   console.log('🔍 ABOUT TO PROCESS', sleeperPlayers.length, 'players in main loop');
   
-  // ✅ ENHANCED: Process each player with array integrity checks
-  for (let i = 0; i < sleeperPlayers.length; i++) {
-    const sleeperPlayer = sleeperPlayers[i];
-    
-    // ✅ ENHANCED: Check for Chris Richards at each iteration
-    const isChris = sleeperPlayer?.id === '2168' || 
-                   (sleeperPlayer?.name && sleeperPlayer.name.toLowerCase().includes('chris richards')) ||
-                   (sleeperPlayer?.full_name && sleeperPlayer.full_name.toLowerCase().includes('chris richards'));
-    
-    if (isChris) {
-      console.log('🔍 PROCESSING CHRIS RICHARDS IN LOOP:');
-      console.log('- Player data:', { 
-        id: sleeperPlayer.id, 
-        name: sleeperPlayer.name || sleeperPlayer.full_name, 
-        team: sleeperPlayer.team_abbr || sleeperPlayer.team,
-        opta_id: sleeperPlayer.opta_id
-      });
-      console.log('- Loop index:', i);
-      console.log('- Player object keys:', Object.keys(sleeperPlayer));
+// ✅ ENHANCED: Process each player with position tracking
+for (let i = 0; i < sleeperPlayers.length; i++) {
+  const sleeperPlayer = sleeperPlayers[i];
+  
+  // ✅ NEW: Track loop progress for Chris Richards debugging
+  if (i === 560 || i === 561 || i === 562 || i === 563 || i === 564 || i === 565) {
+    console.log(`🔍 LOOP POSITION ${i}: Processing player...`);
+    if (sleeperPlayer) {
+      console.log(`- Player: ${sleeperPlayer.name || sleeperPlayer.full_name || 'NO NAME'} (ID: ${sleeperPlayer.id || 'NO ID'})`);
+    } else {
+      console.log('- Player: NULL/UNDEFINED');
     }
-
-    // ✅ ENHANCED: Safety check with detailed logging for Chris
-    if (!sleeperPlayer || (!sleeperPlayer.name && !sleeperPlayer.full_name)) {
-      if (isChris) {
-        console.log('❌ CHRIS RICHARDS: Invalid player data, skipping');
-        console.log('- Player object:', sleeperPlayer);
-        console.log('- Has name:', !!sleeperPlayer?.name);
-        console.log('- Has full_name:', !!sleeperPlayer?.full_name);
-      }
-      continue;
-    }
-
-    // Filter out already used FFH players
-    const availableFFHPlayers = ffhPlayers.filter(p => {
-      const ffhId = this.getFFHPlayerId(p);
-      return !usedFFHPlayerIds.has(ffhId);
+  }
+  
+  // ✅ ENHANCED: Check for Chris Richards at each iteration
+  const isChris = sleeperPlayer?.id === '2168' || 
+                 (sleeperPlayer?.name && sleeperPlayer.name.toLowerCase().includes('chris richards')) ||
+                 (sleeperPlayer?.full_name && sleeperPlayer.full_name.toLowerCase().includes('chris richards'));
+  
+  if (isChris) {
+    console.log('🔍 PROCESSING CHRIS RICHARDS IN LOOP:');
+    console.log('- Player data:', { 
+      id: sleeperPlayer.id, 
+      name: sleeperPlayer.name || sleeperPlayer.full_name, 
+      team: sleeperPlayer.team_abbr || sleeperPlayer.team,
+      opta_id: sleeperPlayer.opta_id
     });
+    console.log('- Loop index:', i);
+    console.log('- Player object keys:', Object.keys(sleeperPlayer));
+  }
 
+  // ✅ ENHANCED: Safety check with detailed logging for Chris
+  if (!sleeperPlayer || (!sleeperPlayer.name && !sleeperPlayer.full_name)) {
     if (isChris) {
-      console.log('- Available FFH players:', availableFFHPlayers.length);
+      console.log('❌ CHRIS RICHARDS: Invalid player data, skipping');
+      console.log('- Player object:', sleeperPlayer);
+      console.log('- Has name:', !!sleeperPlayer?.name);
+      console.log('- Has full_name:', !!sleeperPlayer?.full_name);
     }
+    continue;
+  }
 
-    if (availableFFHPlayers.length === 0) {
-      if (isChris) {
-        console.log('❌ CHRIS RICHARDS: No available FFH players remaining');
-      } else {
-        console.log(`⚠️ No available FFH players remaining for ${sleeperPlayer.full_name || sleeperPlayer.name}`);
-      }
-      diagnostics.push({
-        sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name}`,
-        ffh: 'No available FFH players remaining',
-        method: 'No Match',
-        confidence: 'None',
-        score: 0
-      });
-      continue;
-    }
+  // Filter out already used FFH players
+  const availableFFHPlayers = ffhPlayers.filter(p => {
+    const ffhId = this.getFFHPlayerId(p);
+    return !usedFFHPlayerIds.has(ffhId);
+  });
 
-    // ✅ ENHANCED: Error handling for matching with Chris Richards tracking
-    let ffhMatch = null;
-    try {
-      if (isChris) console.log('🔍 CHRIS RICHARDS: Calling findBestFFHMatchOptimal...');
-      
-      ffhMatch = this.findBestFFHMatchOptimal(
-        sleeperPlayer, 
-        availableFFHPlayers, 
-        diagnostics
-      );
-      
-      if (isChris) {
-        console.log('🔍 CHRIS RICHARDS: Match result:', !!ffhMatch);
-        if (ffhMatch) {
-          console.log('- Matched to:', this.getFFHPlayerName(ffhMatch));
-        }
-      }
-    } catch (matchError) {
-      console.error(`❌ Matching error for ${sleeperPlayer.name || sleeperPlayer.full_name}:`, matchError);
-      if (isChris) {
-        console.error('❌ CHRIS RICHARDS: Matching failed with error:', matchError);
-      }
-      continue;
+  if (isChris) {
+    console.log('- Available FFH players:', availableFFHPlayers.length);
+  }
+
+  if (availableFFHPlayers.length === 0) {
+    if (isChris) {
+      console.log('❌ CHRIS RICHARDS: No available FFH players remaining');
+    } else {
+      console.log(`⚠️ No available FFH players remaining for ${sleeperPlayer.full_name || sleeperPlayer.name}`);
     }
+    diagnostics.push({
+      sleeper: `${sleeperPlayer.full_name || sleeperPlayer.name}`,
+      ffh: 'No available FFH players remaining',
+      method: 'No Match',
+      confidence: 'None',
+      score: 0
+    });
+    continue;
+  }
+
+  // ✅ ENHANCED: Error handling for matching with Chris Richards tracking
+  let ffhMatch = null;
+  try {
+    if (isChris) console.log('🔍 CHRIS RICHARDS: Calling findBestFFHMatchOptimal...');
+    
+    ffhMatch = this.findBestFFHMatchOptimal(
+      sleeperPlayer, 
+      availableFFHPlayers, 
+      diagnostics
+    );
+    
+    if (isChris) {
+      console.log('🔍 CHRIS RICHARDS: Match result:', !!ffhMatch);
+      if (ffhMatch) {
+        console.log('- Matched to:', this.getFFHPlayerName(ffhMatch));
+      }
+    }
+  } catch (matchError) {
+    console.error(`❌ Matching error for ${sleeperPlayer.name || sleeperPlayer.full_name}:`, matchError);
+    if (isChris) {
+      console.error('❌ CHRIS RICHARDS: Matching failed with error:', matchError);
+    }
+    continue;
+  }
+  
+  if (ffhMatch) {
+    const lastDiagnostic = diagnostics[diagnostics.length - 1];
+    matches.push({
+      sleeperPlayer,
+      ffhPlayer: ffhMatch,
+      confidence: lastDiagnostic?.confidence || 'Medium',
+      method: lastDiagnostic?.method || 'Unknown',
+      score: lastDiagnostic?.score || 0.5
+    });
+    
+    // Mark this FFH player as used
+    const ffhId = this.getFFHPlayerId(ffhMatch);
+    usedFFHPlayerIds.add(ffhId);
+    stats.matched++;
+    
+    const methodUsed = lastDiagnostic?.method || 'Unknown';
+    console.log(`✅ ${methodUsed}: ${sleeperPlayer.full_name || sleeperPlayer.name} → ${this.getFFHPlayerName(ffhMatch)}`);
+    
+    if (isChris) {
+      console.log('✅ CHRIS RICHARDS: Successfully matched!');
+    }
+  } else {
+    console.log(`❌ No match: ${sleeperPlayer.full_name || sleeperPlayer.name}`);
+    if (isChris) {
+      console.log('❌ CHRIS RICHARDS: No match found');
+    }
+  }
+  
+  // ✅ NEW: Progress checkpoint every 100 players
+  if (i % 100 === 0) {
+    console.log(`🔄 Loop progress: ${i}/${sleeperPlayers.length} players processed`);
+  }
+}
     
     if (ffhMatch) {
       const lastDiagnostic = diagnostics[diagnostics.length - 1];
