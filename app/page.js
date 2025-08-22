@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import GameweekService from './services/gameweekService';
+import { OptimizerTabContent } from './components/OptimizerTabContent';
 
 // ----------------- EPL TEAMS FILTER -----------------
 const EPL_TEAMS = [
@@ -381,53 +382,104 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
 };
 
 // ----------------- OTHER STATS COMPONENTS (UNCHANGED) -----------------
-const OptimizerStats = ({ isDarkMode }) => (
-  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    {/* Current Roster Points */}
-    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-2xl font-bold text-blue-600">--</div>
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Current Roster Points</div>
-        </div>
-        <div className="text-blue-500 text-2xl">⚽</div>
-      </div>
-    </div>
 
-    {/* Optimized Roster Points */}
-    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-2xl font-bold text-green-600">--</div>
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Optimized Roster Points</div>
-        </div>
-        <div className="text-green-500 text-2xl">🚀</div>
-      </div>
-    </div>
+const OptimizerStats = ({ isDarkMode }) => {
+  const [stats, setStats] = useState({
+    currentPoints: 0,
+    optimalPoints: 0,
+    efficiency: 0,
+    playersToSwap: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-    {/* % Optimized */}
-    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-2xl font-bold text-purple-600">--%</div>
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>% Optimized</div>
-        </div>
-        <div className="text-purple-500 text-2xl">📈</div>
-      </div>
-    </div>
+  useEffect(() => {
+    const fetchOptimizerStats = async () => {
+      try {
+        const response = await fetch('/api/optimizer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: 'ThatDerekGuy', forceRefresh: false })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setStats(data.stats);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch optimizer stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    {/* Players to Swap */}
-    <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-2xl font-bold text-orange-600">--</div>
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Players to Swap</div>
+    fetchOptimizerStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-300 rounded mb-2"></div>
+              <div className="h-4 bg-gray-300 rounded"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Current Roster Points */}
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-2xl font-bold text-blue-600">{stats.currentPoints.toFixed(1)}</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Current Roster Points</div>
+          </div>
+          <div className="text-blue-500 text-2xl">⚽</div>
         </div>
-        <div className="text-orange-500 text-2xl">🔄</div>
+      </div>
+
+      {/* Optimized Roster Points */}
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-2xl font-bold text-green-600">{stats.optimalPoints.toFixed(1)}</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Optimized Roster Points</div>
+          </div>
+          <div className="text-green-500 text-2xl">🚀</div>
+        </div>
+      </div>
+
+      {/* % Optimized */}
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-2xl font-bold text-purple-600">{stats.efficiency.toFixed(1)}%</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>% Optimized</div>
+          </div>
+          <div className="text-purple-500 text-2xl">📈</div>
+        </div>
+      </div>
+
+      {/* Players to Swap */}
+      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-2xl font-bold text-orange-600">{stats.playersToSwap}</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Players to Swap</div>
+          </div>
+          <div className="text-orange-500 text-2xl">🔄</div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const TransferStats = ({ players, isDarkMode }) => {
   // Calculate transfer analytics
@@ -1773,13 +1825,7 @@ export default function FPLDashboard() {
 
           {/* Other tabs content - placeholder for now */}
           {activeTab === 'optimizer' && (
-            <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-              <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Formation Optimizer</h3>
-              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                Formation optimization tools will be available here soon.
-                Analyze different formations and find the optimal lineup based on predicted points.
-              </p>
-            </div>
+            <OptimizerTabContent isDarkMode={isDarkMode} />
           )}
 
           {activeTab === 'transfers' && (
