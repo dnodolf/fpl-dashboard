@@ -65,8 +65,8 @@ export async function GET() {
   }
 }
 
-// Function to analyze current gameweek with better match counting
-function analyzeCurrentGameweekEnhanced(bootstrapData, fixturesData) {
+// Analyze FPL data to determine current gameweek
+function analyzeCurrentGameweek(bootstrapData, fixturesData) {
   try {
     // Find current or next event
     const currentEvent = bootstrapData.events?.find(event => event.is_current) || 
@@ -74,81 +74,109 @@ function analyzeCurrentGameweekEnhanced(bootstrapData, fixturesData) {
                         bootstrapData.events?.[0];
 
     if (!currentEvent) {
-      throw new Error('No current gameweek found in FPL data');
+      throw new Error('No current event found in FPL data');
     }
 
-    // Get all fixtures for this gameweek
-    const currentGwFixtures = fixturesData?.filter(f => f.event === currentEvent.id) || [];
+    console.log(`🎯 Current event: GW${currentEvent.id} - ${currentEvent.name}`);
+
+    // Get fixtures for current gameweek
+    const currentGwFixtures = fixturesData?.filter(fixture => 
+      fixture.event === currentEvent.id && 
+      fixture.kickoff_time
+    ) || [];
+
+    console.log(`⚽ Found ${currentGwFixtures.length} fixtures for GW${currentEvent.id}`);
+
+    // Determine gameweek status and timing
+    const now = new Date();
+    const deadline = new Date(currentEvent.deadline_time);
     
-    console.log(`📅 Analyzing GW${currentEvent.id} with ${currentGwFixtures.length} fixtures`);
-
-    // Count finished matches more accurately
-    const finishedMatches = currentGwFixtures.filter(fixture => {
-      // A match is finished if:
-      // 1. It has finished = true, OR
-      // 2. It has started = true AND has team scores, OR  
-      // 3. It has both team_a_score and team_h_score (not null)
-      return fixture.finished || 
-             (fixture.started && fixture.team_a_score !== null && fixture.team_h_score !== null) ||
-             (fixture.team_a_score !== null && fixture.team_h_score !== null);
-    });
-
-    const liveMatches = currentGwFixtures.filter(fixture => {
-      // A match is live if it has started but not finished
-      return fixture.started && !fixture.finished;
-    });
-
-    const upcomingMatches = currentGwFixtures.filter(fixture => {
-      // A match is upcoming if it hasn't started yet
-      return !fixture.started && !fixture.finished;
-    });
-
-    console.log(`📊 GW${currentEvent.id} Match Status:`);
-    console.log(`   Finished: ${finishedMatches.length}/${currentGwFixtures.length}`);
-    console.log(`   Live: ${liveMatches.length}`);
-    console.log(`   Upcoming: ${upcomingMatches.length}`);
-
-    // Determine gameweek status
-    let status = 'upcoming';
-    let statusDisplay = `🏁 GW ${currentEvent.id} (Upcoming)`;
-    let displayDate = 'TBD';
+    let status, statusDisplay, displayDate, fixtures = null;
 
     if (currentGwFixtures.length > 0) {
-      if (finishedMatches.length === currentGwFixtures.length) {
-        // All matches finished
-        status = 'completed';
-        statusDisplay = `✅ GW ${currentEvent.id} (Completed)`;
-        displayDate = 'Finished';
-      } else if (finishedMatches.length > 0 || liveMatches.length > 0) {
-        // Some matches finished or live
+      // Sort fixtures by kickoff time
+      const sortedFixtures = currentGwFixtures
+        .map(f => ({ ...f, kickoff: new Date(f.kickoff_time) }))
+        .sort((a, b) => a.kickoff - b.kickoff);
+
+      const firstKickoff = sortedFixtures[0].kickoff;
+      const lastKickoff = sortedFixtures[sortedFixtures.length - 1].kickoff;
+      const finishedCount = currentGwFixtures.filter(f => f.finished).length;
+
+      if (now < deadline) {
+        // Before deadline - upcoming
+        status = 'upcoming';
+        statusDisplay = `🏁 GW ${currentEvent.id} (Upcoming)`;
+        displayDate = firstKickoff.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        });
+      } else if (now >= deadline && finishedCount < currentGwFixtures.length) {
+        // After deadline, games still playing - live (this is actionable)
         status = 'live';
         statusDisplay = `🔴 GW ${currentEvent.id} (Live)`;
-        displayDate = `${finishedMatches.length}/${currentGwFixtures.length} matches finished`;
+        displayDate = lastKickoff.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        });
+        fixtures = {
+          first: firstKickoff,
+          last: lastKickoff,
+          count: currentGwFixtures.length,
+          finished: finishedCount
+        };
       } else {
-        // No matches started yet
-        const firstFixture = currentGwFixtures
-          .filter(f => f.kickoff_time)
-          .sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time))[0];
+        // All games finished - this gameweek is completed, find next actionable one
+        const nextEvent = bootstrapData.events?.find(event => 
+          event.id > currentEvent.id && !event.finished
+        );
         
-        if (firstFixture) {
-          const kickoffDate = new Date(firstFixture.kickoff_time);
-          displayDate = kickoffDate.toLocaleDateString('en-US', { 
+        if (nextEvent) {
+          // Return next upcoming gameweek instead of completed one
+          const nextDeadline = new Date(nextEvent.deadline_time);
+          return {
+            number: nextEvent.id,
+            status: 'upcoming',
+            statusDisplay: `🏁 GW ${nextEvent.id} (Upcoming)`,
+            date: nextDeadline.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric' 
+            }),
+            fullDate: nextEvent.deadline_time,
+            name: nextEvent.name,
+            deadline: nextEvent.deadline_time,
+            deadlineFormatted: nextDeadline.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            fixtures: null,
+            source: 'fpl_api'
+          };
+        } else {
+          // No next event found, fall back to current completed one
+          status = 'completed';
+          statusDisplay = `✅ GW ${currentEvent.id} (Completed)`;
+          displayDate = lastKickoff.toLocaleDateString('en-US', { 
             month: 'short', 
             day: 'numeric' 
           });
         }
       }
+    } else {
+      // No fixtures scheduled yet
+      status = 'upcoming';
+      statusDisplay = `🏁 GW ${currentEvent.id} (Upcoming)`;
+      displayDate = 'TBD';
     }
 
-    // Calculate deadline info
-    const deadline = new Date(currentEvent.deadline_time);
-    
     const gameweekData = {
       number: currentEvent.id,
       status,
       statusDisplay,
       date: displayDate,
-      fullDate: currentEvent.deadline_time,
+      fullDate: currentGwFixtures.length > 0 ? currentGwFixtures[0].kickoff_time : null,
       name: currentEvent.name,
       deadline: currentEvent.deadline_time,
       deadlineFormatted: deadline.toLocaleDateString('en-US', { 
@@ -157,19 +185,11 @@ function analyzeCurrentGameweekEnhanced(bootstrapData, fixturesData) {
         hour: '2-digit',
         minute: '2-digit'
       }),
-      fixtures: {
-        total: currentGwFixtures.length,
-        finished: finishedMatches.length,
-        live: liveMatches.length,
-        upcoming: upcomingMatches.length
-      },
+      fixtures,
       source: 'fpl_api'
     };
 
-    console.log(`📅 Enhanced gameweek analysis: GW${gameweekData.number} (${gameweekData.status})`);
-    console.log(`   Status: ${statusDisplay}`);
-    console.log(`   Matches: ${gameweekData.fixtures.finished}/${gameweekData.fixtures.total} finished`);
-    
+    console.log(`📅 Processed gameweek: GW${gameweekData.number} (${gameweekData.status})`);
     return gameweekData;
 
   } catch (error) {
