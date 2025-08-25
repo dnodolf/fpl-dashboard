@@ -1005,10 +1005,36 @@ const GameweekDisplay = ({ gameweek, isDarkMode }) => {
     }
   };
 
+  const getHoverColor = (status) => {
+    switch (status) {
+      case 'upcoming': return isDarkMode ? 'hover:bg-blue-800 hover:border-blue-600' : 'hover:bg-blue-100 hover:border-blue-300';
+      case 'live': return isDarkMode ? 'hover:bg-red-800 hover:border-red-600' : 'hover:bg-red-100 hover:border-red-300';
+      case 'completed': return isDarkMode ? 'hover:bg-green-800 hover:border-green-600' : 'hover:bg-green-100 hover:border-green-300';
+      default: return isDarkMode ? 'hover:bg-gray-800 hover:border-gray-600' : 'hover:bg-gray-100 hover:border-gray-300';
+    }
+  };
+
+  // Handle click to open Premier League fixtures page
+  const handleGameweekClick = () => {
+    const gameweekNumber = gameweek.number;
+    const fixturesUrl = `https://fantasy.premierleague.com/fixtures/${gameweekNumber}`;
+    
+    // Open in new tab
+    window.open(fixturesUrl, '_blank', 'noopener,noreferrer');
+    
+    // Log for debugging
+    console.log(`🔗 Opening Premier League fixtures for GW${gameweekNumber}: ${fixturesUrl}`);
+  };
+
   return (
-    <div className={`${getStatusColor(gameweek.status)} border rounded-lg px-3 py-2`}>
-      <div className={`text-sm font-medium ${getTextColor(gameweek.status)}`}>
+    <button
+      onClick={handleGameweekClick}
+      className={`${getStatusColor(gameweek.status)} ${getHoverColor(gameweek.status)} border rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer transform hover:scale-105 active:scale-95`}
+      title={`Click to view GW${gameweek.number} fixtures on Premier League website`}
+    >
+      <div className={`text-sm font-medium ${getTextColor(gameweek.status)} flex items-center gap-1`}>
         {getStatusIcon(gameweek.status)} GW {gameweek.number} ({gameweek.status === 'upcoming' ? 'Upcoming' : gameweek.status === 'live' ? 'Live' : 'Completed'})
+        <span className="text-xs opacity-70 ml-1">🔗</span>
       </div>
       <div className={`text-xs ${getSubTextColor(gameweek.status)}`}>
         {gameweek.status === 'upcoming' ? 'Starts' : gameweek.status === 'live' ? 'Ends' : 'Finished'}: {gameweek.date}
@@ -1021,8 +1047,9 @@ const GameweekDisplay = ({ gameweek, isDarkMode }) => {
         {gameweek.source && gameweek.source !== 'fpl_api' && (
           <div className="mt-1 opacity-75">⚠️ {gameweek.source}</div>
         )}
+        <div className="mt-1 text-xs opacity-60">Click to view fixtures</div>
       </div>
-    </div>
+    </button>
   );
 };
 
