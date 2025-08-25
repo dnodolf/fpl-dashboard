@@ -1,6 +1,7 @@
-// app/api/integrated-players/route.js - SIMPLIFIED OPTA-ONLY VERSION
+// app/api/integrated-players/route.js - SIMPLIFIED OPTA-ONLY VERSION WITH FFH GAMEWEEK FIX
 
 import { NextResponse } from 'next/server';
+import GameweekService from '../../services/gameweekService.js';
 
 // Cache for API responses
 let cachedData = null;
@@ -30,6 +31,89 @@ async function importServices() {
     console.warn('Service import failed:', error.message);
     return { matching: null, scoring: null, available: false };
   }
+}
+
+/**
+ * Enhanced FFH prediction extraction - handles both results and predictions arrays
+ * DURABLE FIX: Works for all gameweeks by checking both arrays intelligently
+ */
+function extractAllGameweekPredictions(ffhPlayer) {
+  const allPredictions = new Map(); // Use Map to avoid duplicates and maintain order
+  
+  // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
+  if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
+    ffhPlayer.predictions.forEach(pred => {
+      if (pred.gw && pred.predicted_pts) {
+        const pts = typeof pred.predicted_pts === 'object' ? 
+                   pred.predicted_pts.predicted_pts : pred.predicted_pts;
+        if (typeof pts === 'number') {
+          allPredictions.set(pred.gw, {
+            gw: pred.gw,
+            predicted_pts: pts,
+            predicted_mins: pred.xmins || pred.predicted_mins || 0,
+            source: 'predictions',
+            opp: pred.opp,
+            capt: pred.capt,
+            status: pred.status,
+            fitness: pred.fitness
+          });
+        }
+      }
+    });
+  }
+  
+  // Step 2: Process the 'results' array (current/completed gameweeks)
+  // ONLY process season 2025 results - ignore previous seasons
+  // This will OVERWRITE predictions array data for the same gameweek (results are more current)
+  if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
+    ffhPlayer.results.forEach(result => {
+      // FILTER: Only process season 2025 results
+      if (result.season !== 2025) {
+        return; // Skip results from previous seasons
+      }
+      
+      if (result.gw && result.predicted_pts) {
+        const prediction = result.predicted_pts;
+        let pts = null;
+        let mins = null;
+        
+        // Handle different prediction formats in results
+        if (typeof prediction === 'object') {
+          pts = prediction.predicted_pts;
+          mins = prediction.predicted_mins || 0;
+        } else {
+          pts = prediction;
+          mins = 0;
+        }
+        
+        if (typeof pts === 'number') {
+          allPredictions.set(result.gw, {
+            gw: result.gw,
+            predicted_pts: pts,
+            predicted_mins: mins,
+            source: 'results',
+            season: result.season, // Track season for filtering
+            opp: result.opp,
+            actual_pts: result.actual_pts,
+            mins: result.mins,
+            injured: result.injured,
+            in_squad: result.in_squad,
+            suspended: result.suspended
+          });
+        }
+      }
+    });
+  }
+  
+  // Step 3: Convert Map back to arrays for different use cases
+  const combinedPredictions = Array.from(allPredictions.values()).sort((a, b) => a.gw - b.gw);
+  
+  return {
+    all: combinedPredictions,
+    upcoming: combinedPredictions.filter(p => p.source === 'predictions'),
+    current: combinedPredictions.filter(p => p.source === 'results' && p.season === 2025),
+    byGameweek: Object.fromEntries(allPredictions)
+  };
 }
 
 /**
@@ -187,16 +271,26 @@ async function fetchFFHData() {
 }
 
 /**
- * Main integration function - SIMPLIFIED
+ * Main integration function - SIMPLIFIED WITH FFH GAMEWEEK FIX
  */
 async function integratePlayersWithOptaMatching() {
-  console.log('🚀 Starting OPTA-ONLY integration...');
+  console.log('🚀 Starting OPTA-ONLY integration with FFH gameweek fix...');
   
   try {
     // Import services
     console.log('🔧 Importing services...');
     const services = await importServices();
     console.log('✅ Services import complete:', { available: services.available });
+    
+    // Get current gameweek for intelligent prediction handling
+    let currentGameweek = null;
+    try {
+      const gwData = await GameweekService.getCurrentGameweek();
+      currentGameweek = gwData.number;
+      console.log(`📅 Current gameweek: ${currentGameweek}`);
+    } catch (error) {
+      console.warn('Could not get current gameweek, using fallback logic:', error.message);
+    }
     
     // Fetch data from both sources
     console.log('📡 Fetching data from APIs...');
@@ -263,55 +357,74 @@ async function integratePlayersWithOptaMatching() {
         age: sleeperPlayer.age || null
       };
 
-if (ffhPlayer) {
+      if (ffhPlayer) {
         // Extract FFH predictions
         const ffhSeasonPrediction = ffhPlayer.season_prediction || 
                                    ffhPlayer.range_prediction || 
                                    ffhPlayer.predicted_pts || 0;
         
-        // Include predictions array with xmins data
-        if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
-          enhancedPlayer.predictions = ffhPlayer.predictions;
-          
-          const gwPredictions = {};
-          const sleeperGwPredictions = {};
-          
-          ffhPlayer.predictions.forEach(pred => {
-            if (pred.gw && pred.predicted_pts) {
-              const pts = typeof pred.predicted_pts === 'object' ? 
-                         pred.predicted_pts.predicted_pts : pred.predicted_pts;
-              if (typeof pts === 'number') {
-                gwPredictions[pred.gw] = pts;
-                sleeperGwPredictions[pred.gw] = fallbackConvertFFHToSleeper(pts, position);
-              }
+        // NEW: Use enhanced prediction extraction that handles both arrays
+        const allPredictions = extractAllGameweekPredictions(ffhPlayer);
+        
+        // Store the complete predictions data for compatibility
+        enhancedPlayer.predictions = allPredictions.all;
+        enhancedPlayer.upcoming_predictions = allPredictions.upcoming;
+        enhancedPlayer.current_predictions = allPredictions.current;
+        
+        // Build gameweek prediction objects (existing functionality preserved)
+        const gwPredictions = {};
+        const sleeperGwPredictions = {};
+        const gwMinutePredictions = {};
+        
+        allPredictions.all.forEach(pred => {
+          if (pred.gw && typeof pred.predicted_pts === 'number') {
+            gwPredictions[pred.gw] = pred.predicted_pts;
+            sleeperGwPredictions[pred.gw] = fallbackConvertFFHToSleeper(pred.predicted_pts, position);
+            if (pred.predicted_mins) {
+              gwMinutePredictions[pred.gw] = pred.predicted_mins;
             }
-          });
-          
-          enhancedPlayer.ffh_gw_predictions = JSON.stringify(gwPredictions);
-          enhancedPlayer.sleeper_gw_predictions = JSON.stringify(sleeperGwPredictions);
-          
-          // Calculate next 5 gameweeks predicted minutes
-          const next5Predictions = ffhPlayer.predictions.slice(0, 5);
-          if (next5Predictions.length > 0) {
-            const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
-            enhancedPlayer.avg_minutes_next5 = totalMinutes / next5Predictions.length;
-            
-            const gwMinutePredictions = {};
-            ffhPlayer.predictions.forEach(pred => {
-              if (pred.gw && pred.xmins) {
-                gwMinutePredictions[pred.gw] = pred.xmins;
-              }
-            });
-            enhancedPlayer.ffh_gw_minutes = JSON.stringify(gwMinutePredictions);
           }
+        });
+        
+        enhancedPlayer.ffh_gw_predictions = JSON.stringify(gwPredictions);
+        enhancedPlayer.sleeper_gw_predictions = JSON.stringify(sleeperGwPredictions);
+        enhancedPlayer.ffh_gw_minutes = JSON.stringify(gwMinutePredictions);
+        
+        // Calculate next 5 gameweeks intelligently
+        // Prioritize upcoming gameweeks, then current ones, sorted by gameweek number
+        const next5 = [...allPredictions.upcoming, ...allPredictions.current]
+          .sort((a, b) => a.gw - b.gw)
+          .slice(0, 5);
+        
+        if (next5.length > 0) {
+          const totalMinutes = next5.reduce((total, pred) => total + (pred.predicted_mins || 0), 0);
+          enhancedPlayer.avg_minutes_next5 = totalMinutes / next5.length;
         }
         
-        // Extract PPG data from FFH player
+        // Store current gameweek prediction for optimizer use
+        // Use GameweekService to get the exact current gameweek, then find that prediction
+        const currentPrediction = currentGameweek && allPredictions.byGameweek[currentGameweek] ? 
+          allPredictions.byGameweek[currentGameweek] : 
+          (allPredictions.current.length > 0 ? 
+            allPredictions.current.find(p => p.gw === currentGameweek) || 
+            allPredictions.current[allPredictions.current.length - 1] : 
+            null);
+        
+        if (currentPrediction) {
+          enhancedPlayer.current_gameweek_prediction = {
+            gw: currentPrediction.gw,
+            predicted_pts: currentPrediction.predicted_pts,
+            predicted_mins: currentPrediction.predicted_mins,
+            source: currentPrediction.source
+          };
+        }
+        
+        // Extract PPG data from FFH player (existing code continues unchanged)
         if (ffhPlayer.player && ffhPlayer.player.form_data && typeof ffhPlayer.player.form_data.ppg === 'number') {
           enhancedPlayer.current_ppg = ffhPlayer.player.form_data.ppg;
         }
         
-        // Extract predicted season PPG
+        // Extract predicted season PPG (existing code continues unchanged)
         if (typeof ffhPlayer.season_prediction_avg === 'number') {
           enhancedPlayer.predicted_ppg = ffhPlayer.season_prediction_avg;
         }
@@ -351,7 +464,9 @@ if (ffhPlayer) {
         enhancedPlayer.ffh_team = extractFFHTeam(ffhPlayer);
         enhancedPlayer.ffh_position_id = ffhPlayer.position_id;
         
-        console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts, Avg Mins: ${enhancedPlayer.avg_minutes_next5 || 'N/A'}, PPG: ${enhancedPlayer.current_ppg || 'N/A'} → ${enhancedPlayer.predicted_ppg || 'N/A'}`);
+        // Enhanced logging to show which array was used for predictions
+        const predictionSource = currentPrediction ? `${currentPrediction.source} (GW${currentPrediction.gw})` : 'none';
+        console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts, Prediction source: ${predictionSource}, Avg Mins: ${enhancedPlayer.avg_minutes_next5 || 'N/A'}, PPG: ${enhancedPlayer.current_ppg || 'N/A'} → ${enhancedPlayer.predicted_ppg || 'N/A'}`);
       }
       
       enhancedPlayers.push(enhancedPlayer);
@@ -366,7 +481,7 @@ if (ffhPlayer) {
       byConfidence: { 'High': enhancedPlayers.length }
     };
 
-    console.log('📈 OPTA-ONLY Integration complete:', finalStats);
+    console.log('📈 OPTA-ONLY Integration complete with FFH gameweek fix:', finalStats);
 
     return {
       success: true,
@@ -377,6 +492,7 @@ if (ffhPlayer) {
         ffhTotal: ffhData.totalPlayers,
         enhancedTotal: enhancedPlayers.length,
         servicesUsed: services.available,
+        currentGameweek: currentGameweek,
         optaAnalysis // Include the detailed Opta analysis
       },
       quality: {
@@ -384,7 +500,7 @@ if (ffhPlayer) {
         matchingQuality: `${Math.round((enhancedPlayers.length / ffhData.totalPlayers) * 100)}%`,
         scoringConversion: services.available ? 'Sophisticated service' : 'Fallback multipliers'
       },
-      source: 'opta-only-integrated',
+      source: 'opta-only-integrated-with-gameweek-fix',
       enhanced: true,
       lastUpdated: new Date().toISOString(),
       fromCache: false
@@ -404,7 +520,7 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}));
     const { forceRefresh = false, clearCache = false } = body;
 
-    console.log('🔄 OPTA-ONLY Integration request:', { forceRefresh, clearCache });
+    console.log('🔄 OPTA-ONLY Integration request with FFH gameweek fix:', { forceRefresh, clearCache });
 
     if (clearCache) {
       cachedData = null;

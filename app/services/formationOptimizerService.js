@@ -3,6 +3,7 @@
 /**
  * Formation Optimizer Service for FPL Dashboard
  * Optimizes lineups using Sleeper formations and predicted points
+ * ENHANCED: Now handles both FFH results and predictions arrays intelligently
  */
 
 export class FormationOptimizerService {
@@ -158,10 +159,43 @@ export class FormationOptimizerService {
   }
 
   /**
-   * Get predicted points for a player
+   * Get predicted points for a player - ENHANCED VERSION
+   * Now handles both results and predictions arrays intelligently
    */
   getPlayerPoints(player) {
-    // Priority order for point sources
+    // Priority 1: Use current gameweek prediction if available (NEW)
+    if (player.current_gameweek_prediction && player.current_gameweek_prediction.predicted_pts) {
+      return player.current_gameweek_prediction.predicted_pts;
+    }
+    
+    // Priority 2: Look for current predictions from results array (active gameweeks) (NEW)
+    if (player.current_predictions && Array.isArray(player.current_predictions)) {
+      const sortedCurrent = player.current_predictions.sort((a, b) => b.gw - a.gw);
+      if (sortedCurrent.length > 0 && sortedCurrent[0].predicted_pts) {
+        return sortedCurrent[0].predicted_pts;
+      }
+    }
+    
+    // Priority 3: Look for upcoming predictions (future gameweeks) (NEW)
+    if (player.upcoming_predictions && Array.isArray(player.upcoming_predictions)) {
+      const sortedUpcoming = player.upcoming_predictions.sort((a, b) => a.gw - b.gw);
+      if (sortedUpcoming.length > 0 && sortedUpcoming[0].predicted_pts) {
+        return sortedUpcoming[0].predicted_pts;
+      }
+    }
+    
+    // Priority 4: Use all predictions array (fallback) (NEW)
+    if (player.predictions && Array.isArray(player.predictions)) {
+      const validPredictions = player.predictions
+        .filter(p => p.predicted_pts && typeof p.predicted_pts === 'number')
+        .sort((a, b) => a.gw - b.gw);
+      
+      if (validPredictions.length > 0) {
+        return validPredictions[0].predicted_pts;
+      }
+    }
+    
+    // Priority 5: Season-based averages (EXISTING)
     if (player.sleeper_season_total) return player.sleeper_season_total / 38;
     if (player.sleeper_season_avg) return player.sleeper_season_avg;
     if (player.ffh_season_prediction) return player.ffh_season_prediction / 38;
@@ -169,13 +203,15 @@ export class FormationOptimizerService {
     if (player.current_ppg) return player.current_ppg;
     if (player.total_points) return player.total_points / 38;
     
-    // Try to extract from gameweek predictions
+    // Priority 6: Try to extract from gameweek predictions JSON (EXISTING)
     if (player.sleeper_gw_predictions) {
       try {
         const gwPreds = JSON.parse(player.sleeper_gw_predictions);
         const values = Object.values(gwPreds);
         if (values.length > 0) {
-          return values.reduce((a, b) => a + b, 0) / values.length;
+          // Return average of next few gameweeks
+          const next3 = values.slice(0, 3);
+          return next3.reduce((a, b) => a + b, 0) / next3.length;
         }
       } catch (e) {
         // Continue to next option
@@ -183,6 +219,62 @@ export class FormationOptimizerService {
     }
     
     return 0;
+  }
+
+  /**
+   * Get predicted minutes for a player - ENHANCED VERSION
+   * Now handles both results and predictions arrays intelligently
+   */
+  getPlayerMinutes(player) {
+    // Priority 1: Use current gameweek prediction if available (NEW)
+    if (player.current_gameweek_prediction && player.current_gameweek_prediction.predicted_mins) {
+      return player.current_gameweek_prediction.predicted_mins;
+    }
+    
+    // Priority 2: Look for current predictions from results array (NEW)
+    if (player.current_predictions && Array.isArray(player.current_predictions)) {
+      const sortedCurrent = player.current_predictions.sort((a, b) => b.gw - a.gw);
+      if (sortedCurrent.length > 0 && sortedCurrent[0].predicted_mins) {
+        return sortedCurrent[0].predicted_mins;
+      }
+    }
+    
+    // Priority 3: Look for upcoming predictions (NEW)
+    if (player.upcoming_predictions && Array.isArray(player.upcoming_predictions)) {
+      const sortedUpcoming = player.upcoming_predictions.sort((a, b) => a.gw - b.gw);
+      if (sortedUpcoming.length > 0 && sortedUpcoming[0].predicted_mins) {
+        return sortedUpcoming[0].predicted_mins;
+      }
+    }
+    
+    // Priority 4: Use all predictions array (fallback) (NEW)
+    if (player.predictions && Array.isArray(player.predictions)) {
+      const validPredictions = player.predictions
+        .filter(p => p.predicted_mins && typeof p.predicted_mins === 'number')
+        .sort((a, b) => a.gw - b.gw);
+      
+      if (validPredictions.length > 0) {
+        return validPredictions[0].predicted_mins;
+      }
+    }
+    
+    // Priority 5: Use pre-calculated average (EXISTING)
+    if (player.avg_minutes_next5) return player.avg_minutes_next5;
+    
+    // Priority 6: Try to extract from gameweek minutes JSON (EXISTING)
+    if (player.ffh_gw_minutes) {
+      try {
+        const gwMins = JSON.parse(player.ffh_gw_minutes);
+        const values = Object.values(gwMins);
+        if (values.length > 0) {
+          return values[0]; // Return next gameweek minutes
+        }
+      } catch (e) {
+        // Continue to fallback
+      }
+    }
+    
+    return 90; // Default full minutes
   }
 
   /**
@@ -220,12 +312,14 @@ export class FormationOptimizerService {
     availablePlayers.forEach(player => {
       const position = this.normalizePosition(player);
       const points = this.getPlayerPoints(player);
+      const minutes = this.getPlayerMinutes(player); // NEW: Also get predicted minutes
       
       if (playersByPosition[position]) {
         playersByPosition[position].push({
           ...player,
           normalizedPosition: position,
-          predictedPoints: points
+          predictedPoints: points,
+          predictedMinutes: minutes // NEW: Store predicted minutes
         });
       }
     });
@@ -329,7 +423,7 @@ export class FormationOptimizerService {
   }
 
   /**
-   * Analyze current roster vs optimal
+   * Analyze current roster vs optimal - ENHANCED
    */
   async analyzeCurrentRoster(players, userId = 'ThatDerekGuy') {
     try {
@@ -358,12 +452,15 @@ export class FormationOptimizerService {
       const optimalResults = this.optimizeAllFormations(currentPlayers);
       const optimalLineup = optimalResults.optimalFormation;
 
-      // Generate recommendations
+      // Generate recommendations with enhanced prediction info
       const recommendations = this.generateRecommendations(
         currentRoster,
         currentStarters,
         optimalLineup
       );
+
+      // NEW: Add prediction source analysis
+      const predictionAnalysis = this.analyzePredictionSources(currentStarters);
 
       return {
         current: {
@@ -378,7 +475,8 @@ export class FormationOptimizerService {
           (currentPoints / optimalLineup.totalPoints) * 100 : 0,
         recommendations,
         allFormations: optimalResults.allFormations,
-        roster: currentRoster
+        roster: currentRoster,
+        predictionAnalysis // NEW: Show where predictions are coming from
       };
     } catch (error) {
       console.error('Error analyzing current roster:', error);
@@ -394,7 +492,42 @@ export class FormationOptimizerService {
   }
 
   /**
-   * Generate specific recommendations for lineup changes
+   * Analyze prediction sources for transparency - NEW METHOD
+   */
+  analyzePredictionSources(players) {
+    const sources = {
+      current_gameweek: 0,
+      results_array: 0,
+      predictions_array: 0,
+      season_average: 0,
+      fallback: 0
+    };
+
+    players.forEach(player => {
+      if (player.current_gameweek_prediction) {
+        sources.current_gameweek++;
+      } else if (player.current_predictions && player.current_predictions.length > 0) {
+        sources.results_array++;
+      } else if (player.upcoming_predictions && player.upcoming_predictions.length > 0) {
+        sources.predictions_array++;
+      } else if (player.sleeper_season_total || player.sleeper_season_avg) {
+        sources.season_average++;
+      } else {
+        sources.fallback++;
+      }
+    });
+
+    return {
+      sources,
+      total: players.length,
+      quality: sources.current_gameweek + sources.results_array + sources.predictions_array,
+      qualityPercentage: players.length > 0 ? 
+        Math.round(((sources.current_gameweek + sources.results_array + sources.predictions_array) / players.length) * 100) : 0
+    };
+  }
+
+  /**
+   * Generate specific recommendations for lineup changes - ENHANCED
    */
   generateRecommendations(currentRoster, currentStarters, optimalLineup) {
     if (!optimalLineup || !optimalLineup.valid) {
@@ -430,11 +563,15 @@ export class FormationOptimizerService {
       !optimalPlayerIds.has(p.sleeper_id || p.id)
     );
 
-    // Generate swap recommendations
+    // Generate swap recommendations with enhanced prediction info
     for (let i = 0; i < Math.min(playersToAdd.length, playersToRemove.length); i++) {
       const playerIn = playersToAdd[i];
       const playerOut = playersToRemove[i];
       const pointsGained = this.getPlayerPoints(playerIn) - this.getPlayerPoints(playerOut);
+      
+      // NEW: Get prediction source info
+      const playerInSource = this.getPredictionSource(playerIn);
+      const playerOutSource = this.getPredictionSource(playerOut);
 
       recommendations.push({
         type: 'player_swap',
@@ -442,12 +579,14 @@ export class FormationOptimizerService {
         playerOut: {
           name: playerOut.name,
           position: playerOut.position,
-          points: this.getPlayerPoints(playerOut)
+          points: this.getPlayerPoints(playerOut),
+          predictionSource: playerOutSource // NEW
         },
         playerIn: {
           name: playerIn.name,
           position: playerIn.position,
-          points: this.getPlayerPoints(playerIn)
+          points: this.getPlayerPoints(playerIn),
+          predictionSource: playerInSource // NEW
         },
         impact: pointsGained,
         priority: pointsGained > 1 ? 'high' : pointsGained > 0.5 ? 'medium' : 'low'
@@ -479,6 +618,25 @@ export class FormationOptimizerService {
       const priorityOrder = { high: 3, medium: 2, low: 1, info: 0 };
       return priorityOrder[b.priority] - priorityOrder[a.priority];
     });
+  }
+
+  /**
+   * Get prediction source for a player - NEW METHOD
+   */
+  getPredictionSource(player) {
+    if (player.current_gameweek_prediction) {
+      return `Current GW${player.current_gameweek_prediction.gw} (${player.current_gameweek_prediction.source})`;
+    }
+    if (player.current_predictions && player.current_predictions.length > 0) {
+      return `Results array (GW${player.current_predictions[0].gw})`;
+    }
+    if (player.upcoming_predictions && player.upcoming_predictions.length > 0) {
+      return `Predictions array (GW${player.upcoming_predictions[0].gw})`;
+    }
+    if (player.sleeper_season_total) {
+      return 'Season average';
+    }
+    return 'Fallback';
   }
 
   /**
