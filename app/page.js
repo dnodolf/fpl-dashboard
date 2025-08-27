@@ -382,13 +382,14 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
 };
 
 // ----------------- OTHER STATS COMPONENTS (UNCHANGED) -----------------
-
 const OptimizerStats = ({ isDarkMode }) => {
   const [stats, setStats] = useState({
     currentPoints: 0,
     optimalPoints: 0,
-    efficiency: 0,
-    playersToSwap: 0
+    optimalPlayerPercentage: 0,
+    playersToSwap: 0,
+    optimalPlayersInCurrent: 0,
+    totalPlayers: 11
   });
   const [loading, setLoading] = useState(true);
 
@@ -404,7 +405,22 @@ const OptimizerStats = ({ isDarkMode }) => {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            setStats(data.stats);
+            // Calculate optimal player stats
+            const optimalPlayerIds = data.optimal?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
+            const currentPlayerIds = data.current?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
+            
+            const optimalPlayersInCurrent = currentPlayerIds.filter(id => optimalPlayerIds.includes(id)).length;
+            const totalPlayers = currentPlayerIds.length || 11;
+            const optimalPlayerPercentage = totalPlayers > 0 ? (optimalPlayersInCurrent / totalPlayers) * 100 : 0;
+            
+            setStats({
+              currentPoints: data.stats?.currentPoints || 0,
+              optimalPoints: data.stats?.optimalPoints || 0,
+              optimalPlayerPercentage,
+              playersToSwap: totalPlayers - optimalPlayersInCurrent,
+              optimalPlayersInCurrent,
+              totalPlayers
+            });
           }
         }
       } catch (error) {
@@ -452,18 +468,28 @@ const OptimizerStats = ({ isDarkMode }) => {
             <div className="text-2xl font-bold text-green-600">{stats.optimalPoints.toFixed(1)}</div>
             <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Optimized Roster Points</div>
           </div>
-          <div className="text-green-500 text-2xl">🚀</div>
+          <div className="text-green-500 text-2xl">🎯</div>
         </div>
       </div>
 
-      {/* % Optimized */}
+      {/* % Optimal Players */}
       <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-2xl font-bold text-purple-600">{stats.efficiency.toFixed(1)}%</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>% Optimized</div>
+            <div className={`text-2xl font-bold ${
+              stats.optimalPlayerPercentage >= 80 
+                ? 'text-green-600'
+                : stats.optimalPlayerPercentage >= 60
+                  ? 'text-yellow-600'
+                  : 'text-red-600'
+            }`}>
+              {stats.optimalPlayerPercentage.toFixed(0)}%
+            </div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              % Optimal Players ({stats.optimalPlayersInCurrent}/{stats.totalPlayers})
+            </div>
           </div>
-          <div className="text-purple-500 text-2xl">📈</div>
+          <div className="text-purple-500 text-2xl">📊</div>
         </div>
       </div>
 
@@ -471,10 +497,10 @@ const OptimizerStats = ({ isDarkMode }) => {
       <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-2xl font-bold text-orange-600">{stats.playersToSwap}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.playersToSwap}</div>
             <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Players to Swap</div>
           </div>
-          <div className="text-orange-500 text-2xl">🔄</div>
+          <div className="text-red-500 text-2xl">🔄</div>
         </div>
       </div>
     </div>
@@ -1845,14 +1871,18 @@ export default function FPLDashboard() {
             </>
           )}
 
-          {/* NEW: Enhanced Matching Tab */}
+          {/* Matching statistics and information */}
           {activeTab === 'matching' && (
             <MatchingTabContent players={players} integration={integration} isDarkMode={isDarkMode} />
           )}
 
-          {/* Other tabs content - placeholder for now */}
+          {/* Optimizing lineup for the current GW */}
           {activeTab === 'optimizer' && (
-            <OptimizerTabContent isDarkMode={isDarkMode} />
+            <OptimizerTabContent 
+              isDarkMode={isDarkMode} 
+              players={players}
+              currentGameweek={currentGameweek}
+            />
           )}
 
           {activeTab === 'transfers' && (
