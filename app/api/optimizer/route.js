@@ -100,15 +100,22 @@ export async function POST(request) {
     // Prepare formations data for visualization
     const formationsData = analysis.allFormations?.map(formation => ({
       name: formation.formation,
+      formation: formation.formation, // Add this for FormationVisualization compatibility
       points: formation.totalPoints,
-      players: formation.players.map(p => ({
-        id: p.sleeper_id || p.id,
-        name: p.name,
-        position: p.normalizedPosition,
-        team: p.team,
-        points: p.predictedPoints,
-        minutes: p.avg_minutes_next5 || 0
-      })),
+      totalPoints: formation.totalPoints, // Add this for compatibility
+      players: formation.players?.map(p => ({
+        id: p.sleeper_id || p.id || p.player_id,
+        player_id: p.sleeper_id || p.id || p.player_id,
+        sleeper_id: p.sleeper_id || p.id || p.player_id,
+        name: p.name || p.web_name || 'Unknown Player',
+        web_name: p.web_name || p.name || 'Unknown Player',
+        position: p.position,
+        team: p.team || p.team_abbr || 'Unknown',
+        team_abbr: p.team_abbr || p.team || 'Unknown',
+        points: optimizerService.getPlayerPoints(p),
+        predicted_pts: optimizerService.getPlayerPoints(p),
+        minutes: optimizerService.getPlayerMinutes(p) || 90
+      })) || [],
       valid: formation.valid
     })) || [];
 
@@ -118,26 +125,50 @@ export async function POST(request) {
       stats,
       current: {
         formation: analysis.current?.formation || 'Unknown',
-        players: analysis.current?.players?.map(p => ({
-          id: p.sleeper_id || p.id,
-          name: p.name,
-          position: optimizerService.normalizePosition(p),
-          team: p.team,
-          points: optimizerService.getPlayerPoints(p),
-          minutes: p.avg_minutes_next5 || 0
-        })) || [],
+        players: analysis.current?.players?.map(p => {
+          // Normalize position for consistency
+          let position = p.position;
+          if (position === 'GK' || position === 'G') {
+            position = 'GKP';
+          }
+          
+          return {
+            id: p.sleeper_id || p.id || p.player_id,
+            player_id: p.sleeper_id || p.id || p.player_id,
+            sleeper_id: p.sleeper_id || p.id || p.player_id,
+            name: p.name || p.web_name || 'Unknown Player',
+            web_name: p.web_name || p.name || 'Unknown Player',
+            full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
+            position: position, // Use the normalized position
+            team: p.team || p.team_abbr || 'Unknown',
+            team_abbr: p.team_abbr || p.team || 'Unknown',
+            points: optimizerService.getPlayerPoints(p),
+            current_gw_prediction: optimizerService.getPlayerPoints(p),
+            predicted_pts: optimizerService.getPlayerPoints(p),
+            minutes: optimizerService.getPlayerMinutes(p)
+          };
+        }) || [],
+        points: analysis.current?.points || 0,
         totalPoints: analysis.current?.points || 0
       },
       optimal: analysis.optimal ? {
         formation: analysis.optimal.formation,
         players: analysis.optimal.players.map(p => ({
-          id: p.sleeper_id || p.id,
-          name: p.name,
-          position: p.normalizedPosition,
-          team: p.team,
-          points: p.predictedPoints,
-          minutes: p.avg_minutes_next5 || 0
+          id: p.sleeper_id || p.id || p.player_id,
+          player_id: p.sleeper_id || p.id || p.player_id, // Add this for compatibility
+          sleeper_id: p.sleeper_id || p.id || p.player_id, // Add this for compatibility
+          name: p.name || p.web_name || 'Unknown Player',
+          web_name: p.web_name || p.name || 'Unknown Player',
+          full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
+          position: p.position, // Use the actual position from the player object
+          team: p.team || p.team_abbr || 'Unknown',
+          team_abbr: p.team_abbr || p.team || 'Unknown',
+          points: optimizerService.getPlayerPoints(p), // Use the service method correctly
+          current_gw_prediction: optimizerService.getPlayerPoints(p), // For compatibility
+          predicted_pts: optimizerService.getPlayerPoints(p), // For compatibility
+          minutes: optimizerService.getPlayerMinutes(p) // Use the service method
         })),
+        points: analysis.optimal.totalPoints, // Add this for FormationVisualization
         totalPoints: analysis.optimal.totalPoints
       } : null,
       recommendations: analysis.recommendations,

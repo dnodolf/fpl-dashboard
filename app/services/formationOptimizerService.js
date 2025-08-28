@@ -18,7 +18,7 @@ export class FormationOptimizerService {
    */
   static VALID_FORMATIONS = {
     '3-5-2': {
-      GKP: 1,
+      GK: 1,
       DEF: 3,
       MID: 5,
       FWD: 2,
@@ -27,7 +27,7 @@ export class FormationOptimizerService {
       description: '3 Defenders, 5 Midfielders, 2 Forwards'
     },
     '4-4-2': {
-      GKP: 1,
+      GK: 1,
       DEF: 4,
       MID: 4,
       FWD: 2,
@@ -36,7 +36,7 @@ export class FormationOptimizerService {
       description: '4 Defenders, 4 Midfielders, 2 Forwards'
     },
     '4-5-1': {
-      GKP: 1,
+      GK: 1,
       DEF: 4,
       MID: 5,
       FWD: 1,
@@ -45,7 +45,7 @@ export class FormationOptimizerService {
       description: '4 Defenders, 5 Midfielders, 1 Forward'
     },
     '3-4-3': {
-      GKP: 1,
+      GK: 1,
       DEF: 3,
       MID: 4,
       FWD: 3,
@@ -54,7 +54,7 @@ export class FormationOptimizerService {
       description: '3 Defenders, 4 Midfielders, 3 Forwards'
     },
     '4-3-3': {
-      GKP: 1,
+      GK: 1,
       DEF: 4,
       MID: 3,
       FWD: 3,
@@ -63,7 +63,7 @@ export class FormationOptimizerService {
       description: '4 Defenders, 3 Midfielders, 3 Forwards'
     },
     '5-4-1': {
-      GKP: 1,
+      GK: 1,
       DEF: 5,
       MID: 4,
       FWD: 1,
@@ -142,21 +142,64 @@ export class FormationOptimizerService {
     }
   }
 
-  /**
-   * Parse formation from Sleeper metadata
-   */
-  parseFormation(formationString) {
-    if (!formationString) return null;
-    
-    try {
-      const formations = JSON.parse(formationString);
-      // Get the primary formation (usually key "1")
-      return formations["1"] || Object.values(formations)[0] || null;
-    } catch (error) {
-      console.warn('Failed to parse formation:', formationString);
-      return null;
-    }
+/**
+ * Parse formation from Sleeper metadata - ENHANCED
+ */
+parseFormation(formationString) {
+  if (!formationString) return null;
+  
+  try {
+    const formations = JSON.parse(formationString);
+    // Get the primary formation (usually key "1")
+    return formations["1"] || Object.values(formations)[0] || null;
+  } catch (error) {
+    console.warn('Failed to parse formation:', formationString);
+    return null;
   }
+}
+
+/**
+ * Calculate formation based on actual starting players' positions - FIXED FOR CONSISTENT MAPPING
+ */
+calculateFormationFromPlayers(players) {
+  if (!players || players.length === 0) {
+    return null;
+  }
+
+  // Count players by position - CONSISTENT WITH VISUALIZATION
+  const positionCounts = {
+    GKP: 0,   // Use GKP consistently
+    DEF: 0,
+    MID: 0,
+    FWD: 0
+  };
+
+  players.forEach(player => {
+    let position = player.position;
+    
+    // Normalize GK variations to GKP
+    if (position === 'GK' || position === 'G') {
+      position = 'GKP';
+    }
+    
+    if (positionCounts.hasOwnProperty(position)) {
+      positionCounts[position]++;
+    } else {
+      console.warn(`Unknown position in formation calculation: ${position} for player ${player.name || player.web_name}`);
+    }
+  });
+
+  // Generate formation string (DEF-MID-FWD, GKP is assumed to be 1)
+  const formation = `${positionCounts.DEF}-${positionCounts.MID}-${positionCounts.FWD}`;
+  
+  console.log('🏗️ Calculated formation from players:', {
+    players: players.length,
+    positions: positionCounts,
+    formation: formation
+  });
+
+  return formation;
+}
 
   /**
    * Get predicted points for a player - ENHANCED VERSION
@@ -289,120 +332,206 @@ export class FormationOptimizerService {
     return pos || 'MID';
   }
 
-  /**
-   * Find optimal lineup for a given formation
-   */
-  optimizeFormation(formation, availablePlayers) {
-    const formationConfig = FormationOptimizerService.VALID_FORMATIONS[formation];
-    if (!formationConfig) {
-      throw new Error(`Invalid formation: ${formation}`);
-    }
-
-    const lineup = { formation, players: [], totalPoints: 0 };
-    const usedPlayers = new Set();
-
-    // Group players by position
-    const playersByPosition = {
-      GKP: [],
-      DEF: [],
-      MID: [],
-      FWD: []
+/**
+ * Enhanced formation optimization that provides better error messages
+ */
+optimizeFormation(formationType, availablePlayers) {
+  const formationConfig = FormationOptimizerService.VALID_FORMATIONS[formationType];
+  
+  if (!formationConfig) {
+    return {
+      formation: formationType,
+      valid: false,
+      reason: 'Unknown formation type',
+      totalPoints: 0,
+      players: []
     };
+  }
 
-    availablePlayers.forEach(player => {
-      const position = this.normalizePosition(player);
-      const points = this.getPlayerPoints(player);
-      const minutes = this.getPlayerMinutes(player); // NEW: Also get predicted minutes
-      
-      if (playersByPosition[position]) {
-        playersByPosition[position].push({
-          ...player,
-          normalizedPosition: position,
-          predictedPoints: points,
-          predictedMinutes: minutes // NEW: Store predicted minutes
-        });
-      }
-    });
+  console.log(`🔍 ${formationType} - Available players:`, availablePlayers.length);
+  console.log(`🔍 First 3 players:`, availablePlayers.slice(0, 3).map(p => ({
+    name: p.name || p.web_name || 'Unknown',
+    position: p.position,
+    id: p.id || p.player_id || p.sleeper_id
+  })));
 
-    // Sort each position by predicted points (descending)
-    Object.keys(playersByPosition).forEach(pos => {
-      playersByPosition[pos].sort((a, b) => b.predictedPoints - a.predictedPoints);
-    });
+  // Group players by position - CONSISTENT MAPPING TO MATCH FORMATION VISUALIZATION
+  const playersByPosition = {
+    GKP: [], // Use GKP to match FormationVisualization
+    DEF: [],
+    MID: [],
+    FWD: []
+  };
 
-    // Select players for each position
-    for (const [position, required] of Object.entries(formationConfig)) {
-      if (position === 'total' || position === 'displayName' || position === 'description') continue;
+  availablePlayers.forEach(player => {
+    // Normalize position to match FormationVisualization expectations
+    let position = player.position;
+    
+    // Convert various GK formats to GKP for consistency
+    if (position === 'GK' || position === 'G') {
+      position = 'GKP';
+    }
+    
+    if (playersByPosition.hasOwnProperty(position)) {
+      playersByPosition[position].push({
+        ...player,
+        position: position, // Ensure position is normalized
+        points: this.getPlayerPoints(player)
+      });
+    } else {
+      console.warn(`🚨 Unknown position: "${position}" for player ${player.name || player.web_name}`);
+    }
+  });
+
+  // DEBUG: Log position counts
+  console.log(`📊 ${formationType} position counts:`, {
+    GKP: playersByPosition.GKP.length,
+    DEF: playersByPosition.DEF.length,
+    MID: playersByPosition.MID.length,
+    FWD: playersByPosition.FWD.length
+  });
+
+  // Sort each position by points (descending)
+  Object.keys(playersByPosition).forEach(position => {
+    playersByPosition[position].sort((a, b) => (b.points || 0) - (a.points || 0));
+  });
+
+  // UPDATED: Check requirements using formation config but match to our position groups
+  const positionMapping = {
+    GK: 'GKP', // Formation config uses GK, we use GKP
+    DEF: 'DEF',
+    MID: 'MID',
+    FWD: 'FWD'
+  };
+
+  const missingPositions = [];
+  Object.entries(formationConfig).forEach(([configPosition, required]) => {
+    if (configPosition === 'total' || configPosition === 'displayName' || configPosition === 'description') return;
+    
+    const ourPosition = positionMapping[configPosition] || configPosition;
+    const available = playersByPosition[ourPosition]?.length || 0;
+    
+    if (available < required) {
+      missingPositions.push(`${configPosition}: need ${required}, have ${available}`);
+    }
+  });
+
+  if (missingPositions.length > 0) {
+    console.log(`❌ ${formationType} failed:`, missingPositions.join(', '));
+    return {
+      formation: formationType,
+      valid: false,
+      reason: `Missing players: ${missingPositions.join(', ')}`,
+      totalPoints: 0,
+      players: []
+    };
+  }
+
+  // Select the best players for each position using the mapping
+  const selectedPlayers = [];
+  let totalPoints = 0;
+
+  Object.entries(formationConfig).forEach(([configPosition, required]) => {
+    if (configPosition === 'total' || configPosition === 'displayName' || configPosition === 'description') return;
+    
+    const ourPosition = positionMapping[configPosition] || configPosition;
+    const bestPlayers = playersByPosition[ourPosition].slice(0, required);
+    selectedPlayers.push(...bestPlayers);
+    totalPoints += bestPlayers.reduce((sum, player) => sum + (player.points || 0), 0);
+  });
+
+  console.log(`✅ ${formationType} successful: ${totalPoints.toFixed(1)} pts with ${selectedPlayers.length} players`);
+
+  return {
+    formation: formationType,
+    valid: true,
+    players: selectedPlayers,
+    totalPoints: totalPoints,
+    points: totalPoints, // Add this alias for compatibility
+    efficiency: this.calculateFormationEfficiency ? this.calculateFormationEfficiency(selectedPlayers) : 100,
+    playerCount: selectedPlayers.length
+  };
+}
+
+/**
+ * Find the best formation and lineup from available players - ENHANCED
+ * Now ensures all formations are tested even if they don't have optimal players
+ */
+optimizeAllFormations(availablePlayers) {
+  if (!availablePlayers || availablePlayers.length === 0) {
+    return {
+      currentFormation: null,
+      optimalFormation: null,
+      recommendations: [],
+      error: 'No players available'
+    };
+  }
+
+  const results = [];
+  const formations = Object.keys(FormationOptimizerService.VALID_FORMATIONS);
+  
+  console.log('🔍 Testing formations:', formations);
+
+  // Test each formation
+  for (const formation of formations) {
+    try {
+      const result = this.optimizeFormation(formation, availablePlayers);
       
-      const availableForPosition = playersByPosition[position] || [];
-      const selectedForPosition = [];
-      
-      for (let i = 0; i < required && i < availableForPosition.length; i++) {
-        const player = availableForPosition[i];
-        if (!usedPlayers.has(player.sleeper_id || player.id)) {
-          selectedForPosition.push(player);
-          usedPlayers.add(player.sleeper_id || player.id);
-          lineup.totalPoints += player.predictedPoints;
-        }
-      }
-      
-      // If we don't have enough players for this position, formation is invalid
-      if (selectedForPosition.length < required) {
-        return {
-          formation,
-          players: [],
+      // Always add result even if not completely valid
+      // This ensures all formations appear in comparison
+      if (result.valid) {
+        results.push(result);
+        console.log(`✅ ${formation}: ${result.totalPoints.toFixed(1)} pts (valid)`);
+      } else {
+        // Create a placeholder result for invalid formations
+        const placeholderResult = {
+          formation: formation,
           totalPoints: 0,
+          players: [],
           valid: false,
-          error: `Not enough ${position} players (need ${required}, have ${selectedForPosition.length})`
+          reason: result.reason || 'Not enough players for this formation'
         };
+        results.push(placeholderResult);
+        console.log(`❌ ${formation}: 0.0 pts (invalid - ${placeholderResult.reason})`);
       }
+    } catch (error) {
+      console.warn(`Formation ${formation} optimization failed:`, error.message);
       
-      lineup.players.push(...selectedForPosition);
-    }
-
-    return {
-      ...lineup,
-      valid: true,
-      efficiency: lineup.players.length === 11 ? 100 : (lineup.players.length / 11) * 100
-    };
-  }
-
-  /**
-   * Find the best formation and lineup from available players
-   */
-  optimizeAllFormations(availablePlayers) {
-    if (!availablePlayers || availablePlayers.length === 0) {
-      return {
-        currentFormation: null,
-        optimalFormation: null,
-        recommendations: [],
-        error: 'No players available'
+      // Add placeholder for failed formations too
+      const errorResult = {
+        formation: formation,
+        totalPoints: 0,
+        players: [],
+        valid: false,
+        reason: `Error: ${error.message}`
       };
+      results.push(errorResult);
     }
-
-    const results = [];
-    const formations = Object.keys(FormationOptimizerService.VALID_FORMATIONS);
-
-    // Test each formation
-    for (const formation of formations) {
-      try {
-        const result = this.optimizeFormation(formation, availablePlayers);
-        if (result.valid) {
-          results.push(result);
-        }
-      } catch (error) {
-        console.warn(`Formation ${formation} optimization failed:`, error.message);
-      }
-    }
-
-    // Sort by total points
-    results.sort((a, b) => b.totalPoints - a.totalPoints);
-
-    return {
-      allFormations: results,
-      optimalFormation: results[0] || null,
-      formationComparison: this.compareFormations(results)
-    };
   }
+
+  // Sort by total points (valid formations first, then invalid)
+  results.sort((a, b) => {
+    if (a.valid && !b.valid) return -1;
+    if (!a.valid && b.valid) return 1;
+    return (b.totalPoints || 0) - (a.totalPoints || 0);
+  });
+
+  console.log('🏆 Formation results:', results.map(r => ({
+    formation: r.formation,
+    points: r.totalPoints,
+    valid: r.valid
+  })));
+
+return {
+  allFormations: results.map(result => ({
+    ...result,
+    formation: result.formation || result.name, // Ensure formation property exists
+    name: result.formation || result.name       // Keep name for compatibility
+  })),
+  optimalFormation: results.find(r => r.valid) || null,
+  formationComparison: this.compareFormations(results)
+};
+}
 
   /**
    * Compare formations and generate insights
@@ -422,74 +551,93 @@ export class FormationOptimizerService {
     return comparisons;
   }
 
-  /**
-   * Analyze current roster vs optimal - ENHANCED
-   */
-  async analyzeCurrentRoster(players, userId = 'ThatDerekGuy') {
-    try {
-      // Get current roster from Sleeper
-      const currentRoster = await this.fetchCurrentRoster(userId);
-      
-      // Get player data for current roster
-      const currentPlayers = currentRoster.players
-        .map(playerId => players.find(p => 
-          (p.sleeper_id || p.id || p.player_id) === playerId
-        ))
-        .filter(Boolean);
+/**
+ * Analyze current roster vs optimal - ENHANCED WITH FORMATION CALCULATION
+ */
+async analyzeCurrentRoster(players, userId = 'ThatDerekGuy') {
+  try {
+    // Get current roster from Sleeper
+    const currentRoster = await this.fetchCurrentRoster(userId);
+    
+    // Get player data for current roster
+    const currentPlayers = currentRoster.players
+      .map(playerId => players.find(p => 
+        (p.sleeper_id || p.id || p.player_id) === playerId
+      ))
+      .filter(Boolean);
 
-      // Calculate current lineup points
-      const currentStarters = currentRoster.starters
-        .map(playerId => players.find(p => 
-          (p.sleeper_id || p.id || p.player_id) === playerId
-        ))
-        .filter(Boolean);
+    // Calculate current lineup points
+    const currentStarters = currentRoster.starters
+      .map(playerId => players.find(p => 
+        (p.sleeper_id || p.id || p.player_id) === playerId
+      ))
+      .filter(Boolean);
 
-      const currentPoints = currentStarters.reduce((total, player) => {
-        return total + this.getPlayerPoints(player);
-      }, 0);
+    // ENHANCED: Calculate actual formation from starting players
+    const actualFormation = this.calculateFormationFromPlayers(currentStarters);
+    const metadataFormation = currentRoster.formation;
+    
+    console.log('🔍 Formation Debug:', {
+      metadata: metadataFormation,
+      calculated: actualFormation,
+      starters: currentStarters.length,
+      starterPositions: currentStarters.map(p => ({ name: p.name || p.web_name, position: p.position }))
+    });
 
-      // Find optimal lineup from current roster
-      const optimalResults = this.optimizeAllFormations(currentPlayers);
-      const optimalLineup = optimalResults.optimalFormation;
+    // Use calculated formation as primary, metadata as fallback
+    const currentFormation = actualFormation || metadataFormation;
 
-      // Generate recommendations with enhanced prediction info
-      const recommendations = this.generateRecommendations(
-        currentRoster,
-        currentStarters,
-        optimalLineup
-      );
+    const currentPoints = currentStarters.reduce((total, player) => {
+      return total + this.getPlayerPoints(player);
+    }, 0);
 
-      // NEW: Add prediction source analysis
-      const predictionAnalysis = this.analyzePredictionSources(currentStarters);
+    // Find optimal lineup from current roster
+    const optimalResults = this.optimizeAllFormations(currentPlayers);
+    const optimalLineup = optimalResults.optimalFormation;
 
-      return {
-        current: {
-          formation: currentRoster.formation,
-          players: currentStarters,
-          points: currentPoints,
-          playerCount: currentStarters.length
-        },
-        optimal: optimalLineup,
-        improvement: optimalLineup ? optimalLineup.totalPoints - currentPoints : 0,
-        efficiency: optimalLineup && optimalLineup.totalPoints > 0 ? 
-          (currentPoints / optimalLineup.totalPoints) * 100 : 0,
-        recommendations,
-        allFormations: optimalResults.allFormations,
-        roster: currentRoster,
-        predictionAnalysis // NEW: Show where predictions are coming from
-      };
-    } catch (error) {
-      console.error('Error analyzing current roster:', error);
-      return {
-        current: null,
-        optimal: null,
-        improvement: 0,
-        efficiency: 0,
-        recommendations: [],
-        error: error.message
-      };
-    }
+    // Generate recommendations with enhanced prediction info
+    const recommendations = this.generateRecommendations(
+      { ...currentRoster, formation: currentFormation }, // Use calculated formation
+      currentStarters,
+      optimalLineup
+    );
+
+    // Add prediction source analysis
+    const predictionAnalysis = this.analyzePredictionSources(currentStarters);
+
+    return {
+      current: {
+        formation: currentFormation, // Use calculated formation
+        players: currentStarters,
+        points: currentPoints,
+        playerCount: currentStarters.length
+      },
+      optimal: optimalLineup,
+      improvement: optimalLineup ? optimalLineup.totalPoints - currentPoints : 0,
+      efficiency: optimalLineup && optimalLineup.totalPoints > 0 ? 
+        (currentPoints / optimalLineup.totalPoints) * 100 : 0,
+      recommendations,
+      allFormations: optimalResults.allFormations,
+      roster: { ...currentRoster, formation: currentFormation }, // Use calculated formation
+      predictionAnalysis,
+      formationDebug: {
+        metadata: metadataFormation,
+        calculated: actualFormation,
+        final: currentFormation
+      }
+    };
+  } catch (error) {
+    console.error('Error analyzing current roster:', error);
+    return {
+      current: null,
+      optimal: null,
+      improvement: 0,
+      efficiency: 0,
+      recommendations: [],
+      error: error.message
+    };
   }
+}
 
   /**
    * Analyze prediction sources for transparency - NEW METHOD

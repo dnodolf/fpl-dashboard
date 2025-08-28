@@ -365,7 +365,7 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
   );
 };
 
-// ----------------- FORMATION COMPARISON COMPONENT - ENHANCED -----------------
+// ----------------- FORMATION COMPARISON COMPONENT - FIXED LAYOUT -----------------
 const FormationComparison = ({ allFormations, currentFormation, isDarkMode }) => {
   if (!allFormations || allFormations.length === 0) {
     return (
@@ -383,10 +383,21 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode }) =>
     );
   }
 
-  // Sort formations by points
-  const sortedFormations = [...allFormations].sort((a, b) => b.points - a.points);
-  const bestFormation = sortedFormations[0];
-  const bestPoints = bestFormation?.points || 0;
+  // Sort formations by points and validity - valid formations first, then by points
+  const sortedFormations = [...allFormations].sort((a, b) => {
+    const aValid = a.valid !== false && (a.points || a.totalPoints || 0) > 0;
+    const bValid = b.valid !== false && (b.points || b.totalPoints || 0) > 0;
+    
+    // Valid formations first
+    if (aValid && !bValid) return -1;
+    if (!aValid && bValid) return 1;
+    
+    // Within same validity, sort by points
+    return (b.points || b.totalPoints || 0) - (a.points || a.totalPoints || 0);
+  });
+  
+  const bestFormation = sortedFormations.find(f => f.valid !== false && (f.points || f.totalPoints || 0) > 0);
+  const bestPoints = bestFormation?.points || bestFormation?.totalPoints || 0;
 
   return (
     <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
@@ -398,60 +409,81 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode }) =>
       <div className="p-4">
         <div className="space-y-3">
           {sortedFormations.slice(0, 6).map((formation, index) => {
-            const isCurrent = formation.formation === currentFormation;
+            const formationName = formation.formation || formation.name || 'Unknown';
+            const isCurrent = formationName === currentFormation;
             const isBest = formation === bestFormation;
-            const pointsDiff = bestPoints - formation.points;
+            const formationPoints = formation.points || formation.totalPoints || 0;
+            const pointsDiff = bestPoints - formationPoints;
+            const isInvalid = formation.valid === false || formationPoints === 0;
             
             return (
-              <div key={formation.formation} 
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  isCurrent 
-                    ? (isDarkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-200')
-                    : isBest ?
-                      (isDarkMode ? 'bg-green-900 border border-green-700' : 'bg-green-50 border border-green-200')
-                      : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
+              <div key={formationName || index} 
+                className={`flex items-center justify-between p-4 rounded-lg ${
+                  isInvalid
+                    ? (isDarkMode ? 'bg-gray-900 border border-gray-600 opacity-60' : 'bg-gray-100 border border-gray-300 opacity-60')
+                    : isCurrent 
+                      ? (isDarkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-200')
+                      : isBest
+                        ? (isDarkMode ? 'bg-green-900 border border-green-700' : 'bg-green-50 border border-green-200')
+                        : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
                 }`}>
                 
                 {/* Left: Formation Name */}
-                <div className="flex items-center gap-2">
-                  <span className={`text-lg font-bold ${
-                    isCurrent ? 
-                      (isDarkMode ? 'text-blue-100' : 'text-blue-800') :
-                      isBest ?
-                        (isDarkMode ? 'text-green-100' : 'text-green-800') :
-                        (isDarkMode ? 'text-white' : 'text-gray-900')
+                <div className="flex items-center gap-3 flex-1">
+                  <span className={`text-2xl font-bold ${
+                    isInvalid
+                      ? (isDarkMode ? 'text-gray-500' : 'text-gray-400')
+                      : isCurrent 
+                        ? (isDarkMode ? 'text-blue-100' : 'text-blue-800') 
+                        : isBest
+                          ? (isDarkMode ? 'text-green-100' : 'text-green-800')
+                          : (isDarkMode ? 'text-white' : 'text-gray-900')
                   }`}>
-                    {formation.formation}
+                    {formationName}
                   </span>
                   
-                  {isCurrent && (
+                  {isCurrent && !isInvalid && (
                     <span className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white">
                       CURRENT
+                    </span>
+                  )}
+                  
+                  {isInvalid && (
+                    <span className="px-2 py-1 text-xs font-medium rounded bg-red-600 text-white">
+                      INVALID
                     </span>
                   )}
                 </div>
                 
                 {/* Middle: Points */}
-                <div className={`text-lg font-bold ${
-                  isCurrent ? 
-                    (isDarkMode ? 'text-blue-100' : 'text-blue-800') :
-                    isBest ?
-                      (isDarkMode ? 'text-green-100' : 'text-green-800') :
-                      (isDarkMode ? 'text-white' : 'text-gray-900')
-                }`}>
-                  {formation.points.toFixed(1)} pts
+                <div className="flex-1 text-center">
+                  <span className={`text-xl font-bold ${
+                    isInvalid
+                      ? (isDarkMode ? 'text-gray-500' : 'text-gray-400')
+                      : isCurrent 
+                        ? (isDarkMode ? 'text-blue-100' : 'text-blue-800') 
+                        : isBest
+                          ? (isDarkMode ? 'text-green-100' : 'text-green-800')
+                          : (isDarkMode ? 'text-white' : 'text-gray-900')
+                  }`}>
+                    {isInvalid ? 'N/A' : `${formationPoints.toFixed(1)} pts`}
+                  </span>
                 </div>
                 
                 {/* Right: Status */}
-                <div className="text-right">
-                  {isBest ? (
-                    <span className="px-2 py-1 text-xs font-medium rounded bg-green-600 text-white">
+                <div className="flex-1 text-right">
+                  {isInvalid ? (
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Not enough players
+                    </span>
+                  ) : isBest ? (
+                    <span className="px-3 py-1.5 text-sm font-medium rounded bg-green-600 text-white">
                       BEST
                     </span>
                   ) : (
-                    <div className={`text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                    <span className={`text-lg font-medium ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
                       -{pointsDiff.toFixed(1)} pts
-                    </div>
+                    </span>
                   )}
                 </div>
               </div>
@@ -552,6 +584,7 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
               </span>
             </div>
           </div>
+          
           <FormationVisualization 
             lineup={current} 
             isDarkMode={isDarkMode} 
