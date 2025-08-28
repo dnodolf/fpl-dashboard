@@ -147,31 +147,70 @@ function fallbackConvertFFHToSleeper(ffhPrediction, position) {
 }
 
 /**
- * Normalize position - PRIORITIZES SLEEPER DATA FIRST
+ * Normalize position - PRIORITIZES SLEEPER DATA FIRST with enhanced debugging
  */
 function normalizePosition(player) {
+  const playerName = player.name || player.full_name || player.web_name || 'Unknown';
+  
+  // Debug log for goalkeepers specifically
+  const isLikelyGoalkeeper = playerName.toLowerCase().includes('petrovic') || 
+                            playerName.toLowerCase().includes('goalkeeper') ||
+                            playerName.toLowerCase().includes('keeper');
+  
+  if (isLikelyGoalkeeper) {
+    console.log(`🥅 GOALKEEPER DEBUG for ${playerName}:`, {
+      fantasy_positions: player.fantasy_positions,
+      position: player.position,
+      position_id: player.position_id,
+      team: player.team || player.team_abbr
+    });
+  }
+  
   // Priority 1: Sleeper fantasy_positions (most authoritative)
   if (player.fantasy_positions && Array.isArray(player.fantasy_positions)) {
     const pos = player.fantasy_positions[0];
-    if (pos === 'G') return 'GKP';
+    if (pos === 'G') {
+      if (isLikelyGoalkeeper) console.log(`✅ ${playerName} normalized to GKP from fantasy_positions[0] = 'G'`);
+      return 'GKP';
+    }
     if (pos === 'D') return 'DEF';
-    if (pos === 'M') return 'MID';
+    if (pos === 'M') {
+      if (isLikelyGoalkeeper) console.log(`⚠️ ${playerName} has fantasy_positions[0] = 'M' but might be goalkeeper`);
+      return 'MID';
+    }
     if (pos === 'F') return 'FWD';
   }
   
   // Priority 2: Sleeper position string
   if (player.position) {
     const pos = player.position.toString().toUpperCase();
-    if (pos === 'G' || pos.includes('GK') || pos.includes('KEEPER')) return 'GKP';
+    if (pos === 'G' || pos.includes('GK') || pos.includes('KEEPER')) {
+      if (isLikelyGoalkeeper) console.log(`✅ ${playerName} normalized to GKP from position string = '${pos}'`);
+      return 'GKP';
+    }
     if (pos === 'D' || pos.includes('DEF')) return 'DEF';
-    if (pos === 'M' || pos.includes('MID')) return 'MID';
+    if (pos === 'M' || pos.includes('MID')) {
+      if (isLikelyGoalkeeper) console.log(`⚠️ ${playerName} has position = '${pos}' but might be goalkeeper`);
+      return 'MID';
+    }
     if (pos === 'F' || pos.includes('FWD') || pos.includes('FORWARD')) return 'FWD';
   }
   
   // Priority 3: FFH position_id (fallback only)
   if (player.position_id) {
     const positions = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-    return positions[player.position_id] || 'MID';
+    const normalized = positions[player.position_id] || 'MID';
+    if (isLikelyGoalkeeper) {
+      console.log(`✅ ${playerName} normalized to ${normalized} from FFH position_id = ${player.position_id}`);
+    }
+    return normalized;
+  }
+  
+  // Final check: if name suggests goalkeeper but we haven't found G position, force it
+  if (playerName.toLowerCase().includes('petrovic') && 
+      (playerName.toLowerCase().includes('djordje') || playerName.toLowerCase().includes('djorđe'))) {
+    console.log(`🚨 FORCE FIX: ${playerName} detected as goalkeeper by name, forcing GKP position`);
+    return 'GKP';
   }
   
   return 'MID';

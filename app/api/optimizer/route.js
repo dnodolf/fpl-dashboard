@@ -3,6 +3,40 @@
 import { NextResponse } from 'next/server';
 import { FormationOptimizerService } from '../../services/formationOptimizerService.js';
 
+function detectAndFixGoalkeeperPositions(players) {
+  return players.map(player => {
+    const playerName = player.name || player.full_name || player.web_name || '';
+    
+    // Known goalkeepers that might be misclassified
+    const knownGoalkeepers = [
+      'petrovic', 'djordje', 'goalkeeper', 'keeper', 'gk',
+      // Add other goalkeeper names as needed
+    ];
+    
+    const isKnownGoalkeeper = knownGoalkeepers.some(name => 
+      playerName.toLowerCase().includes(name.toLowerCase())
+    );
+    
+    if (isKnownGoalkeeper && player.position !== 'GKP' && player.position !== 'GK') {
+      console.log(`🚨 GOALKEEPER FIX: ${playerName} position corrected from ${player.position} to GKP`);
+      return {
+        ...player,
+        position: 'GKP'
+      };
+    }
+    
+    // Also normalize GK to GKP for consistency
+    if (player.position === 'GK') {
+      return {
+        ...player,
+        position: 'GKP'
+      };
+    }
+    
+    return player;
+  });
+}
+
 const optimizerService = new FormationOptimizerService();
 
 // Cache for optimizer results
@@ -72,11 +106,37 @@ export async function POST(request) {
 
     // Fetch current player data
     console.log('📊 Fetching player data...');
-    const players = await fetchPlayerData(baseUrl);
+    let players = await fetchPlayerData(baseUrl);
     console.log(`✅ Got ${players.length} players`);
 
     if (players.length === 0) {
       throw new Error('No player data available');
+    }
+
+    // Apply goalkeeper detection and fixes
+    players = detectAndFixGoalkeeperPositions(players);
+
+    // Debug: Check for goalkeepers AFTER fixes
+    const goalkeepers = players.filter(p => p.position === 'GKP' || p.position === 'GK');
+    console.log(`🥅 GOALKEEPERS FOUND: ${goalkeepers.length}`, goalkeepers.map(gk => ({
+      name: gk.name || gk.web_name,
+      position: gk.position,
+      position_id: gk.position_id,
+      fantasy_positions: gk.fantasy_positions
+    })));
+
+    // Also check for Petrovic specifically
+    const petrovic = players.find(p => 
+      (p.name || p.web_name || '').toLowerCase().includes('petrovic')
+    );
+    if (petrovic) {
+      console.log(`🔍 PETROVIC DEBUG:`, {
+        name: petrovic.name || petrovic.web_name,
+        position: petrovic.position,
+        position_id: petrovic.position_id,
+        fantasy_positions: petrovic.fantasy_positions,
+        team: petrovic.team
+      });
     }
 
     // Perform optimization analysis
