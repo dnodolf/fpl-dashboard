@@ -220,16 +220,10 @@ export async function convertFFHGWPredictionsToSleeper(ffhGwPredictions, positio
 }
 
 /**
- * Extract position from various data formats
+ * Extract position from various data formats - PRIORITIZES SLEEPER DATA
  */
 export function normalizePosition(player) {
-  // From FFH data
-  if (player.position_id) {
-    const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-    return positions[player.position_id] || 'MID';
-  }
-  
-  // From Sleeper data
+  // Priority 1: Sleeper fantasy_positions
   if (player.fantasy_positions && Array.isArray(player.fantasy_positions)) {
     const pos = player.fantasy_positions[0];
     if (pos === 'G') return 'GK';
@@ -238,13 +232,19 @@ export function normalizePosition(player) {
     if (pos === 'F') return 'FWD';
   }
   
-  // From position string
+  // Priority 2: Sleeper position string
   if (player.position) {
     const pos = player.position.toUpperCase();
-    if (pos.includes('GK') || pos.includes('KEEPER')) return 'GK';
-    if (pos.includes('DEF') || pos.includes('D')) return 'DEF';
-    if (pos.includes('MID') || pos.includes('M')) return 'MID';
-    if (pos.includes('FWD') || pos.includes('F') || pos.includes('FORWARD')) return 'FWD';
+    if (pos === 'G' || pos.includes('GK') || pos.includes('KEEPER')) return 'GK';
+    if (pos === 'D' || pos.includes('DEF')) return 'DEF';
+    if (pos === 'M' || pos.includes('MID')) return 'MID';
+    if (pos === 'F' || pos.includes('FWD') || pos.includes('FORWARD')) return 'FWD';
+  }
+  
+  // Priority 3: FFH position_id (fallback)
+  if (player.position_id) {
+    const positions = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+    return positions[player.position_id] || 'MID';
   }
   
   return 'MID'; // Default fallback

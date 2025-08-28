@@ -147,14 +147,10 @@ function fallbackConvertFFHToSleeper(ffhPrediction, position) {
 }
 
 /**
- * Normalize position
+ * Normalize position - PRIORITIZES SLEEPER DATA FIRST
  */
 function normalizePosition(player) {
-  if (player.position_id) {
-    const positions = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-    return positions[player.position_id] || 'MID';
-  }
-  
+  // Priority 1: Sleeper fantasy_positions (most authoritative)
   if (player.fantasy_positions && Array.isArray(player.fantasy_positions)) {
     const pos = player.fantasy_positions[0];
     if (pos === 'G') return 'GKP';
@@ -163,12 +159,19 @@ function normalizePosition(player) {
     if (pos === 'F') return 'FWD';
   }
   
+  // Priority 2: Sleeper position string
   if (player.position) {
     const pos = player.position.toString().toUpperCase();
-    if (pos.includes('GK') || pos.includes('KEEPER')) return 'GKP';
-    if (pos.includes('DEF') || pos === 'D') return 'DEF';
-    if (pos.includes('MID') || pos === 'M') return 'MID';
-    if (pos.includes('FWD') || pos === 'F' || pos.includes('FORWARD')) return 'FWD';
+    if (pos === 'G' || pos.includes('GK') || pos.includes('KEEPER')) return 'GKP';
+    if (pos === 'D' || pos.includes('DEF')) return 'DEF';
+    if (pos === 'M' || pos.includes('MID')) return 'MID';
+    if (pos === 'F' || pos.includes('FWD') || pos.includes('FORWARD')) return 'FWD';
+  }
+  
+  // Priority 3: FFH position_id (fallback only)
+  if (player.position_id) {
+    const positions = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+    return positions[player.position_id] || 'MID';
   }
   
   return 'MID';
@@ -337,8 +340,13 @@ async function integratePlayersWithOptaMatching() {
       
       if (!sleeperPlayer.id) continue;
       
-      const position = normalizePosition(sleeperPlayer);
-      
+    // FORCE SLEEPER POSITION - DO NOT LET FFH OVERRIDE
+    const position = sleeperPlayer.fantasy_positions?.[0] === 'M' ? 'MID' :
+        sleeperPlayer.fantasy_positions?.[0] === 'F' ? 'FWD' :
+        sleeperPlayer.fantasy_positions?.[0] === 'D' ? 'DEF' :
+        sleeperPlayer.fantasy_positions?.[0] === 'G' ? 'GKP' :
+        'MID'; // Default  
+            
       // Base player record
       let enhancedPlayer = {
         player_id: sleeperPlayer.id,
@@ -469,6 +477,8 @@ async function integratePlayersWithOptaMatching() {
         console.log(`✅ Enhanced ${enhancedPlayer.name} (${position}): ${ffhSeasonPrediction} → ${enhancedPlayer.sleeper_season_total} pts, Prediction source: ${predictionSource}, Avg Mins: ${enhancedPlayer.avg_minutes_next5 || 'N/A'}, PPG: ${enhancedPlayer.current_ppg || 'N/A'} → ${enhancedPlayer.predicted_ppg || 'N/A'}`);
       }
       
+      enhancedPlayer.position = position;
+
       enhancedPlayers.push(enhancedPlayer);
     }
 
