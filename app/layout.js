@@ -1,11 +1,19 @@
 import './globals.css'
 
+// Separate viewport export (NEW requirement in Next.js 14+)
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
+// Metadata export (viewport removed)
 export const metadata = {
   title: 'FPL Roster Explorer',
   description: 'Advanced Fantasy Premier League Analysis Tool',
   manifest: '/manifest.json',
   themeColor: '#3b82f6',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

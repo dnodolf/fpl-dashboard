@@ -271,13 +271,15 @@ async function fetchSleeperData() {
  * Fetch FFH data
  */
 async function fetchFFHData() {
+  console.log('📡 Fetching FFH data...');
+  
   try {
     const baseUrl = 'https://data.fantasyfootballhub.co.uk/api/player-predictions/';
     const params = new URLSearchParams({
       orderBy: 'points',
       focus: 'range',
       positions: '1,2,3,4',
-      min_cost: '40',
+      min_cost: '0',
       max_cost: '145',
       search_term: '',
       gw_start: '1',
@@ -289,25 +291,61 @@ async function fetchFFHData() {
     });
 
     const response = await fetch(`${baseUrl}?${params}`, {
+      method: 'GET',
       headers: {
+        'Accept': 'application/json',
         'Accept-Language': 'en-US',
-        'Authorization': process.env.FFH_AUTH_STATIC || 'r5C(e3.JeS^:_7LF',
+        'Authorization': 'r5C(e3.JeS^:_7LF',
         'Content-Type': 'application/json',
-        'Token': process.env.FFH_BEARER_TOKEN || ''
-      }
+        'Token': 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCIsImtpZCI6IkYyYXpwVm9weUJuVnEtd3pqbTFiMCJ9.eyJodHRwczovL2ZhbnRhc3lmb290YmFsbGh1Yi5jby51ay9yb2xlcyI6WyJQUk8iXSwiaHR0cHM6Ly9mYW50YXN5Zm9vdGJhbGxodWIuY28udWsvbG9naW5zQ291bnQiOjMsImh0dHBzOi8vZmFudGFzeWZvb3RiYWxsaHViLmNvLnVrL2V4dGVybmFsVXNlcklkIjoyNzU0MDYsImh0dHBzOi8vZmFudGFzeWZvb3RiYWxsaHViLmNvLnVrL3N1YnNjcmlwdGlvbiI6eyJlbmRBdCI6IjIwMjUtMDgtMTFUMTk6MTI6MDAuMDAwWiIsInNvdXJjZSI6eyJjdXN0b21lcklkZW50aWZpZXIiOiJjdXNfUWR6QXZkZEhXUWlSeFAiLCJpZCI6InN1Yl8xUG1oQzhKMld6RTdnUUFtRmQ2OGRZSUQiLCJwcm92aWRlciI6InN0cmlwZSJ9LCJzdGF0dXMiOiJhY3RpdmUiLCJ0ZXJtIjoieWVhcmx5IiwidGllciI6IlBSTyJ9LCJodHRwczovL2ZhbnRhc3lmb290YmFsbGh1Yi5jby51ay9maXJlYmFzZVRva2VuIjoiZXlKaGJHY2lPaUpTVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmhkV1FpT2lKb2RIUndjem92TDJsa1pXNTBhWFI1ZEc5dmJHdHBkQzVuYjI5bmJHVmhjR2x6TG1OdmJTOW5iMjluYkdVdWFXUmxiblJwZEhrdWFXUmxiblJwZEhsMGIyOXNhMmwwTG5ZeExrbGtaVzUwYVhSNVZHOXZiR3RwZENJc0ltbGhkQ0k2TVRjMU5EUTVPRGt4TWl3aVpYaHdJam94TnpVME5UQXlOVEV5TENKcGMzTWlPaUptYVhKbFltRnpaUzFoWkcxcGJuTmtheTFqYzJvNWMwQm1abWgxWWkxaGNIQXVhV0Z0TG1kelpYSjJhV05sWVdOamIzVnVkQzVqYjIwaUxDSnpkV0lpT2lKbWFYSmxZbUZ6WlMxaFpHMXBibk5rYXkxamMybzVjMEJtWm1oMVlpMWhjSEF1YVdGdExtZHpaWEoyYVdObFlXTmpiM1Z1ZEM1amIyMGlMQ0oxYVdRaU9pSXlOelUwTURZaWZRLmFUNkM4TnluUnRSbkZwODJ6eW5IWklXMklJd0d2c3RJR2o4S0ZJdEZwNHl0dWN3QWo0ZEtZVzliaHFLemdreU53WXdjTGhtU01ualJERzFnQ0lYMGp2bkVXM1R2dFhHSnFSS28zYVhEQVdiZzJlLVpZSlNTcVhUeUdTMDlGQVE4dVZHZkdDSV9ucThOYTZYcnRxZ0VmRVBrM1pqUTNaRUJLM1ZiS2VSU0xfekdRRzJKeU91TzRyZlVCTGZ4SWJzbnlKdlpfejNzM3U1Y21uNGphbElIanZvMGg3ZjdPYTM0c0dLSDBvVnBNLVdVVnZYeFlKZjBYeGJtMWI1NkFvSXhBU2dBdi00SmJLaWlzSlR6QkpXRE1qZV9FYU9UYnJlOU95VWpwaVpNYW41ZkJZVHc4REs2a184QkM2QlhEVnhLUUtGdUlYSGNQSWs1ZE1OTkRVMC00USIsImlzcyI6Imh0dHBzOi8vYXV0aC5mYW50YXN5Zm9vdGJhbGxodWIuY28udWsvIiwic3ViIjoiYXV0aDB8Njg3OGQwMzUzNzNiZTU3YjU5M2I2NmYxIiwiYXVkIjpbImZhbnRhc3lmb290YmFsbGh1YiJdLCJpYXQiOjE3NTQ0OTg5MTIsImV4cCI6MTc1NDU4NTMxMiwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCBvZmZsaW5lX2FjY2VzcyIsImp0aSI6Im1KWVZWUkxkSlZiMjYyVUIyZzU2UFQiLCJjbGllbnRfaWQiOiIyUGk1TW9sREN1RmlGMHlJR212c3hVbW9CdUlSYlR0aCIsInBlcm1pc3Npb25zIjpbXX0.LiA5tXriDfr00JnjTBpBDRHbzyidl0SGsItukIzkZ3NoAm26hO1taUnVm6IizpSV7Fs_x-10422MU6K5FV4Jw6VNC49iUkEFVVafitOf_7hiilRxc5C5qabWxKuILgwlf4OXyEUZ5yIsqSm0W3VKZCn1jUgBEzcjO7f_S9BAQ8Nv2nNVES4Wz7vIla2fG-0Cc6yKguK9UVShNEG0mtnrzuxNM1CWBOlFywgr8xICwwFFNBFB7BRjeGoL8OtvQXbPnwqdPyOSr-zVwQR-QrGZQ94piZ5PQIKT86VNGcHL17V8ALkhdY96gY4kI0K5FqoAtWh-Q5z6Bi32Mo_bm-B13A',
+        'User-Agent': 'Mozilla/5.0 (compatible; FPL-Dashboard/2.7)',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      signal: AbortSignal.timeout(60000) // 60 second timeout
     });
 
+    console.log(`📊 FFH Response: ${response.status} ${response.statusText}`);
+    
     if (!response.ok) {
-      throw new Error(`FFH API failed: ${response.status}`);
+      throw new Error(`FFH API returned ${response.status}: ${response.statusText}`);
+    }
+
+    // Check content type
+    const contentType = response.headers.get('content-type');
+    console.log(`📊 FFH Content-Type: ${contentType}`);
+    
+    if (!contentType || !contentType.includes('application/json')) {
+      console.warn(`⚠️ Unexpected content type: ${contentType}`);
     }
 
     const data = await response.json();
+    const players = data.results || data || [];
+    
+    console.log(`✅ FFH data parsed: ${players.length} players`);
+    
     return {
-      players: data.results || data || [],
-      totalPlayers: (data.results || data || []).length
+      players: players,
+      totalPlayers: players.length
     };
+
   } catch (error) {
-    console.error('Error fetching FFH data:', error);
+    console.error('❌ FFH API Error:', error.message);
+    
+    // Provide specific error messages based on the type of failure
+    if (error.name === 'TimeoutError') {
+      throw new Error('FFH API timeout - server is not responding');
+    }
+    
+    if (error.code === 'HPE_INVALID_CONSTANT') {
+      throw new Error('FFH API server error - invalid HTTP response format');
+    }
+    
+    if (error.message.includes('fetch failed')) {
+      throw new Error('FFH API connection failed - check network or server status');
+    }
+    
+    // Re-throw with original message
     throw error;
   }
 }
@@ -334,7 +372,7 @@ async function integratePlayersWithOptaMatching() {
       console.warn('Could not get current gameweek, using fallback logic:', error.message);
     }
     
-    // Fetch data from both sources
+    // Fetch data from both sources - both required
     console.log('📡 Fetching data from APIs...');
     const [sleeperData, ffhData] = await Promise.all([
       fetchSleeperData(),

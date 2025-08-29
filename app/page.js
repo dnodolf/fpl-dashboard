@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import GameweekService from './services/gameweekService';
 import { OptimizerTabContent } from './components/OptimizerTabContent';
+import TransferTabContent from './components/TransferTabContent';
 
 // ----------------- EPL TEAMS FILTER -----------------
 const EPL_TEAMS = [
@@ -508,18 +509,18 @@ const OptimizerStats = ({ isDarkMode }) => {
 };
 
 const TransferStats = ({ players, isDarkMode }) => {
-  // Calculate transfer analytics
-  const freeAgents = players.filter(p => !p.owned_by);
-  const ownedPlayers = players.filter(p => p.owned_by);
+  // Calculate transfer analytics - FIX: Use correct ownership logic
+  const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
+  const myPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy'); // YOUR players specifically
   
-  // Find outperforming free agents (simplistic calculation for now)
+  // Find outperforming free agents compared to YOUR players
   const outperformingFAs = freeAgents.filter(fa => {
     const faPoints = fa.sleeper_points_ros || fa.total_points || 0;
-    return ownedPlayers.some(owned => (owned.sleeper_points_ros || owned.total_points || 0) < faPoints);
+    return myPlayers.some(myPlayer => (myPlayer.sleeper_points_ros || myPlayer.total_points || 0) < faPoints);
   });
 
-  // Calculate recommended moves (best FA vs worst owned)
-  const worstOwned = ownedPlayers.sort((a, b) => 
+  // Calculate recommended moves (best FA vs worst of YOUR players)
+  const worstMyPlayer = myPlayers.sort((a, b) => 
     (a.sleeper_points_ros || a.total_points || 0) - (b.sleeper_points_ros || b.total_points || 0)
   )[0];
   const bestFA = freeAgents.sort((a, b) => 
@@ -529,6 +530,11 @@ const TransferStats = ({ players, isDarkMode }) => {
   const hasUpgrades = outperformingFAs.length > 0;
   const statusMessage = hasUpgrades ? "Upgrades Available" : "Team Optimized";
   const statusColor = hasUpgrades ? "orange" : "green";
+
+  // Calculate potential point gain
+  const potentialGain = (bestFA && worstMyPlayer) ? 
+    ((bestFA.sleeper_points_ros || bestFA.total_points || 0) - 
+     (worstMyPlayer.sleeper_points_ros || worstMyPlayer.total_points || 0)) : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -548,37 +554,33 @@ const TransferStats = ({ players, isDarkMode }) => {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-green-600">{outperformingFAs.length}</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Show Upgrades Only</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Upgrades Available</div>
           </div>
           <div className="text-green-500 text-2xl">⭐</div>
         </div>
       </div>
 
-      {/* Recommended Moves */}
+      {/* Your Squad Size */}
       <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-2xl font-bold text-purple-600">
-              {(bestFA && worstOwned) ? 1 : 0}
-            </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Recommended Moves</div>
+            <div className="text-2xl font-bold text-purple-600">{myPlayers.length}</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Squad Size</div>
           </div>
-          <div className="text-purple-500 text-2xl">💡</div>
+          <div className="text-purple-500 text-2xl">👤</div>
         </div>
       </div>
 
-      {/* Status */}
+      {/* Best Potential Gain */}
       <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div>
-            <div className={`text-lg font-bold text-${statusColor}-600`}>
-              {statusMessage}
+            <div className={`text-2xl font-bold ${potentialGain > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+              {potentialGain > 0 ? `+${potentialGain.toFixed(1)}` : '0.0'}
             </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</div>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Best Potential Gain</div>
           </div>
-          <div className={`text-${statusColor}-500 text-2xl`}>
-            {hasUpgrades ? "🚨" : "✅"}
-          </div>
+          <div className={`text-2xl ${potentialGain > 0 ? 'text-green-500' : 'text-gray-400'}`}>📈</div>
         </div>
       </div>
     </div>
@@ -1884,15 +1886,14 @@ export default function FPLDashboard() {
               currentGameweek={currentGameweek}
             />
           )}
-
+          
+          {/* Get recommendations and explore free agents to pick up */}
           {activeTab === 'transfers' && (
-            <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-              <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Transfer Analysis</h3>
-              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                Smart transfer recommendations and roster analysis will be displayed here.
-                Compare your current roster with available free agents to find optimal moves.
-              </p>
-            </div>
+            <TransferTabContent 
+              players={players}
+              currentGameweek={currentGameweek} 
+              isDarkMode={isDarkMode}
+            />
           )}
 
         </main>
