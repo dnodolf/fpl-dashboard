@@ -1,5 +1,5 @@
 // app/services/gameweekService.js
-// Enhanced Gameweek Service - Uses API proxy to avoid CORS issues
+// Enhanced Gameweek Service with COMPLETE 38 gameweek schedule
 
 class GameweekService {
   constructor() {
@@ -88,7 +88,20 @@ class GameweekService {
           console.log('✅ Gameweek data updated from FPL API');
           return gameweekData;
         } else {
-          throw new Error('Invalid FPL API response');
+          // API returned fallback data, use it but mark as fallback
+          const gameweekData = {
+            ...fplData.currentGameweek,
+            source: 'api_fallback'
+          };
+          
+          // Cache the fallback result (shorter duration)
+          const fallbackData = {
+            ...gameweekData,
+            timestamp: Date.now() - (this.CACHE_DURATION * 0.7) // Cache for only 3 minutes
+          };
+          this.setCachedData(fallbackData);
+          
+          return gameweekData;
         }
       } catch (apiError) {
         console.warn('⚠️ FPL API unavailable, using enhanced fallback logic...');
@@ -114,16 +127,11 @@ class GameweekService {
     }
   }
 
-  // Enhanced fallback with better logic and current season dates
-  getEnhancedFallback() {
-    const now = new Date();
-    const currentDate = now.toISOString().slice(0, 10);
-    const currentTime = now.getTime();
-
-    // Updated gameweek dates for 2025-26 season (current season)
-    const gameweekDates = [
-      { gw: 1, start: '2025-08-15', end: '2025-08-18', deadline: '2025-08-15T17:30:00Z' },
-      { gw: 2, start: '2025-08-22', end: '2025-08-25', deadline: '2025-08-22T17:30:00Z' },
+  // Get complete 38 gameweek schedule for 2025-26 Premier League season
+  getCompleteGameweekSchedule() {
+    return [
+      { gw: 1, start: '2025-08-16', end: '2025-08-18', deadline: '2025-08-16T17:30:00Z' },
+      { gw: 2, start: '2025-08-23', end: '2025-08-25', deadline: '2025-08-23T11:00:00Z' },
       { gw: 3, start: '2025-08-30', end: '2025-09-01', deadline: '2025-08-30T17:30:00Z' },
       { gw: 4, start: '2025-09-13', end: '2025-09-15', deadline: '2025-09-13T17:30:00Z' },
       { gw: 5, start: '2025-09-20', end: '2025-09-22', deadline: '2025-09-20T17:30:00Z' },
@@ -131,10 +139,45 @@ class GameweekService {
       { gw: 7, start: '2025-10-04', end: '2025-10-06', deadline: '2025-10-04T17:30:00Z' },
       { gw: 8, start: '2025-10-18', end: '2025-10-20', deadline: '2025-10-18T17:30:00Z' },
       { gw: 9, start: '2025-10-25', end: '2025-10-27', deadline: '2025-10-25T17:30:00Z' },
-      { gw: 10, start: '2025-11-01', end: '2025-11-03', deadline: '2025-11-01T17:30:00Z' }
+      { gw: 10, start: '2025-11-01', end: '2025-11-03', deadline: '2025-11-01T17:30:00Z' },
+      { gw: 11, start: '2025-11-08', end: '2025-11-10', deadline: '2025-11-08T17:30:00Z' },
+      { gw: 12, start: '2025-11-22', end: '2025-11-24', deadline: '2025-11-22T17:30:00Z' },
+      { gw: 13, start: '2025-11-29', end: '2025-12-01', deadline: '2025-11-29T17:30:00Z' },
+      { gw: 14, start: '2025-12-03', end: '2025-12-05', deadline: '2025-12-03T17:30:00Z' },
+      { gw: 15, start: '2025-12-06', end: '2025-12-08', deadline: '2025-12-06T17:30:00Z' },
+      { gw: 16, start: '2025-12-13', end: '2025-12-15', deadline: '2025-12-13T17:30:00Z' },
+      { gw: 17, start: '2025-12-20', end: '2025-12-22', deadline: '2025-12-20T17:30:00Z' },
+      { gw: 18, start: '2025-12-26', end: '2025-12-28', deadline: '2025-12-26T12:00:00Z' }, // Boxing Day
+      { gw: 19, start: '2025-12-29', end: '2025-12-31', deadline: '2025-12-29T12:00:00Z' },
+      { gw: 20, start: '2026-01-01', end: '2026-01-03', deadline: '2026-01-01T12:00:00Z' }, // New Year
+      { gw: 21, start: '2026-01-11', end: '2026-01-13', deadline: '2026-01-11T17:30:00Z' },
+      { gw: 22, start: '2026-01-18', end: '2026-01-20', deadline: '2026-01-18T17:30:00Z' },
+      { gw: 23, start: '2026-01-25', end: '2026-01-27', deadline: '2026-01-25T17:30:00Z' },
+      { gw: 24, start: '2026-02-01', end: '2026-02-03', deadline: '2026-02-01T17:30:00Z' },
+      { gw: 25, start: '2026-02-08', end: '2026-02-10', deadline: '2026-02-08T17:30:00Z' },
+      { gw: 26, start: '2026-02-22', end: '2026-02-24', deadline: '2026-02-22T17:30:00Z' },
+      { gw: 27, start: '2026-03-01', end: '2026-03-03', deadline: '2026-03-01T17:30:00Z' },
+      { gw: 28, start: '2026-03-08', end: '2026-03-10', deadline: '2026-03-08T17:30:00Z' },
+      { gw: 29, start: '2026-03-15', end: '2026-03-17', deadline: '2026-03-15T17:30:00Z' },
+      { gw: 30, start: '2026-03-29', end: '2026-03-31', deadline: '2026-03-29T18:30:00Z' }, // BST starts
+      { gw: 31, start: '2026-04-05', end: '2026-04-07', deadline: '2026-04-05T18:30:00Z' },
+      { gw: 32, start: '2026-04-12', end: '2026-04-14', deadline: '2026-04-12T18:30:00Z' },
+      { gw: 33, start: '2026-04-19', end: '2026-04-21', deadline: '2026-04-19T18:30:00Z' },
+      { gw: 34, start: '2026-04-26', end: '2026-04-28', deadline: '2026-04-26T18:30:00Z' },
+      { gw: 35, start: '2026-05-03', end: '2026-05-05', deadline: '2026-05-03T18:30:00Z' },
+      { gw: 36, start: '2026-05-10', end: '2026-05-12', deadline: '2026-05-10T18:30:00Z' },
+      { gw: 37, start: '2026-05-17', end: '2026-05-19', deadline: '2026-05-17T18:30:00Z' },
+      { gw: 38, start: '2026-05-24', end: '2026-05-24', deadline: '2026-05-24T15:00:00Z' } // Final day - all games simultaneous
     ];
+  }
 
-    // Find the current actionable gameweek (skip completed ones)
+  // Enhanced fallback with COMPLETE gameweek logic
+  getEnhancedFallback() {
+    const now = new Date();
+    const currentTime = now.getTime();
+    const gameweekDates = this.getCompleteGameweekSchedule();
+
+    // Find the current actionable gameweek
     let currentGameweek = null;
     
     for (let i = 0; i < gameweekDates.length; i++) {
@@ -144,7 +187,7 @@ class GameweekService {
       const deadlineTime = new Date(gw.deadline).getTime();
       
       if (currentTime < deadlineTime) {
-        // Upcoming gameweek - this is what we want to show for planning
+        // Upcoming gameweek - deadline hasn't passed yet
         currentGameweek = {
           number: gw.gw,
           status: 'upcoming',
@@ -162,7 +205,23 @@ class GameweekService {
         };
         break;
       } else if (currentTime >= deadlineTime && currentTime <= endTime) {
-        // Live gameweek - this is what we want to show for tracking
+        // Live gameweek - deadline passed but games still ongoing
+        const hoursSinceDeadline = (currentTime - deadlineTime) / (1000 * 60 * 60);
+        let estimatedFinished;
+        
+        // More realistic estimation based on typical Premier League scheduling
+        if (hoursSinceDeadline < 3) {
+          estimatedFinished = 0; // First games haven't finished yet
+        } else if (hoursSinceDeadline < 6) {
+          estimatedFinished = 3; // Early Saturday games finished
+        } else if (hoursSinceDeadline < 9) {
+          estimatedFinished = 6; // Saturday games finished
+        } else if (hoursSinceDeadline < 27) {
+          estimatedFinished = 8; // Sunday games in progress
+        } else {
+          estimatedFinished = 10; // All games finished
+        }
+        
         currentGameweek = {
           number: gw.gw,
           status: 'live',
@@ -173,19 +232,19 @@ class GameweekService {
           fixtures: {
             first: new Date(gw.start),
             last: new Date(gw.end),
-            count: 10, // Estimate
-            finished: Math.round(Math.random() * 10) // Rough estimate for demo
+            count: 10, // Standard Premier League gameweek
+            finished: estimatedFinished // Estimated based on time elapsed
           },
           source: 'enhanced_fallback'
         };
         break;
       }
-      // Skip completed gameweeks - we don't want to show them
+      // Skip completed gameweeks - we don't want to show them as current
     }
 
     // If no actionable gameweek found, find the next upcoming one
     if (!currentGameweek) {
-      const nextGw = gameweekDates.find(gw => new Date(gw.start).getTime() > currentTime) || gameweekDates[1]; // Default to GW2
+      const nextGw = gameweekDates.find(gw => new Date(gw.start).getTime() > currentTime) || gameweekDates[gameweekDates.length - 1];
       currentGameweek = {
         number: nextGw.gw,
         status: 'upcoming',
@@ -203,10 +262,11 @@ class GameweekService {
       };
     }
 
+    console.log(`📅 Enhanced fallback: GW${currentGameweek.number} (${currentGameweek.status})`);
     return currentGameweek;
   }
 
-  // Get next few gameweeks for planning (fallback version)
+  // Get next few gameweeks for planning (with complete schedule)
   async getUpcomingGameweeks(count = 5) {
     try {
       // Try API first
@@ -218,21 +278,44 @@ class GameweekService {
       console.warn('Using fallback for upcoming gameweeks');
     }
 
-    // Fallback to hardcoded data
-    const gameweekDates = [
-      { gw: 2, start: '2025-08-22', deadline: '2025-08-22T17:30:00Z' },
-      { gw: 3, start: '2025-08-30', deadline: '2025-08-30T17:30:00Z' },
-      { gw: 4, start: '2025-09-13', deadline: '2025-09-13T17:30:00Z' },
-      { gw: 5, start: '2025-09-20', deadline: '2025-09-20T17:30:00Z' },
-      { gw: 6, start: '2025-09-27', deadline: '2025-09-27T17:30:00Z' }
-    ];
+    // Fallback to complete schedule
+    const gameweekDates = this.getCompleteGameweekSchedule();
+    const now = new Date();
+    
+    // Find current position in schedule
+    const currentGameweek = gameweekDates.findIndex(gw => 
+      new Date(gw.deadline).getTime() > now.getTime()
+    );
+    
+    // Get upcoming gameweeks starting from current
+    const upcomingGws = gameweekDates
+      .slice(Math.max(0, currentGameweek), currentGameweek + count)
+      .map(gw => ({
+        number: gw.gw,
+        name: `Gameweek ${gw.gw}`,
+        deadline: gw.deadline,
+        firstFixture: new Date(gw.start),
+        fixtureCount: gw.gw === 38 ? 10 : 10 // All simultaneous on final day
+      }));
 
-    return gameweekDates.slice(0, count).map(gw => ({
+    return upcomingGws;
+  }
+
+  // Get all gameweeks for the season (useful for planning)
+  getAllGameweeks() {
+    const gameweekDates = this.getCompleteGameweekSchedule();
+    return gameweekDates.map(gw => ({
       number: gw.gw,
       name: `Gameweek ${gw.gw}`,
       deadline: gw.deadline,
-      firstFixture: new Date(gw.start),
-      fixtureCount: 10
+      startDate: gw.start,
+      endDate: gw.end,
+      deadlineFormatted: new Date(gw.deadline).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }));
   }
 }
