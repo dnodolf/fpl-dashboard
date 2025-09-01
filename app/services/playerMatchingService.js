@@ -86,6 +86,32 @@ export class PlayerMatchingService {
   }
 
   /**
+   * Find best match between Sleeper and FFH player using Opta ID
+   */
+  async findBestMatch(sleeperPlayer, ffhPlayers) {
+    if (!sleeperPlayer || !ffhPlayers || !Array.isArray(ffhPlayers)) {
+      return null;
+    }
+
+    // Extract standardized data
+    const sleeperData = this.extractSleeperData(sleeperPlayer);
+    if (!sleeperData || !sleeperData.opta_id) {
+      return null;
+    }
+
+    // Find exact Opta ID match
+    for (const ffhPlayer of ffhPlayers) {
+      const ffhData = this.extractFFHData(ffhPlayer);
+      
+      if (ffhData && ffhData.opta_id && ffhData.opta_id === sleeperData.opta_id) {
+        return ffhPlayer; // Return original FFH player object
+      }
+    }
+
+    return null; // No match found
+  }
+
+  /**
    * Get FFH player ID for deduplication
    */
   getFFHPlayerId(ffhPlayer) {
@@ -243,6 +269,29 @@ export class PlayerMatchingService {
     };
   }
 
+  /**
+   * Get matching statistics
+   */
+  async getMatchingStats(sleeperPlayers, ffhPlayers) {
+    let totalMatches = 0;
+    let totalSleeper = Array.isArray(sleeperPlayers) ? sleeperPlayers.length : Object.keys(sleeperPlayers).length;
+    
+    const sleeperArray = Array.isArray(sleeperPlayers) ? 
+      sleeperPlayers : Object.values(sleeperPlayers);
+
+    for (const sleeperPlayer of sleeperArray) {
+      const match = await this.findBestMatch(sleeperPlayer, ffhPlayers);
+      if (match) totalMatches++;
+    }
+
+    return {
+      totalSleeper,
+      totalFFH: ffhPlayers.length,
+      totalMatches,
+      matchRate: totalSleeper > 0 ? ((totalMatches / totalSleeper) * 100).toFixed(1) : '0.0'
+    };
+  }
+
   // Utility methods for legacy compatibility
   calculateAverageConfidence(matches) {
     return 100; // All Opta matches are High confidence
@@ -263,85 +312,4 @@ export class PlayerMatchingService {
   getCacheStats() {
     return { size: 0, keys: [] };
   }
-}
-
-const sleeperService = new SleeperApiService();
-
-export async function GET(request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const endpoint = searchParams.get('endpoint') || 'players';
-    const includeOwnership = searchParams.get('ownership') !== 'false';
-
-    console.log(`Sleeper API request: endpoint=${endpoint}, ownership=${includeOwnership}`);
-
-    switch (endpoint) {
-      case 'players':
-        const players = await sleeperService.getAllPlayers();
-        let result = { players, total: Object.keys(players).length };
-
-        if (includeOwnership) {
-          const ownershipData = await sleeperService.createOwnershipMap();
-          const transformedPlayers = sleeperService.transformSleeperPlayers(players, ownershipData.ownershipMap);
-          
-          result = {
-            players: transformedPlayers,
-            total: transformedPlayers.length,
-            ownership: ownershipData.ownershipMap,
-            rosters: ownershipData.rosters,
-            users: ownershipData.users
-          };
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: result,
-          timestamp: new Date().toISOString()
-        });
-
-      case 'rosters':
-        const rosters = await sleeperService.getLeagueRosters();
-        return NextResponse.json({
-          success: true,
-          data: { rosters },
-          timestamp: new Date().toISOString()
-        });
-
-      case 'users':
-        const users = await sleeperService.getLeagueUsers();
-        return NextResponse.json({
-          success: true,
-          data: { users },
-          timestamp: new Date().toISOString()
-        });
-
-      case 'scoring':
-        const scoring = await sleeperService.getScoringSettings();
-        return NextResponse.json({
-          success: true,
-          data: { scoring },
-          timestamp: new Date().toISOString()
-        });
-
-      default:
-        return NextResponse.json({
-          success: false,
-          error: `Unknown endpoint: ${endpoint}`,
-          available: ['players', 'rosters', 'users', 'scoring']
-        }, { status: 400 });
-    }
-
-  } catch (error) {
-    console.error('Sleeper API error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
-  }
-}
-
-export async function POST(request) {
-  // Forward POST requests to GET for simplicity
-  return GET(request);
 }
