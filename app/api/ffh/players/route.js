@@ -14,13 +14,19 @@ class FFHApiService {
       'Accept-Language': 'en-US',
       'Authorization': this.authStatic,
       'Content-Type': 'application/json',
-      'Token': `Bearer ${this.bearerToken}`
+      'Token': this.bearerToken
     };
   }
 
-  async getPlayerPredictions() {
+  async getPlayerPredictions(params = {}) {
     try {
-      const url = `${this.baseUrl}/player-predictions/?orderBy=points&focus=range&positions=1,2,3,4&min_cost=40&max_cost=145&search_term=&gw_start=1&gw_end=47&first=0&last=99999&use_predicted_fixtures=false&selected_players=`;
+      // Use params from request or defaults
+      const first = params.first || 0;
+      const last = params.last || 99999;
+      
+      const url = `${this.baseUrl}/player-predictions/?orderBy=points&focus=range&positions=1,2,3,4&min_cost=40&max_cost=145&search_term=&gw_start=1&gw_end=47&first=${first}&last=${last}&use_predicted_fixtures=false&selected_players=`;
+      
+      console.log(`🔥 Fetching FFH data from: ${url}`);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -64,7 +70,14 @@ class FFHApiService {
       clean_sheets: player.clean_sheets || 0,
       goals_conceded: player.goals_conceded || 0,
       saves: player.saves || 0,
-      bonus: player.bonus || 0
+      bonus: player.bonus || 0,
+      
+      // Raw FFH data for position matching
+      opta_uuid: player.opta_uuid || player.opta_id,
+      opta_id: player.opta_id || player.opta_uuid,
+      fpl_id: player.id,
+      position_id: player.element_type,
+      _raw: player
     }));
   }
 
@@ -106,7 +119,7 @@ const ffhService = new FFHApiService();
 
 export async function GET() {
   try {
-    console.log('Fetching FFH player data...');
+    console.log('FFH GET: Fetching player data...');
     
     // Get predictions from FFH
     const predictions = await ffhService.getPlayerPredictions();
@@ -122,23 +135,81 @@ export async function GET() {
     // Transform to dashboard format
     const transformedPlayers = ffhService.transformFFHData(predictions);
     
-    console.log(`Successfully fetched ${transformedPlayers.length} players from FFH`);
+    console.log(`✅ FFH GET: Successfully fetched ${transformedPlayers.length} players`);
     
     return NextResponse.json({
       success: true,
-      players: transformedPlayers,
+      data: transformedPlayers,
+      players: transformedPlayers, // For compatibility
       count: transformedPlayers.length,
       source: 'Fantasy Football Hub',
       lastUpdated: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('FFH API route error:', error);
+    console.error('FFH GET route error:', error);
     
     return NextResponse.json({
       success: false,
       error: error.message,
+      data: [],
       players: [],
+      details: 'Check FFH_BEARER_TOKEN and FFH_AUTH_STATIC in environment variables'
+    }, { status: 500 });
+  }
+}
+
+// NEW: Add POST handler for integrated-players route
+export async function POST(request) {
+  try {
+    console.log('FFH POST: Processing request...');
+    
+    // Parse request body
+    const requestData = await request.json();
+    const endpoint = requestData.endpoint || 'player-predictions';
+    const params = requestData.params || {};
+    
+    console.log(`FFH POST: Endpoint=${endpoint}, Params=`, params);
+    
+    // Only handle player-predictions for now
+    if (endpoint !== 'player-predictions') {
+      return NextResponse.json({
+        success: false,
+        error: `Unsupported endpoint: ${endpoint}`,
+        data: []
+      }, { status: 400 });
+    }
+    
+    // Get predictions from FFH with custom params
+    const predictions = await ffhService.getPlayerPredictions(params);
+    
+    if (!predictions || predictions.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No player predictions received from FFH API',
+        data: []
+      }, { status: 404 });
+    }
+
+    // Return raw FFH data (not transformed) for the integrated-players route
+    console.log(`✅ FFH POST: Successfully fetched ${predictions.length} raw players`);
+    
+    return NextResponse.json({
+      success: true,
+      data: predictions,
+      count: predictions.length,
+      source: 'Fantasy Football Hub',
+      lastUpdated: new Date().toISOString(),
+      totalPlayers: predictions.length
+    });
+
+  } catch (error) {
+    console.error('FFH POST route error:', error);
+    
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+      data: [],
       details: 'Check FFH_BEARER_TOKEN and FFH_AUTH_STATIC in environment variables'
     }, { status: 500 });
   }
@@ -154,7 +225,7 @@ export async function HEAD() {
         'Accept-Language': 'en-US',
         'Authorization': process.env.FFH_AUTH_STATIC || 'r5C(e3.JeS^:_7LF',
         'Content-Type': 'application/json',
-        'Token': `Bearer ${process.env.FFH_BEARER_TOKEN}`
+        'Token': process.env.FFH_BEARER_TOKEN
       }
     });
 

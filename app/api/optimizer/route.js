@@ -1,41 +1,9 @@
 // app/api/optimizer/route.js
+// Updated to use unified position utilities - SLEEPER AUTHORITY
 
 import { NextResponse } from 'next/server';
 import { FormationOptimizerService } from '../../services/formationOptimizerService.js';
-
-function detectAndFixGoalkeeperPositions(players) {
-  return players.map(player => {
-    const playerName = player.name || player.full_name || player.web_name || '';
-    
-    // Known goalkeepers that might be misclassified
-    const knownGoalkeepers = [
-      'petrovic', 'djordje', 'goalkeeper', 'keeper', 'gk',
-      // Add other goalkeeper names as needed
-    ];
-    
-    const isKnownGoalkeeper = knownGoalkeepers.some(name => 
-      playerName.toLowerCase().includes(name.toLowerCase())
-    );
-    
-    if (isKnownGoalkeeper && player.position !== 'GKP' && player.position !== 'GK') {
-      console.log(`🚨 GOALKEEPER FIX: ${playerName} position corrected from ${player.position} to GKP`);
-      return {
-        ...player,
-        position: 'GKP'
-      };
-    }
-    
-    // Also normalize GK to GKP for consistency
-    if (player.position === 'GK') {
-      return {
-        ...player,
-        position: 'GKP'
-      };
-    }
-    
-    return player;
-  });
-}
+import { normalizePosition, debugPlayerPosition } from '../../../utils/positionUtils.js';
 
 const optimizerService = new FormationOptimizerService();
 
@@ -64,11 +32,6 @@ async function fetchPlayerData(baseUrl) {
     }
 
     const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get player data');
-    }
-
     return result.players || [];
   } catch (error) {
     console.error('Error fetching player data:', error);
@@ -76,67 +39,64 @@ async function fetchPlayerData(baseUrl) {
   }
 }
 
-/**
- * POST handler - Main optimizer endpoint
- */
 export async function POST(request) {
   try {
-    const body = await request.json().catch(() => ({}));
-    const { 
-      userId = 'ThatDerekGuy',
-      forceRefresh = false,
-      analysisType = 'current_roster' // 'current_roster', 'all_formations', 'specific_formation'
-    } = body;
+    const requestData = await request.json();
+    const userId = requestData.userId || 'ThatDerekGuy';
+    const analysisType = requestData.analysisType || 'current_roster';
+    const forceRefresh = requestData.forceRefresh || false;
 
-    console.log('🎯 Optimizer request:', { userId, forceRefresh, analysisType });
-
-    // Check cache unless force refresh
-    const now = Date.now();
-    if (!forceRefresh && cachedResults && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
-      console.log('⚡ Serving optimizer results from cache');
-      return NextResponse.json({
-        ...cachedResults,
-        fromCache: true,
-        cacheAge: Math.round((now - cacheTimestamp) / 1000)
-      });
+    // Check cache
+    const cacheKey = `${userId}_${analysisType}`;
+    if (!forceRefresh && cachedResults && cacheTimestamp) {
+      const isValid = (Date.now() - cacheTimestamp) < CACHE_DURATION;
+      if (isValid && cachedResults.userId === userId) {
+        console.log('📋 Returning cached optimizer results');
+        return NextResponse.json({
+          ...cachedResults,
+          cached: true,
+          cache_age: Math.round((Date.now() - cacheTimestamp) / 1000 / 60)
+        });
+      }
     }
 
-    // Get base URL for internal API calls
-    const baseUrl = new URL(request.url).origin;
+    console.log(`🔍 OPTIMIZER: Starting ${analysisType} analysis for ${userId}`);
 
-    // Fetch current player data
-    console.log('📊 Fetching player data...');
-    let players = await fetchPlayerData(baseUrl);
-    console.log(`✅ Got ${players.length} players`);
+    // Get base URL for API calls
+    const { protocol, host } = new URL(request.url);
+    const baseUrl = `${protocol}//${host}`;
 
-    if (players.length === 0) {
+    // Fetch integrated player data
+    const players = await fetchPlayerData(baseUrl);
+    
+    if (!players || players.length === 0) {
       throw new Error('No player data available');
     }
 
-    // Apply goalkeeper detection and fixes
-    players = detectAndFixGoalkeeperPositions(players);
+    console.log(`📊 Processing ${players.length} players for optimization`);
 
-    // Debug: Check for goalkeepers AFTER fixes
-    const goalkeepers = players.filter(p => p.position === 'GKP' || p.position === 'GK');
-    console.log(`🥅 GOALKEEPERS FOUND: ${goalkeepers.length}`, goalkeepers.map(gk => ({
-      name: gk.name || gk.web_name,
-      position: gk.position,
-      position_id: gk.position_id,
-      fantasy_positions: gk.fantasy_positions
-    })));
+    // Debug position distribution
+    const positionCounts = {};
+    players.forEach(player => {
+      const pos = normalizePosition(player);
+      positionCounts[pos] = (positionCounts[pos] || 0) + 1;
+    });
+    console.log('📊 Position distribution:', positionCounts);
 
-    // Also check for Petrovic specifically
-    const petrovic = players.find(p => 
-      (p.name || p.web_name || '').toLowerCase().includes('petrovic')
+    // Debug goalkeepers specifically
+    const goalkeepers = players.filter(p => normalizePosition(p) === 'GKP');
+    console.log(`🥅 GOALKEEPERS FOUND: ${goalkeepers.length}`);
+    goalkeepers.forEach(gk => {
+      console.log(`  ${gk.name || gk.full_name} (${gk.team_abbr || gk.team}) - fantasy_positions: ${JSON.stringify(gk.fantasy_positions)}`);
+    });
+
+    // Also check for Ederson specifically
+    const ederson = players.find(p => 
+      (p.name || p.full_name || '').toLowerCase().includes('ederson')
     );
-    if (petrovic) {
-      console.log(`🔍 PETROVIC DEBUG:`, {
-        name: petrovic.name || petrovic.web_name,
-        position: petrovic.position,
-        position_id: petrovic.position_id,
-        fantasy_positions: petrovic.fantasy_positions,
-        team: petrovic.team
-      });
+    if (ederson) {
+      console.log(`🔍 EDERSON DEBUG:`);
+      debugPlayerPosition(ederson);
     }
 
     // Perform optimization analysis
@@ -160,16 +120,17 @@ export async function POST(request) {
     // Prepare formations data for visualization
     const formationsData = analysis.allFormations?.map(formation => ({
       name: formation.formation,
-      formation: formation.formation, // Add this for FormationVisualization compatibility
+      formation: formation.formation,
       points: formation.totalPoints,
-      totalPoints: formation.totalPoints, // Add this for compatibility
+      totalPoints: formation.totalPoints,
       players: formation.players?.map(p => ({
         id: p.sleeper_id || p.id || p.player_id,
         player_id: p.sleeper_id || p.id || p.player_id,
         sleeper_id: p.sleeper_id || p.id || p.player_id,
         name: p.name || p.web_name || 'Unknown Player',
         web_name: p.web_name || p.name || 'Unknown Player',
-        position: p.position,
+        full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
+        position: normalizePosition(p), // Use unified position logic
         team: p.team || p.team_abbr || 'Unknown',
         team_abbr: p.team_abbr || p.team || 'Unknown',
         points: optimizerService.getPlayerPoints(p),
@@ -186,12 +147,6 @@ export async function POST(request) {
       current: {
         formation: analysis.current?.formation || 'Unknown',
         players: analysis.current?.players?.map(p => {
-          // Normalize position for consistency
-          let position = p.position;
-          if (position === 'GK' || position === 'G') {
-            position = 'GKP';
-          }
-          
           return {
             id: p.sleeper_id || p.id || p.player_id,
             player_id: p.sleeper_id || p.id || p.player_id,
@@ -199,7 +154,7 @@ export async function POST(request) {
             name: p.name || p.web_name || 'Unknown Player',
             web_name: p.web_name || p.name || 'Unknown Player',
             full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
-            position: position, // Use the normalized position
+            position: normalizePosition(p), // Use unified position logic
             team: p.team || p.team_abbr || 'Unknown',
             team_abbr: p.team_abbr || p.team || 'Unknown',
             points: optimizerService.getPlayerPoints(p),
@@ -213,84 +168,58 @@ export async function POST(request) {
       },
       optimal: analysis.optimal ? {
         formation: analysis.optimal.formation,
-        players: analysis.optimal.players.map(p => ({
+        players: analysis.optimal.players?.map(p => ({
           id: p.sleeper_id || p.id || p.player_id,
-          player_id: p.sleeper_id || p.id || p.player_id, // Add this for compatibility
-          sleeper_id: p.sleeper_id || p.id || p.player_id, // Add this for compatibility
+          player_id: p.sleeper_id || p.id || p.player_id,
+          sleeper_id: p.sleeper_id || p.id || p.player_id,
           name: p.name || p.web_name || 'Unknown Player',
           web_name: p.web_name || p.name || 'Unknown Player',
           full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
-          position: p.position, // Use the actual position from the player object
+          position: normalizePosition(p), // Use unified position logic
           team: p.team || p.team_abbr || 'Unknown',
           team_abbr: p.team_abbr || p.team || 'Unknown',
-          points: optimizerService.getPlayerPoints(p), // Use the service method correctly
-          current_gw_prediction: optimizerService.getPlayerPoints(p), // For compatibility
-          predicted_pts: optimizerService.getPlayerPoints(p), // For compatibility
-          minutes: optimizerService.getPlayerMinutes(p) // Use the service method
-        })),
-        points: analysis.optimal.totalPoints, // Add this for FormationVisualization
-        totalPoints: analysis.optimal.totalPoints
+          points: optimizerService.getPlayerPoints(p),
+          predicted_pts: optimizerService.getPlayerPoints(p),
+          minutes: optimizerService.getPlayerMinutes(p)
+        })) || [],
+        points: analysis.optimal.totalPoints,
+        totalPoints: analysis.optimal.totalPoints,
+        valid: analysis.optimal.valid
       } : null,
-      recommendations: analysis.recommendations,
-      allFormations: formationsData,
+      recommendations: analysis.recommendations || [],
+      formations: formationsData,
       roster: {
-        totalPlayers: analysis.roster?.players?.length || 0,
+        userName: analysis.roster?.userName || userId,
+        formation: analysis.roster?.formation || 'Unknown',
         wins: analysis.roster?.wins || 0,
         losses: analysis.roster?.losses || 0,
-        seasonPoints: analysis.roster?.points || 0
+        totalPlayers: analysis.roster?.players?.length || 0
       },
-      lastUpdated: new Date().toISOString(),
-      fromCache: false
+      metadata: {
+        timestamp: new Date().toISOString(),
+        analysisType,
+        playersAnalyzed: players.length,
+        formationsChecked: formationsData.length,
+        positionDistribution: positionCounts
+      }
     };
 
-    // Cache the results
+    // Cache successful results
     cachedResults = result;
-    cacheTimestamp = now;
-
-    console.log('✅ Optimizer analysis complete:', {
-      current: stats.currentPoints.toFixed(1),
-      optimal: stats.optimalPoints.toFixed(1),
-      improvement: stats.improvement.toFixed(1),
-      efficiency: stats.efficiency.toFixed(1) + '%'
-    });
+    cacheTimestamp = Date.now();
 
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('❌ Optimizer error:', error);
+    console.error('Optimizer error:', error);
     return NextResponse.json({
       success: false,
       error: error.message,
-      stats: {
-        currentPoints: 0,
-        optimalPoints: 0,
-        improvement: 0,
-        efficiency: 0,
-        playersToSwap: 0,
-        formationChange: false
-      },
-      current: null,
-      optimal: null,
-      recommendations: [],
-      lastUpdated: new Date().toISOString()
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }
 
-/**
- * GET handler - Redirect to POST
- */
 export async function GET(request) {
-  console.log('🔄 GET request received, redirecting to POST logic');
-  
-  const mockRequest = {
-    json: () => Promise.resolve({ 
-      userId: 'ThatDerekGuy',
-      forceRefresh: false,
-      analysisType: 'current_roster'
-    }),
-    url: request.url
-  };
-  
-  return POST(mockRequest);
+  return POST(request);
 }

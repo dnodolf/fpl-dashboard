@@ -7,36 +7,22 @@ class GameweekService {
     this.CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (shorter cache for gameweek data)
   }
 
-  // Get cached data if fresh, otherwise null
+  // Replace localStorage calls with server-side safe versions
   getCachedData() {
+    if (typeof window === 'undefined') return null; // Server-side
     try {
-      const cached = localStorage.getItem(this.CACHE_KEY);
-      if (!cached) return null;
-
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < this.CACHE_DURATION) {
-        return data;
-      }
-      
-      // Clear expired cache
-      localStorage.removeItem(this.CACHE_KEY);
-      return null;
+      return localStorage.getItem('gameweek-cache');
     } catch (error) {
-      console.warn('Cache read error:', error);
       return null;
     }
   }
 
-  // Set cache with timestamp
   setCachedData(data) {
+    if (typeof window === 'undefined') return; // Server-side
     try {
-      const cacheData = {
-        data,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(this.CACHE_KEY, JSON.stringify(cacheData));
+      localStorage.setItem('gameweek-cache', data);
     } catch (error) {
-      console.warn('Cache write error:', error);
+      // Ignore localStorage errors
     }
   }
 

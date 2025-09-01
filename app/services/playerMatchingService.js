@@ -1,4 +1,7 @@
-// app/services/playerMatchingService.js - SIMPLIFIED OPTA-ONLY MATCHING
+// app/services/playerMatchingService.js
+// Updated to use unified position utilities - SLEEPER AUTHORITY
+
+import { normalizePosition } from '../../utils/positionUtils.js';
 
 export class PlayerMatchingService {
   constructor() {
@@ -13,10 +16,6 @@ export class PlayerMatchingService {
       'BURNLEY': 'BUR', 'WOLVES': 'WOL', 'WOLVERHAMPTON': 'WOL'
     };
   }
-
-  // ===============================
-  // DATA EXTRACTION METHODS
-  // ===============================
 
   /**
    * Extract standardized FFH player data
@@ -60,7 +59,7 @@ export class PlayerMatchingService {
   }
 
   /**
-   * Extract standardized Sleeper player data
+   * Extract standardized Sleeper player data using unified position logic
    */
   extractSleeperData(sleeperPlayer) {
     if (!sleeperPlayer) return null;
@@ -80,9 +79,7 @@ export class PlayerMatchingService {
       rotowire_id: sleeperPlayer.rotowire_id || null,
       player_id: sleeperPlayer.id || sleeperPlayer.player_id || '',
 
-      position: sleeperPlayer.fantasy_positions?.[0] || 
-                sleeperPlayer.position ||
-                '',
+      position: normalizePosition(sleeperPlayer), // Use unified position logic
 
       _raw: sleeperPlayer
     };
@@ -99,10 +96,6 @@ export class PlayerMatchingService {
            standardized.opta_id || 
            `${standardized.name}_${standardized.team}`;
   }
-
-  // ===============================
-  // MAIN OPTA-ONLY MATCHING METHOD
-  // ===============================
 
   /**
    * Pure Opta ID matching - simplified and fast
@@ -196,8 +189,8 @@ export class PlayerMatchingService {
     // Calculate rates
     const sleeperOptaRate = Math.round((stats.sleeperWithOpta / sleeperPlayers.length) * 100);
     const ffhOptaRate = Math.round((stats.ffhWithOpta / ffhPlayers.length) * 100);
-    const optaMatchRate = stats.ffhWithOpta > 0 ? 
-      Math.round((stats.optaMatches / stats.ffhWithOpta) * 100) : 0;
+    const optaMatchRate = stats.ffhWithOpta > 0 ?
+        Math.round((stats.optaMatches / stats.ffhWithOpta) * 100) : 0;
 
     console.log(`📊 OPTA COVERAGE:`);
     console.log(`  Sleeper with Opta: ${stats.sleeperWithOpta}/${sleeperPlayers.length} (${sleeperOptaRate}%)`);
@@ -245,28 +238,22 @@ export class PlayerMatchingService {
         matchedPlayers: stats.optaMatches,
         matchRate: `${optaMatchRate}%`,
         uniqueFFHPlayersUsed: stats.optaMatches,
-        approach: 'OPTA-ONLY - Simplified & Fast'
+        approach: 'OPTA-ONLY with Unified Position Authority'
       }
     };
   }
 
-  // ===============================
-  // UTILITY METHODS
-  // ===============================
-
+  // Utility methods for legacy compatibility
   calculateAverageConfidence(matches) {
-    // All Opta matches are High confidence
-    return 100;
+    return 100; // All Opta matches are High confidence
   }
 
-  // Legacy compatibility methods
   normalizeName(name) {
     return name?.toLowerCase().trim() || '';
   }
 
   similarity(name1, name2) {
-    // Not used in Opta-only matching
-    return name1 === name2 ? 1.0 : 0.0;
+    return name1 === name2 ? 1.0 : 0.0; // Not used in Opta-only matching
   }
 
   clearCache() {
@@ -276,4 +263,85 @@ export class PlayerMatchingService {
   getCacheStats() {
     return { size: 0, keys: [] };
   }
+}
+
+const sleeperService = new SleeperApiService();
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const endpoint = searchParams.get('endpoint') || 'players';
+    const includeOwnership = searchParams.get('ownership') !== 'false';
+
+    console.log(`Sleeper API request: endpoint=${endpoint}, ownership=${includeOwnership}`);
+
+    switch (endpoint) {
+      case 'players':
+        const players = await sleeperService.getAllPlayers();
+        let result = { players, total: Object.keys(players).length };
+
+        if (includeOwnership) {
+          const ownershipData = await sleeperService.createOwnershipMap();
+          const transformedPlayers = sleeperService.transformSleeperPlayers(players, ownershipData.ownershipMap);
+          
+          result = {
+            players: transformedPlayers,
+            total: transformedPlayers.length,
+            ownership: ownershipData.ownershipMap,
+            rosters: ownershipData.rosters,
+            users: ownershipData.users
+          };
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: result,
+          timestamp: new Date().toISOString()
+        });
+
+      case 'rosters':
+        const rosters = await sleeperService.getLeagueRosters();
+        return NextResponse.json({
+          success: true,
+          data: { rosters },
+          timestamp: new Date().toISOString()
+        });
+
+      case 'users':
+        const users = await sleeperService.getLeagueUsers();
+        return NextResponse.json({
+          success: true,
+          data: { users },
+          timestamp: new Date().toISOString()
+        });
+
+      case 'scoring':
+        const scoring = await sleeperService.getScoringSettings();
+        return NextResponse.json({
+          success: true,
+          data: { scoring },
+          timestamp: new Date().toISOString()
+        });
+
+      default:
+        return NextResponse.json({
+          success: false,
+          error: `Unknown endpoint: ${endpoint}`,
+          available: ['players', 'rosters', 'users', 'scoring']
+        }, { status: 400 });
+    }
+
+  } catch (error) {
+    console.error('Sleeper API error:', error);
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
+  }
+}
+
+export async function POST(request) {
+  // Forward POST requests to GET for simplicity
+  return GET(request);
 }

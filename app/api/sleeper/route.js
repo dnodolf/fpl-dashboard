@@ -1,34 +1,16 @@
 // app/api/sleeper/route.js
+// Updated to use unified position utilities - SLEEPER AUTHORITY
+
 import { NextResponse } from 'next/server';
+import { mapSleeperPosition, normalizePosition } from '../../../utils/positionUtils.js';
 
 class SleeperApiService {
   constructor() {
-    this.leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
-    this.myOwnerName = process.env.MY_OWNER_NAME || 'ThatDerekGuy';
     this.baseUrl = 'https://api.sleeper.app/v1';
+    this.leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
   }
 
-  async fetchSleeperRosters() {
-    try {
-      const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/rosters`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Sleeper rosters API failed: ${response.status} ${response.statusText}`);
-      }
-
-      const rosters = await response.json();
-      return rosters || [];
-    } catch (error) {
-      console.error('Error fetching Sleeper rosters:', error);
-      throw error;
-    }
-  }
-
-  async fetchSleeperPlayers() {
+  async getAllPlayers() {
     try {
       const response = await fetch(`${this.baseUrl}/players/clubsoccer:epl`, {
         method: 'GET',
@@ -41,14 +23,34 @@ class SleeperApiService {
       }
 
       const players = await response.json();
-      return players || {};
+      return players;
     } catch (error) {
       console.error('Error fetching Sleeper players:', error);
       throw error;
     }
   }
 
-  async fetchSleeperUsers() {
+  async getLeagueRosters() {
+    try {
+      const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/rosters`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Sleeper rosters API failed: ${response.status} ${response.statusText}`);
+      }
+
+      const rosters = await response.json();
+      return rosters;
+    } catch (error) {
+      console.error('Error fetching Sleeper rosters:', error);
+      throw error;
+    }
+  }
+
+  async getLeagueUsers() {
     try {
       const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/users`, {
         method: 'GET',
@@ -61,32 +63,31 @@ class SleeperApiService {
       }
 
       const users = await response.json();
-      return users || [];
+      return users;
     } catch (error) {
       console.error('Error fetching Sleeper users:', error);
       throw error;
     }
   }
 
-  async getOwnershipMap() {
+  async createOwnershipMap() {
     try {
       const [rosters, users] = await Promise.all([
-        this.fetchSleeperRosters(),
-        this.fetchSleeperUsers()
+        this.getLeagueRosters(),
+        this.getLeagueUsers()
       ]);
 
-      // Create user lookup map
-      const userMap = users.reduce((map, user) => {
-        map[user.user_id] = user.display_name || user.username || 'Unknown';
-        return map;
-      }, {});
-
-      // Create ownership map
       const ownershipMap = {};
-      
+      const userMap = {};
+
+      // Create user ID to name mapping
+      users.forEach(user => {
+        userMap[user.user_id] = user.display_name || user.username || 'Unknown';
+      });
+
+      // Map each player to their owner
       rosters.forEach(roster => {
-        const ownerName = userMap[roster.owner_id] || 'Unknown Owner';
-        
+        const ownerName = userMap[roster.owner_id] || 'Unknown';
         if (roster.players && Array.isArray(roster.players)) {
           roster.players.forEach(playerId => {
             ownershipMap[playerId] = ownerName;
@@ -126,38 +127,29 @@ class SleeperApiService {
     }
   }
 
-  // Transform Sleeper player data to our format
+  // Transform Sleeper player data to our format using unified position logic
   transformSleeperPlayers(playersData, ownershipMap = {}) {
     return Object.entries(playersData).map(([playerId, player]) => ({
       sleeper_id: playerId,
       name: player.full_name || '',
       first_name: player.first_name || '',
       last_name: player.last_name || '',
-      position: this.mapSleeperPosition(player.fantasy_positions?.[0] || player.position),
+      position: normalizePosition(player), // Use unified position logic
       team: player.team_abbr || '',
       owned_by: ownershipMap[playerId] || '',
       is_available: !ownershipMap[playerId],
       opta_id: player.opta_id || '',
       rotowire_id: player.rotowire_id || '',
       
-      // Raw Sleeper data
+      // Raw Sleeper data (preserved for debugging)
       fantasy_positions: player.fantasy_positions || [],
+      sleeper_raw_position: player.position || '', // Keep original for reference
       injury_status: player.injury_status || '',
       years_exp: player.years_exp || 0,
       weight: player.weight || '',
       height: player.height || '',
       age: player.age || 0
     }));
-  }
-
-  mapSleeperPosition(position) {
-    const positionMap = {
-      'G': 'GKP',
-      'D': 'DEF',
-      'M': 'MID', 
-      'F': 'FWD'
-    };
-    return positionMap[position] || position || 'Unknown';
   }
 }
 
@@ -173,81 +165,71 @@ export async function GET(request) {
 
     switch (endpoint) {
       case 'players':
-        const players = await sleeperService.fetchSleeperPlayers();
-        let ownershipMap = {};
-        
-        if (includeOwnership) {
-          try {
-            const ownership = await sleeperService.getOwnershipMap();
-            ownershipMap = ownership.ownershipMap;
-          } catch (ownershipError) {
-            console.warn('Could not fetch ownership data:', ownershipError.message);
-          }
-        }
+        const players = await sleeperService.getAllPlayers();
+        let result = { players, total: Object.keys(players).length };
 
-        const transformedPlayers = sleeperService.transformSleeperPlayers(players, ownershipMap);
+        if (includeOwnership) {
+          const ownershipData = await sleeperService.createOwnershipMap();
+          const transformedPlayers = sleeperService.transformSleeperPlayers(players, ownershipData.ownershipMap);
+          
+          result = {
+            players: transformedPlayers,
+            total: transformedPlayers.length,
+            ownership: ownershipData.ownershipMap,
+            rosters: ownershipData.rosters,
+            users: ownershipData.users
+          };
+        }
 
         return NextResponse.json({
           success: true,
-          players: transformedPlayers,
-          count: transformedPlayers.length,
-          source: 'Sleeper API',
-          hasOwnership: includeOwnership && Object.keys(ownershipMap).length > 0,
-          ownershipCount: Object.keys(ownershipMap).length,
-          lastUpdated: new Date().toISOString()
+          data: result,
+          timestamp: new Date().toISOString()
         });
 
       case 'rosters':
-        const rosters = await sleeperService.fetchSleeperRosters();
+        const rosters = await sleeperService.getLeagueRosters();
         return NextResponse.json({
           success: true,
-          rosters,
-          count: rosters.length,
-          lastUpdated: new Date().toISOString()
+          data: { rosters },
+          timestamp: new Date().toISOString()
         });
 
       case 'users':
-        const users = await sleeperService.fetchSleeperUsers();
+        const users = await sleeperService.getLeagueUsers();
         return NextResponse.json({
           success: true,
-          users,
-          count: users.length,
-          lastUpdated: new Date().toISOString()
-        });
-
-      case 'ownership':
-        const ownership = await sleeperService.getOwnershipMap();
-        return NextResponse.json({
-          success: true,
-          data: ownership.ownershipMap,
-          rosters: ownership.rosters,
-          users: ownership.users,
-          count: Object.keys(ownership.ownershipMap).length,
-          lastUpdated: new Date().toISOString()
+          data: { users },
+          timestamp: new Date().toISOString()
         });
 
       case 'scoring':
         const scoring = await sleeperService.getScoringSettings();
         return NextResponse.json({
           success: true,
-          settings: scoring,
-          lastUpdated: new Date().toISOString()
+          data: { scoring },
+          timestamp: new Date().toISOString()
         });
 
       default:
         return NextResponse.json({
           success: false,
-          error: `Unknown endpoint: ${endpoint}. Available: players, rosters, users, ownership, scoring`
+          error: `Unknown endpoint: ${endpoint}`,
+          available: ['players', 'rosters', 'users', 'scoring']
         }, { status: 400 });
     }
 
   } catch (error) {
-    console.error('Sleeper API route error:', error);
-    
+    console.error('Sleeper API error:', error);
     return NextResponse.json({
       success: false,
       error: error.message,
-      details: 'Check SLEEPER_LEAGUE_ID environment variable'
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
+}
+
+export async function POST(request) {
+  // Forward POST requests to GET for simplicity
+  return GET(request);
 }

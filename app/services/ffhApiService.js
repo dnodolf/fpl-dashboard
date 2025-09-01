@@ -12,7 +12,7 @@ class FFHApiService {
       'Accept-Language': 'en-US',
       'Authorization': this.authStatic,
       'Content-Type': 'application/json',
-      'Token': `Bearer ${this.bearerToken}`
+      'Token': this.bearerToken
     };
   }
 

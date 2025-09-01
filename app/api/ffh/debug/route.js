@@ -27,7 +27,7 @@ export async function GET() {
             'Accept-Language': 'en-US',
             'Authorization': authStatic,
             'Content-Type': 'application/json',
-            'Token': `Bearer ${bearerToken}`
+            'Token': bearerToken
           }
         });
         
