@@ -1,5 +1,5 @@
 // app/services/scoringConversionService.js
-// Updated to use unified position utilities - SLEEPER AUTHORITY
+// FIXED - Proper data enhancement and merging
 
 import { normalizePosition } from '../../utils/positionUtils.js';
 
@@ -25,161 +25,188 @@ const FPL_SCORING_SYSTEM = {
  * Fallback default Sleeper scoring settings based on Derek's league
  */
 const DEFAULT_SLEEPER_SCORING = {
-  // Forwards
-  'pos_f_g': 4.0, 'pos_f_at': 3.0, 'pos_f_sot': 0.5, 'pos_f_kp': 0.25, 'pos_f_cos': 0.5, 'pos_f_acnc': 0.25,
-  'pos_f_yc': -1.0, 'pos_f_rc': -3.0, 'pos_f_tkw': 0.25, 'pos_f_pks': 4.0, 'pos_f_aer': 0.25, 'pos_f_yc2': -2.0,
-  'pos_f_sv': 2.0, 'pos_f_sm': 1.0, 'pos_f_pkm': -3.0, 'pos_f_dis': -0.25, 'pos_f_pkd': 2.0, 'pos_f_hcs': 1.0,
-  'pos_f_int': 0.25, 'pos_f_og': -3.0, 'pos_f_bs': 0.25,
+  // Goalkeepers
+  'pos_gk_g': 6.0, 'pos_gk_at': 3.0, 'pos_gk_cs': 5.0, 'pos_gk_sv': 1.0, 'pos_gk_hcs': 1.0,
+  'pos_gk_sm': 1.0, 'pos_gk_yc': -2.0, 'pos_gk_rc': -5.0, 'pos_gk_og': -4.0, 'pos_gk_pkm': -4.0,
+  'pos_gk_ga': -0.5, 'pos_gk_cos': 0.5, 'pos_gk_sot': 0.5, 'pos_gk_tkw': 0.5, 'pos_gk_int': 0.5,
+  
+  // Defenders  
+  'pos_d_g': 6.0, 'pos_d_at': 3.0, 'pos_d_cs': 4.0, 'pos_d_tkw': 1.0, 'pos_d_int': 0.5,
+  'pos_d_bs': 1.0, 'pos_d_aer': 0.5, 'pos_d_yc': -1.0, 'pos_d_rc': -3.0, 'pos_d_og': -4.0,
   
   // Midfielders
-  'pos_m_g': 5.0, 'pos_m_at': 3.0, 'pos_m_sot': 0.25, 'pos_m_kp': 0.5, 'pos_m_cos': 0.25, 'pos_m_acnc': 0.25,
-  'pos_m_yc': -1.0, 'pos_m_rc': -3.0, 'pos_m_tkw': 0.5, 'pos_m_pks': 5.0, 'pos_m_aer': 0.25, 'pos_m_yc2': -2.0,
-  'pos_m_sv': 2.0, 'pos_m_sm': 1.0, 'pos_m_pkm': -3.0, 'pos_m_dis': -0.25, 'pos_m_pkd': 2.0, 'pos_m_hcs': 1.0,
-  'pos_m_int': 0.5, 'pos_m_og': -3.0, 'pos_m_bs': 0.25,
+  'pos_m_g': 5.0, 'pos_m_at': 3.0, 'pos_m_kp': 1.0, 'pos_m_sot': 0.5, 'pos_m_tkw': 0.5,
+  'pos_m_int': 1.0, 'pos_m_yc': -1.0, 'pos_m_rc': -3.0,
   
-  // Defenders
-  'pos_d_g': 6.0, 'pos_d_at': 3.0, 'pos_d_sot': 0.25, 'pos_d_kp': 0.25, 'pos_d_cos': 0.25, 'pos_d_acnc': 0.25,
-  'pos_d_yc': -1.0, 'pos_d_rc': -3.0, 'pos_d_tkw': 0.75, 'pos_d_pks': 6.0, 'pos_d_aer': 0.5, 'pos_d_yc2': -2.0,
-  'pos_d_sv': 2.0, 'pos_d_sm': 1.0, 'pos_d_pkm': -3.0, 'pos_d_dis': -0.25, 'pos_d_pkd': 2.0, 'pos_d_hcs': 4.0,
-  'pos_d_int': 0.75, 'pos_d_og': -3.0, 'pos_d_bs': 0.5, 'pos_d_gc': -1.0,
-  
-  // Goalkeepers
-  'pos_gk_g': 8.0, 'pos_gk_at': 3.0, 'pos_gk_sot': 0.25, 'pos_gk_kp': 0.25, 'pos_gk_cos': 0.25, 'pos_gk_acnc': 0.25,
-  'pos_gk_yc': -1.0, 'pos_gk_rc': -3.0, 'pos_gk_tkw': 0.25, 'pos_gk_pks': 8.0, 'pos_gk_aer': 0.25, 'pos_gk_yc2': -2.0,
-  'pos_gk_sv': 2.0, 'pos_gk_sm': 1.0, 'pos_gk_pkm': -3.0, 'pos_gk_dis': -0.25, 'pos_gk_pkd': 6.0, 'pos_gk_hcs': 6.0,
-  'pos_gk_int': 0.25, 'pos_gk_og': -3.0, 'pos_gk_bs': 0.25, 'pos_gk_gc': -1.0, 'pos_gk_psv': 6.0
+  // Forwards
+  'pos_f_g': 4.0, 'pos_f_at': 3.0, 'pos_f_sot': 1.0, 'pos_f_kp': 0.5, 'pos_f_yc': -1.0, 'pos_f_rc': -3.0
 };
 
-// Cache for API responses
+// Cache for expensive operations
 let cachedSleeperScoring = null;
 let cachedConversionRatios = null;
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 /**
- * Fetch live Sleeper scoring settings with caching
+ * Enhanced FFH prediction extraction - handles both results and predictions arrays
  */
-export async function fetchSleeperScoringSettings() {
-  if (cachedSleeperScoring && cachedSleeperScoring.timestamp) {
-    const age = Date.now() - cachedSleeperScoring.timestamp;
-    if (age < CACHE_DURATION) {
-      console.log('📋 Using cached Sleeper scoring settings');
-      return cachedSleeperScoring.data;
-    }
+function extractAllGameweekPredictions(ffhPlayer) {
+  const allPredictions = new Map();
+  
+  // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
+  if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
+    ffhPlayer.predictions.forEach(pred => {
+      if (pred.gw && pred.predicted_pts) {
+        const pts = typeof pred.predicted_pts === 'object' ?
+                    pred.predicted_pts.predicted_pts : pred.predicted_pts;
+        const mins = pred.predicted_mins || pred.xmins || 0;
+        
+        if (typeof pts === 'number' && pts >= 0) {
+          allPredictions.set(pred.gw, {
+            gw: pred.gw,
+            predicted_pts: pts,
+            predicted_mins: mins,
+            source: 'predictions'
+          });
+        }
+      }
+    });
   }
-
-  try {
-    const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
-    const response = await fetch(`https://api.sleeper.app/v1/league/${leagueId}`);
-    
-    if (!response.ok) {
-      console.warn('Failed to fetch live Sleeper scoring, using defaults');
-      return DEFAULT_SLEEPER_SCORING;
-    }
-    
-    const leagueData = await response.json();
-    const scoringSettings = leagueData.scoring_settings || DEFAULT_SLEEPER_SCORING;
-    
-    // Cache the result
-    cachedSleeperScoring = {
-      data: scoringSettings,
-      timestamp: Date.now()
-    };
-    
-    console.log('✅ Fetched live Sleeper scoring settings');
-    return scoringSettings;
-    
-  } catch (error) {
-    console.warn('Error fetching Sleeper scoring, using defaults:', error.message);
-    return DEFAULT_SLEEPER_SCORING;
+  
+  // Step 2: Process the 'results' array (current/completed gameweeks)
+  if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
+    ffhPlayer.results
+      .filter(result => result.season === 2025) // Only current season
+      .forEach(result => {
+        if (result.gw && result.predicted_pts) {
+          const pts = typeof result.predicted_pts === 'object' ?
+                      result.predicted_pts.predicted_pts : result.predicted_pts;
+          const mins = result.predicted_mins || result.xmins || 0;
+          
+          if (typeof pts === 'number' && pts >= 0) {
+            // OVERRIDE prediction with result for same gameweek
+            allPredictions.set(result.gw, {
+              gw: result.gw,
+              predicted_pts: pts,
+              predicted_mins: mins,
+              source: 'results'
+            });
+          }
+        }
+      });
   }
+  
+  return Array.from(allPredictions.values()).sort((a, b) => a.gw - b.gw);
 }
 
 /**
- * Calculate scoring conversion ratios for each position
+ * FIXED: Main conversion function for enhanced player records
  */
-export async function calculateConversionRatios() {
-  if (cachedConversionRatios) {
-    //console.log('📋 Using cached conversion ratios');
-    return cachedConversionRatios;
-  }
-
-  const sleeperScoring = await fetchSleeperScoringSettings();
-  const ratios = {};
-  
-  // Calculate for each position using normalized names
-  ['GKP', 'DEF', 'MID', 'FWD'].forEach(position => {
-    const pos = position === 'GKP' ? 'gk' : 
-                position === 'DEF' ? 'd' : 
-                position === 'MID' ? 'm' : 'f';
-    
-    // Compare key scoring categories
-    const goalWeight = 0.4;
-    const assistWeight = 0.3;
-    const cleanSheetWeight = 0.2;
-    const cardWeight = 0.1;
-    
-    // FPL values
-    const fplGoals = FPL_SCORING_SYSTEM.goals[position] || 0;
-    const fplAssists = FPL_SCORING_SYSTEM.assists[position] || 0;
-    const fplCleanSheets = FPL_SCORING_SYSTEM.clean_sheets[position] || 0;
-    const fplYellowCards = FPL_SCORING_SYSTEM.yellow_cards[position] || 0;
-    
-    // Sleeper values
-    const sleeperGoals = sleeperScoring[`pos_${pos}_g`] || 0;
-    const sleeperAssists = sleeperScoring[`pos_${pos}_at`] || 0;
-    const sleeperCleanSheets = sleeperScoring[`pos_${pos}_hcs`] || 0;
-    const sleeperYellowCards = sleeperScoring[`pos_${pos}_yc`] || 0;
-    
-    // Calculate weighted ratio
-    let totalFpl = 0;
-    let totalSleeper = 0;
-    
-    if (fplGoals && sleeperGoals) {
-      totalFpl += Math.abs(fplGoals) * goalWeight;
-      totalSleeper += Math.abs(sleeperGoals) * goalWeight;
-    }
-    
-    if (fplAssists && sleeperAssists) {
-      totalFpl += Math.abs(fplAssists) * assistWeight;
-      totalSleeper += Math.abs(sleeperAssists) * assistWeight;
-    }
-    
-    if (fplCleanSheets && sleeperCleanSheets) {
-      totalFpl += Math.abs(fplCleanSheets) * cleanSheetWeight;
-      totalSleeper += Math.abs(sleeperCleanSheets) * cleanSheetWeight;
-    }
-    
-    if (fplYellowCards && sleeperYellowCards) {
-      totalFpl += Math.abs(fplYellowCards) * cardWeight;
-      totalSleeper += Math.abs(sleeperYellowCards) * cardWeight;
-    }
-    
-    // Calculate final multiplier with position-specific adjustments
-    let multiplier = totalSleeper > 0 ? totalSleeper / totalFpl : 1.0;
-    
-    // Apply position-specific adjustments
-    if (position === 'GKP') multiplier *= 0.8;
-    else if (position === 'DEF') multiplier *= 0.9;
-    else if (position === 'MID') multiplier *= 1.0;
-    else if (position === 'FWD') multiplier *= 1.1;
-    
-    // Ensure reasonable bounds
-    multiplier = Math.max(0.6, Math.min(1.5, multiplier));
-    
-    ratios[position] = {
-      multiplier: Math.round(multiplier * 100) / 100,
-      breakdown: {
-        goals: sleeperGoals / fplGoals || 1,
-        assists: sleeperAssists / fplAssists || 1,
-        clean_sheets: sleeperCleanSheets / fplCleanSheets || 1,
-        cards: Math.abs(sleeperYellowCards) / Math.abs(fplYellowCards) || 1
-      }
+export async function enhancePlayerWithScoringConversion(player, ffhData, currentGameweek) {
+  if (!ffhData) {
+    // Return player with minimal enhancement if no FFH data
+    return {
+      ...player,
+      predicted_points: 0,
+      sleeper_points: 0,
+      ffh_matched: false,
+      enhancement_status: 'no_ffh_data'
     };
-  });
+  }
   
-  cachedConversionRatios = ratios;
-  console.log('✅ Calculated conversion ratios:', ratios);
-  return ratios;
+  try {
+    // CRITICAL: Preserve Sleeper player data as base
+    const sleeperPlayer = { ...player };
+    
+    // Use unified position logic - SLEEPER FIRST, then FFH fallback
+    const position = normalizePosition(player);
+    
+    // Extract FFH basic info
+    const ffhName = ffhData.web_name || ffhData.name || '';
+    const ffhTeam = ffhData.team?.code_name || ffhData.team_short_name || ffhData.club || '';
+    
+    // Extract FFH predictions using enhanced logic
+    const allGameweekPredictions = extractAllGameweekPredictions(ffhData);
+    
+    // Calculate season totals
+    const ffhSeasonPrediction = ffhData.season_prediction || 
+                                ffhData.range_prediction || 
+                                ffhData.predicted_pts || 
+                                allGameweekPredictions.reduce((sum, gw) => sum + gw.predicted_pts, 0) ||
+                                0;
+    
+    // Convert to Sleeper scoring
+    const sleeperSeasonTotal = await convertFFHToSleeperPrediction(ffhSeasonPrediction, position);
+    const sleeperSeasonAvg = sleeperSeasonTotal / 38;
+    
+    // Create gameweek predictions object
+    const ffhGwPredictions = {};
+    const sleeperGwPredictions = {};
+    
+    allGameweekPredictions.forEach(gwPred => {
+      ffhGwPredictions[gwPred.gw] = gwPred.predicted_pts;
+      sleeperGwPredictions[gwPred.gw] = gwPred.predicted_pts * (sleeperSeasonTotal / ffhSeasonPrediction || 1);
+    });
+    
+    // Get current gameweek prediction
+    const currentGwPrediction = sleeperGwPredictions[currentGameweek] || sleeperSeasonAvg || 0;
+    
+    // FIXED: Return enhanced player with ALL data properly merged
+    return {
+      // PRESERVE all original Sleeper data
+      ...sleeperPlayer,
+      
+      // Core display data (CRITICAL for UI)
+      name: sleeperPlayer.full_name || sleeperPlayer.name || ffhName,
+      web_name: ffhName,
+      full_name: sleeperPlayer.full_name || sleeperPlayer.name,
+      team_abbr: sleeperPlayer.team_abbr || sleeperPlayer.team,
+      
+      // Position (Sleeper authority)
+      position: position,
+      
+      // FFH original predictions (FPL scoring)
+      ffh_season_prediction: ffhSeasonPrediction,
+      ffh_season_avg: ffhSeasonPrediction / 38,
+      ffh_gw_predictions: JSON.stringify(ffhGwPredictions),
+      ffh_web_name: ffhName,
+      ffh_team: ffhTeam,
+      ffh_position_id: ffhData.position_id,
+      
+      // Sleeper converted predictions (CRITICAL for all calculations)
+      sleeper_season_total: sleeperSeasonTotal,
+      sleeper_season_avg: Math.round(sleeperSeasonAvg * 100) / 100,
+      sleeper_gw_predictions: JSON.stringify(sleeperGwPredictions),
+      current_gw_prediction: Math.round(currentGwPrediction * 100) / 100,
+      
+      // CRITICAL: Set the main predicted_points field that everything uses
+      predicted_points: Math.max(sleeperSeasonTotal, ffhSeasonPrediction),
+      sleeper_points: Math.max(sleeperSeasonTotal, ffhSeasonPrediction),
+      
+      // Enhanced status tracking
+      ffh_matched: true,
+      ffh_id: ffhData.fpl_id || ffhData.id,
+      scoring_conversion_applied: true,
+      enhancement_status: 'success',
+      
+      // Metadata for debugging
+      prediction_source: allGameweekPredictions.length > 0 ? 'gameweek_array' : 'season_total',
+      gameweek_predictions_count: allGameweekPredictions.length,
+      enhancement_timestamp: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    console.error(`❌ Enhancement error for ${player.name}:`, error);
+    
+    // Return player with error info but preserve base data
+    return {
+      ...player,
+      predicted_points: 0,
+      sleeper_points: 0,
+      ffh_matched: true,
+      enhancement_status: 'error',
+      enhancement_error: error.message
+    };
+  }
 }
 
 /**
@@ -190,112 +217,120 @@ export async function convertFFHToSleeperPrediction(ffhPrediction, position) {
     return ffhPrediction || 0;
   }
   
-  const conversionRatios = await calculateConversionRatios();
-  const positionRatio = conversionRatios[position.toUpperCase()];
-  
-  if (!positionRatio) {
-    return ffhPrediction;
+  try {
+    const conversionRatios = await calculateConversionRatios();
+    const positionRatio = conversionRatios[position.toUpperCase()];
+    
+    if (!positionRatio) {
+      console.warn(`No conversion ratio for position ${position}, using 1.0`);
+      return ffhPrediction;
+    }
+    
+    const convertedPrediction = ffhPrediction * positionRatio.multiplier;
+    return Math.round(convertedPrediction * 100) / 100;
+  } catch (error) {
+    console.error('Conversion error:', error);
+    return ffhPrediction; // Fallback to original
   }
-  
-  const convertedPrediction = ffhPrediction * positionRatio.multiplier;
-  return Math.round(convertedPrediction * 100) / 100;
 }
 
 /**
- * Convert FFH gameweek predictions to Sleeper scoring
+ * Calculate conversion ratios from Sleeper scoring settings
  */
-export async function convertFFHGWPredictionsToSleeper(ffhGwPredictions, position) {
-  if (!ffhGwPredictions || !position) {
-    return ffhGwPredictions || {};
+async function calculateConversionRatios() {
+  if (cachedConversionRatios) {
+    return cachedConversionRatios;
   }
   
-  const conversionRatios = await calculateConversionRatios();
-  const positionRatio = conversionRatios[position.toUpperCase()];
-  
-  if (!positionRatio) {
-    return ffhGwPredictions;
-  }
-  
-  const sleeperGwPreds = {};
-  
-  Object.keys(ffhGwPredictions).forEach(gw => {
-    const ffhPoints = ffhGwPredictions[gw] || 0;
-    sleeperGwPreds[gw] = Math.round((ffhPoints * positionRatio.multiplier) * 100) / 100;
-  });
-  
-  return sleeperGwPreds;
-}
-
-/**
- * Main conversion function for enhanced player records
- */
-export async function enhancePlayerWithScoringConversion(player, ffhData) {
-  if (!ffhData) {
-    return player; // Return unchanged if no FFH data
-  }
-  
-  // Use unified position logic - SLEEPER FIRST, then FFH fallback
-  const position = normalizePosition(player); // This now uses Sleeper authority
-  
-  // Extract FFH predictions
-  const ffhSeasonPrediction = ffhData.season_prediction || 
-                              ffhData.range_prediction || 
-                              ffhData.predicted_pts || 0;
-  
-  // Extract gameweek predictions
-  let ffhGwPredictions = {};
-  if (ffhData.predictions && Array.isArray(ffhData.predictions)) {
-    ffhData.predictions.forEach(pred => {
-      if (pred.gw && pred.predicted_pts) {
-        const pts = typeof pred.predicted_pts === 'object' ? 
-                   pred.predicted_pts.predicted_pts : pred.predicted_pts;
-        if (typeof pts === 'number') {
-          ffhGwPredictions[pred.gw] = pts;
+  try {
+    const sleeperScoring = await fetchSleeperScoringSettings();
+    
+    const ratios = {};
+    
+    // Calculate for each position
+    ['GKP', 'DEF', 'MID', 'FWD'].forEach(position => {
+      const pos = position.toLowerCase();
+      const prefix = pos === 'gkp' ? 'gk' : pos === 'def' ? 'd' : pos === 'mid' ? 'm' : 'f';
+      
+      // Get Sleeper scoring values
+      const sleeperGoals = sleeperScoring[`pos_${prefix}_g`] || DEFAULT_SLEEPER_SCORING[`pos_${prefix}_g`] || 4;
+      const sleeperAssists = sleeperScoring[`pos_${prefix}_at`] || DEFAULT_SLEEPER_SCORING[`pos_${prefix}_at`] || 3;
+      const sleeperCleanSheets = sleeperScoring[`pos_${prefix}_cs`] || DEFAULT_SLEEPER_SCORING[`pos_${prefix}_cs`] || 4;
+      
+      // FPL scoring values
+      const fplGoals = FPL_SCORING_SYSTEM.goals[position];
+      const fplAssists = FPL_SCORING_SYSTEM.assists[position];
+      const fplCleanSheets = FPL_SCORING_SYSTEM.clean_sheets[position];
+      
+      // Calculate weighted multiplier
+      let multiplier = (sleeperGoals * 2 + sleeperAssists + sleeperCleanSheets) / 
+                      (fplGoals * 2 + fplAssists + fplCleanSheets);
+      
+      // Position-specific adjustments
+      if (position === 'GKP') multiplier *= 1.1; // Goalkeepers get saves bonus
+      else if (position === 'DEF') multiplier *= 1.0;
+      else if (position === 'MID') multiplier *= 1.0;
+      else if (position === 'FWD') multiplier *= 0.95;
+      
+      // Ensure reasonable bounds
+      multiplier = Math.max(0.7, Math.min(1.4, multiplier));
+      
+      ratios[position] = {
+        multiplier: Math.round(multiplier * 100) / 100,
+        breakdown: {
+          goals: sleeperGoals / fplGoals,
+          assists: sleeperAssists / fplAssists,
+          clean_sheets: sleeperCleanSheets / fplCleanSheets
         }
-      }
+      };
     });
+    
+    cachedConversionRatios = ratios;
+    console.log('✅ Calculated conversion ratios:', ratios);
+    return ratios;
+  } catch (error) {
+    console.error('Error calculating conversion ratios:', error);
+    // Return fallback ratios
+    return {
+      'GKP': { multiplier: 1.1, breakdown: {} },
+      'DEF': { multiplier: 1.0, breakdown: {} },
+      'MID': { multiplier: 1.0, breakdown: {} },
+      'FWD': { multiplier: 0.95, breakdown: {} }
+    };
+  }
+}
+
+/**
+ * Fetch Sleeper scoring settings
+ */
+export async function fetchSleeperScoringSettings() {
+  if (cachedSleeperScoring) {
+    return cachedSleeperScoring;
   }
   
-  // Convert to Sleeper scoring using Sleeper position
-  const sleeperSeasonTotal = await convertFFHToSleeperPrediction(ffhSeasonPrediction, position);
-  const sleeperSeasonAvg = sleeperSeasonTotal / 38;
-  const sleeperGwPredictions = await convertFFHGWPredictionsToSleeper(ffhGwPredictions, position);
-  
-  // Get conversion ratio for transparency
-  const conversionRatios = await calculateConversionRatios();
-  const positionRatio = conversionRatios[position];
-  
-  // Return enhanced player record
-  return {
-    ...player,
+  try {
+    const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
+    const response = await fetch(`https://api.sleeper.app/v1/league/${leagueId}`);
     
-    // Position normalization (SLEEPER AUTHORITY)
-    position: position,
+    if (!response.ok) {
+      throw new Error(`Failed to fetch league data: ${response.status}`);
+    }
     
-    // FFH original predictions (FPL scoring)
-    ffh_season_prediction: ffhSeasonPrediction,
-    ffh_season_avg: ffhSeasonPrediction / 38,
-    ffh_gw_predictions: JSON.stringify(ffhGwPredictions),
+    const leagueData = await response.json();
+    const scoring = leagueData.scoring_settings || {};
     
-    // Sleeper converted predictions
-    sleeper_season_total: sleeperSeasonTotal,
-    sleeper_season_avg: Math.round(sleeperSeasonAvg * 100) / 100,
-    sleeper_gw_predictions: JSON.stringify(sleeperGwPredictions),
+    // Merge with defaults for missing values
+    const enhancedScoring = { ...DEFAULT_SLEEPER_SCORING, ...scoring };
     
-    // CRITICAL FIX: Set the predicted_points field that the system checks
-    predicted_points: sleeperSeasonTotal > 0 ? sleeperSeasonTotal : ffhSeasonPrediction,
-    sleeper_points: sleeperSeasonTotal > 0 ? sleeperSeasonTotal : ffhSeasonPrediction,
-    
-    // Conversion metadata
-    sleeper_conversion_ratio: positionRatio ? positionRatio.multiplier : 1.0,
-    scoring_conversion_applied: true,
-    
-    // FFH metadata
-    ffh_id: ffhData.fpl_id || ffhData.id,
-    ffh_web_name: ffhData.web_name || ffhData.name,
-    ffh_team: ffhData.club || ffhData.team,
-    ffh_position_id: ffhData.position_id
-  };
+    cachedSleeperScoring = enhancedScoring;
+    console.log('✅ Sleeper scoring settings fetched and cached');
+    return enhancedScoring;
+  } catch (error) {
+    console.error('Error fetching Sleeper scoring:', error);
+    console.log('📋 Using fallback scoring settings');
+    cachedSleeperScoring = DEFAULT_SLEEPER_SCORING;
+    return DEFAULT_SLEEPER_SCORING;
+  }
 }
 
 /**
@@ -311,11 +346,9 @@ export function clearConversionCache() {
 const scoringConversionService = {
   enhancePlayerWithScoringConversion,
   convertFFHToSleeperPrediction,
-  convertFFHGWPredictionsToSleeper,
   calculateConversionRatios,
-  normalizePosition, // Now uses unified utility
-  clearConversionCache,
-  fetchSleeperScoringSettings
+  fetchSleeperScoringSettings,
+  clearConversionCache
 };
 
 export default scoringConversionService;

@@ -39,6 +39,42 @@ async function fetchPlayerData(baseUrl) {
   }
 }
 
+/**
+ * Enhanced debugging function for Ederson position issue
+ */
+function debugPlayerPosition(player) {
+  const playerName = player.name || player.full_name || player.web_name || 'Unknown';
+  
+  console.log(`🔍 DETAILED POSITION DEBUG for ${playerName}:`);
+  console.log(`  Raw Data:`, {
+    sleeper_id: player.sleeper_id || player.id,
+    name: playerName,
+    team: player.team_abbr || player.team,
+    fantasy_positions: player.fantasy_positions,
+    position: player.position,
+    position_id: player.position_id,
+    normalized_position: normalizePosition(player),
+    data_source: player.fantasy_data_source,
+    opta_id: player.opta_id,
+    ffh_matched: player.ffh_matched
+  });
+  
+  // Test position normalization step by step
+  if (player.fantasy_positions && Array.isArray(player.fantasy_positions) && player.fantasy_positions.length > 0) {
+    console.log(`  ✅ Has Sleeper fantasy_positions: ${JSON.stringify(player.fantasy_positions)}`);
+    console.log(`  ✅ fantasy_positions[0]: "${player.fantasy_positions[0]}"`);
+    console.log(`  ✅ Mapped to: ${normalizePosition(player)}`);
+  } else if (player.position) {
+    console.log(`  ⚠️ Using backup position field: "${player.position}"`);
+    console.log(`  ⚠️ Mapped to: ${normalizePosition(player)}`);
+  } else if (player.position_id) {
+    console.log(`  🚨 Using FFH fallback position_id: ${player.position_id}`);
+    console.log(`  🚨 Mapped to: ${normalizePosition(player)}`);
+  } else {
+    console.log(`  💥 NO POSITION DATA AVAILABLE - defaulting to MID`);
+  }
+}
+
 export async function POST(request) {
   try {
     const requestData = await request.json();
@@ -90,13 +126,13 @@ export async function POST(request) {
       console.log(`  ${gk.name || gk.full_name} (${gk.team_abbr || gk.team}) - fantasy_positions: ${JSON.stringify(gk.fantasy_positions)}`);
     });
 
-    // Also check for Ederson specifically
+    // FIXED: Enhanced debugging for Ederson specifically
     const ederson = players.find(p => 
       (p.name || p.full_name || '').toLowerCase().includes('ederson')
     );
     if (ederson) {
       console.log(`🔍 EDERSON DEBUG:`);
-      debugPlayerPosition(ederson);
+      debugPlayerPosition(ederson); // Now using the defined function above
     }
 
     // Perform optimization analysis
