@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { FormationOptimizerService } from '../../services/formationOptimizerService.js';
-import { normalizePosition, debugPlayerPosition } from '../../../utils/positionUtils.js';
+import { normalizePosition } from '../../../utils/positionUtils.js';
 
 const optimizerService = new FormationOptimizerService();
 

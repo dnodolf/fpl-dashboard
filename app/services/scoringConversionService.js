@@ -99,7 +99,7 @@ export async function fetchSleeperScoringSettings() {
  */
 export async function calculateConversionRatios() {
   if (cachedConversionRatios) {
-    console.log('📋 Using cached conversion ratios');
+    //console.log('📋 Using cached conversion ratios');
     return cachedConversionRatios;
   }
 
@@ -281,6 +281,10 @@ export async function enhancePlayerWithScoringConversion(player, ffhData) {
     sleeper_season_total: sleeperSeasonTotal,
     sleeper_season_avg: Math.round(sleeperSeasonAvg * 100) / 100,
     sleeper_gw_predictions: JSON.stringify(sleeperGwPredictions),
+    
+    // CRITICAL FIX: Set the predicted_points field that the system checks
+    predicted_points: sleeperSeasonTotal > 0 ? sleeperSeasonTotal : ffhSeasonPrediction,
+    sleeper_points: sleeperSeasonTotal > 0 ? sleeperSeasonTotal : ffhSeasonPrediction,
     
     // Conversion metadata
     sleeper_conversion_ratio: positionRatio ? positionRatio.multiplier : 1.0,

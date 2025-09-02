@@ -202,16 +202,13 @@ function usePlayerData() {
     integration: null
   });
 
-  // Update data function with caching
   const fetchData = async (type = 'auto', forceRefresh = false, useCache = true) => {
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
 
-      // Check cache first unless force refresh
       if (!forceRefresh && useCache) {
         const cachedData = CacheManager.get();
         if (cachedData) {
-          console.log('⚡ Loading from cache');
           setData(prev => ({
             ...prev,
             loading: false,
@@ -221,8 +218,6 @@ function usePlayerData() {
         }
       }
 
-      console.log('🔄 Fetching fresh data from API');
-      
       const response = await fetch('/api/integrated-players', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -239,31 +234,30 @@ function usePlayerData() {
 
       const result = await response.json();
       
-      if (result.success) {
+      // Direct check for players array
+      if (result.players && Array.isArray(result.players)) {
         const newData = {
-          players: result.players || [],
+          players: result.players,
           loading: false,
           error: null,
-          lastUpdated: result.lastUpdated,
-          source: result.source || 'integrated',
-          quality: result.quality,
-          ownershipData: result.ownershipData || false,
-          enhanced: result.enhanced || true,
-          cached: result.fromCache || false,
-          ownershipCount: result.ownershipCount || result.players?.length || 0,
+          lastUpdated: result.timestamp,
+          source: 'integrated',
+          quality: 'high',
+          ownershipData: true,
+          enhanced: true,
+          cached: result.cached || false,
+          ownershipCount: result.count || result.players.length,
           integrated: true,
-          integration: result.integration
+          integration: result.stats
         };
 
-        // Save to cache
         CacheManager.set(newData);
-        
         setData(newData);
       } else {
-        throw new Error(result.error || 'Failed to fetch integrated player data');
+        throw new Error('No player data received from API');
       }
     } catch (error) {
-      console.error('❌ Error fetching player data:', error);
+      console.error('Error fetching player data:', error);
       setData(prev => ({
         ...prev,
         loading: false,
@@ -273,12 +267,94 @@ function usePlayerData() {
   };
 
   useEffect(() => {
-    // Auto-load with cache for speed
     fetchData('auto', false, true);
   }, []);
 
   return { ...data, refetch: fetchData };
 }
+
+// Update data function with caching
+const fetchData = async (type = 'auto', forceRefresh = false, useCache = true) => {
+  try {
+    setData(prev => ({ ...prev, loading: true, error: null }));
+
+    // Check cache first unless force refresh
+    if (!forceRefresh && useCache) {
+      const cachedData = CacheManager.get();
+      if (cachedData) {
+        console.log('⚡ Loading from cache');
+        setData(prev => ({
+          ...prev,
+          loading: false,
+          ...cachedData
+        }));
+        return;
+      }
+    }
+
+    console.log('🔄 Fetching fresh data from API');
+    
+    const response = await fetch('/api/integrated-players', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        includeMatching: true,
+        includeScoring: true,
+        forceRefresh
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    // ADD DEBUG LINES:
+    console.log('🔍 API Response received:', {
+      hasPlayers: !!result.players,
+      playersLength: result.players?.length,
+      isArray: Array.isArray(result.players),
+      firstPlayer: result.players?.[0]?.name,
+      resultKeys: Object.keys(result)
+    });
+    
+    // Check if we have players data (API working) instead of success field
+    if (result.players && Array.isArray(result.players)) {
+      console.log('✅ Setting player data:', result.players.length, 'players');
+      
+      const newData = {
+        players: result.players,
+        loading: false,
+        error: null,
+        lastUpdated: result.timestamp,
+        source: 'integrated',
+        quality: 'high',
+        ownershipData: true,
+        enhanced: true,
+        cached: result.cached || false,
+        ownershipCount: result.count || result.players.length,
+        integrated: true,
+        integration: result.stats
+      };
+
+      // Save to cache
+      CacheManager.set(newData);
+      
+      setData(newData);
+      console.log('✅ State should be updated with:', newData.players.length, 'players');
+    } else {
+      throw new Error(result.error || 'Failed to fetch integrated player data');
+    }
+  } catch (error) {
+    console.error('❌ Error fetching player data:', error);
+    setData(prev => ({
+      ...prev,
+      loading: false,
+      error: error.message
+    }));
+  }
+};
 
 // ----------------- SLEEPER POSITION COLORS -----------------
 const getSleeperPositionStyle = (position) => {
@@ -1178,6 +1254,15 @@ export default function FPLDashboard() {
   });
   
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
+
+  // ADD THIS TEMPORARY DEBUG:
+  console.log('Hook returned:', { 
+    playersCount: players?.length, 
+    loading, 
+    error,
+    playersType: typeof players,
+    isArray: Array.isArray(players)
+  });
 
   // Load gameweek data
   useEffect(() => {

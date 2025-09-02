@@ -2,7 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import GameweekService from '../../services/gameweekService.js';
-import { normalizePosition, debugPlayerPosition } from '../../../utils/positionUtils.js';
+import { normalizePosition } from '../../../utils/positionUtils.js';
 
 // Cache for API responses
 let cachedData = null;
@@ -339,11 +339,6 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
     const playerName = player.full_name || player.name || 'Unknown Player';
     const position = normalizePosition(player.fantasy_positions?.[0]);
     
-    // Only debug if player is valid
-    if (player && playerName !== 'Unknown Player') {
-      debugPlayerPosition(playerName, player);
-    }
-    
     return {
       id,
       sleeper_id: id,
@@ -446,22 +441,26 @@ export async function POST(request) {
     }
 
 // Fresh data integration
-const result = await integratePlayersWithOptaMatching();
+const players = await integratePlayersWithOptaMatching();
+
+// Create response data
+const responseData = {
+  success: true,
+  players: players,
+  count: players.length,
+  timestamp: new Date().toISOString(),
+  stats: {
+    totalPlayers: players.length,
+    playersWithPredictions: players.filter(p => p.predicted_points > 0).length
+  }
+};
 
 // Cache successful results
-if (result.status !== 500) {
-  // clone the response so we can consume it without locking
-  const clone = result.clone();
-  const resultData = await clone.json();
-  if (resultData.success) {
-    cachedData = resultData;
-    cacheTimestamp = Date.now();
-    console.log('💾 Data cached successfully');
-  }
-}
+cachedData = responseData;
+cacheTimestamp = Date.now();
+console.log('💾 Data cached successfully');
 
-return result;
-
+return NextResponse.json(responseData);
     
   } catch (error) {
     console.error('POST handler error:', error);

@@ -107,17 +107,3 @@ export function getPositionDisplayInfo(position) {
 export function isValidPosition(position) {
   return ['GKP', 'DEF', 'MID', 'FWD'].includes(position);
 }
-
-/**
- * Debug function to log all position data for a player
- */
-export function debugPlayerPosition(player) {
-  console.log(`🔍 FULL POSITION DEBUG for ${player.name || player.full_name || 'Unknown'}:`);
-  console.log({
-    sleeper_fantasy_positions: player.fantasy_positions,
-    sleeper_position: player.position,  
-    ffh_position_id: player.position_id,
-    normalized: normalizePosition(player),
-    player_id: player.id || player.player_id || player.sleeper_id
-  });
-}
