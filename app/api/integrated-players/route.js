@@ -332,7 +332,7 @@ async function integratePlayersWithOptaMatching() {
 
   console.log(`📊 All data fetched successfully - Sleeper: ${sleeperData.totalPlayers}, FFH: ${ffhData.totalPlayers}`);
 
-// Convert Sleeper players to array with unified positions - SAFE VERSION
+// Convert Sleeper players to array with unified positions - WITH OWNERSHIP
 const sleeperPlayersArray = Object.entries(sleeperData.players)
   .filter(([id, player]) => player && typeof player === 'object') // Filter out invalid entries
   .map(([id, player]) => {
@@ -344,6 +344,7 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
       sleeper_id: id,
       ...player,
       position,
+      owned_by: sleeperData.ownership[id] || 'Free Agent', // ADD THIS LINE
       fantasy_data_source: 'sleeper'
     };
   });
@@ -443,7 +444,12 @@ export async function POST(request) {
 // Fresh data integration
 const players = await integratePlayersWithOptaMatching();
 
-// Create response data
+// Calculate matching statistics from final processed players
+const playersWithPredictions = players.filter(p => p.predicted_points > 0);
+const playersWithOpta = players.filter(p => p.opta_id);
+const matchedPlayers = players.filter(p => p.ffh_matched !== false);
+
+// Create response data with proper matching statistics
 const responseData = {
   success: true,
   players: players,
@@ -451,7 +457,18 @@ const responseData = {
   timestamp: new Date().toISOString(),
   stats: {
     totalPlayers: players.length,
-    playersWithPredictions: players.filter(p => p.predicted_points > 0).length
+    playersWithPredictions: playersWithPredictions.length,
+    sleeperTotal: players.length,
+    ffhTotal: 612, // From your API logs
+    optaAnalysis: {
+      sleeperWithOpta: playersWithOpta.length,
+      sleeperOptaRate: ((playersWithOpta.length / players.length) * 100).toFixed(1),
+      ffhWithOpta: 612, // From your API logs - all FFH players have Opta
+      ffhOptaRate: "100.0",
+      optaMatches: matchedPlayers.length,
+      optaMatchRate: ((matchedPlayers.length / 612) * 100).toFixed(1),
+      unmatchedSleeperWithOpta: players.filter(p => p.opta_id && p.ffh_matched === false)
+    }
   }
 };
 

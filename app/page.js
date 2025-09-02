@@ -31,12 +31,11 @@ const TEAM_DISPLAY_NAMES = Object.fromEntries(
 
 // Helper function to check if player is on EPL team
 const isEPLPlayer = (player) => {
-  if (!player.team) return false;
+  // The actual team abbreviations are in team_abbr, not team
+  const playerTeamAbbr = (player.team_abbr || '').trim();
   
-  const playerTeam = player.team.trim();
-  
-  // Check if it's an EPL abbreviation
-  return Object.values(TEAM_MAPPINGS).includes(playerTeam) || EPL_TEAMS.includes(playerTeam);
+  // Check if the team_abbr matches any EPL team abbreviation
+  return Object.values(TEAM_MAPPINGS).includes(playerTeamAbbr);
 };
 
 // ----------------- LOADING SPINNER COMPONENT -----------------
@@ -1264,6 +1263,43 @@ export default function FPLDashboard() {
     isArray: Array.isArray(players)
   });
 
+// ADD OWNERSHIP DEBUG:
+if (players && players.length > 0) {
+  console.log('🔍 Full player structure - first player:');
+  const firstPlayer = players[0];
+  console.log('  All keys:', Object.keys(firstPlayer));
+  console.log('  Full player object:', firstPlayer);
+  
+  console.log('🔍 Ownership debug - first 5 players:');
+  players.slice(0, 5).forEach((player, i) => {
+    console.log(`  Player ${i + 1}:`, {
+      name: player.name || player.web_name || player.first_name,
+      sleeper_id: player.sleeper_id,
+      owned_by: player.owned_by,
+      owner_name: player.owner_name,
+      ownership_keys: Object.keys(player).filter(key => key.includes('own') || key.includes('user')),
+      all_keys: Object.keys(player).slice(0, 10) // First 10 keys to see structure
+    });
+  });
+}
+
+// ADD PPG DEBUG:
+if (players && players.length > 0) {
+  console.log('🔍 PPG field analysis - first player with predictions:');
+  const playerWithPreds = players.find(p => p.predicted_points > 0);
+  if (playerWithPreds) {
+    const ppgKeys = Object.keys(playerWithPreds).filter(key => 
+      key.includes('ppg') || key.includes('avg') || key.includes('points')
+    );
+    console.log('  PPG-related keys:', ppgKeys);
+    console.log('  Sample values:', {
+      predicted_points: playerWithPreds.predicted_points,
+      total_points: playerWithPreds.total_points,
+      ppg_keys: ppgKeys.map(key => `${key}: ${playerWithPreds[key]}`)
+    });
+  }
+}
+
   // Load gameweek data
   useEffect(() => {
     const loadGameweek = async () => {
@@ -1368,9 +1404,11 @@ export default function FPLDashboard() {
         
         return 0;
       case 'current_ppg':
-        return player.current_ppg || 0;
+        // Use FFH season average (actual current PPG)
+        return player.ffh_season_avg || 0;
       case 'predicted_ppg':
-        return player.predicted_ppg || 0;
+        // Use Sleeper season average (predicted PPG after conversion)
+        return player.sleeper_season_avg || 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -1398,10 +1436,10 @@ export default function FPLDashboard() {
       }
     }
 
-    // Team filter
-    if (filters.team !== 'all' && player.team !== filters.team) {
-      return false;
-    }
+// Team filter  
+if (filters.team !== 'all' && player.team_abbr !== filters.team) {
+  return false;
+}
 
     // Owner filter
     if (filters.owner !== 'all') {
@@ -1805,7 +1843,7 @@ export default function FPLDashboard() {
                             </span>
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {TEAM_DISPLAY_NAMES[player.team] || player.team || 'N/A'}
+                            {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || 'N/A'}
                           </td>
 <td className="px-6 py-4 whitespace-nowrap text-sm">
   {player.owned_by && player.owned_by !== 'Free Agent' && player.owned_by !== '' ? (
@@ -1923,10 +1961,10 @@ export default function FPLDashboard() {
                             })()}
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {player.current_ppg ? player.current_ppg.toFixed(1) : 'N/A'}
+                            {player.ffh_season_avg ? player.ffh_season_avg.toFixed(1) : 'N/A'}
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {player.predicted_ppg ? player.predicted_ppg.toFixed(1) : 'N/A'}
+                            {player.sleeper_season_avg ? player.sleeper_season_avg.toFixed(1) : 'N/A'}
                           </td>
                         </tr>
                       ))}
