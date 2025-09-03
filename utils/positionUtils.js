@@ -84,8 +84,8 @@ export function mapSleeperPosition(position) {
   if (pos.includes('FORWARD') || pos.includes('ATTACK')) return 'FWD';
   
   // Log unknown positions for debugging
-  console.warn(`🚨 Unknown position format: "${position}" - defaulting to MID`);
-  return 'MID';
+  console.warn(`🚨 Unknown position format: "${position}" - listing as UNKNOWN`);
+  return 'UNKNOWN';
 }
 
 /**
@@ -107,55 +107,4 @@ export function getPositionDisplayInfo(position) {
  */
 export function isValidPosition(position) {
   return ['GKP', 'DEF', 'MID', 'FWD'].includes(position);
-}
-
-/**
- * Enhanced debugging function for specific players
- */
-export function debugSpecificPlayer(player, playerNameToCheck = 'ederson') {
-  const playerName = (player.name || player.full_name || player.web_name || '').toLowerCase();
-  
-  if (playerName.includes(playerNameToCheck.toLowerCase())) {
-    console.log(`\n🔍 === DEBUGGING ${playerName.toUpperCase()} ===`);
-    console.log('Raw player object:', {
-      sleeper_id: player.sleeper_id || player.id,
-      name: player.name,
-      full_name: player.full_name,
-      web_name: player.web_name,
-      team_abbr: player.team_abbr,
-      team: player.team,
-      fantasy_positions: player.fantasy_positions,
-      position: player.position,
-      position_id: player.position_id,
-      opta_id: player.opta_id,
-      fantasy_data_source: player.fantasy_data_source
-    });
-    
-    // Test each step of position logic
-    console.log('\n📋 Position Logic Test:');
-    if (player.fantasy_positions && Array.isArray(player.fantasy_positions) && player.fantasy_positions.length > 0) {
-      const pos = player.fantasy_positions[0];
-      console.log(`  Step 1 - fantasy_positions[0]: "${pos}"`);
-      console.log(`  Step 1 - mapSleeperPosition("${pos}"): "${mapSleeperPosition(pos)}"`);
-    } else {
-      console.log(`  Step 1 - fantasy_positions: MISSING or INVALID`);
-    }
-    
-    if (player.position) {
-      console.log(`  Step 2 - position: "${player.position}"`);
-      console.log(`  Step 2 - mapSleeperPosition("${player.position}"): "${mapSleeperPosition(player.position)}"`);
-    } else {
-      console.log(`  Step 2 - position: MISSING`);
-    }
-    
-    if (player.position_id) {
-      console.log(`  Step 3 - position_id: ${player.position_id}`);
-    } else {
-      console.log(`  Step 3 - position_id: MISSING`);
-    }
-    
-    const finalPosition = normalizePosition(player);
-    console.log(`\n🎯 FINAL RESULT: ${finalPosition}`);
-    console.log(`=== END DEBUGGING ===\n`);
-  }
 }

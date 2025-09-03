@@ -4,53 +4,6 @@ import { NextResponse } from 'next/server';
 import GameweekService from '../../services/gameweekService.js';
 import { normalizePosition } from '../../../utils/positionUtils.js';
 
-/**
- * Enhanced debugging for the matching and enhancement process
- */
-function debugPlayerEnhancement(sleeperPlayer, ffhMatch, enhancedResult) {
-  const playerName = sleeperPlayer.full_name || sleeperPlayer.name || 'Unknown';
-  
-  if (playerName.toLowerCase().includes('ederson')) {
-    console.log('\n🔍 === EDERSON ENHANCEMENT DEBUG ===');
-    
-    console.log('1. SLEEPER INPUT:', {
-      name: sleeperPlayer.full_name,
-      position: sleeperPlayer.position,
-      fantasy_positions: sleeperPlayer.fantasy_positions,
-      team_abbr: sleeperPlayer.team_abbr,
-      opta_id: sleeperPlayer.opta_id,
-      sleeper_id: sleeperPlayer.sleeper_id || sleeperPlayer.id
-    });
-    
-    console.log('2. FFH MATCH FOUND:', ffhMatch ? 'YES' : 'NO');
-    if (ffhMatch) {
-      console.log('  FFH Data:', {
-        web_name: ffhMatch.web_name,
-        team: ffhMatch.team?.code_name || ffhMatch.team_short_name,
-        position_id: ffhMatch.position_id,
-        opta_id: ffhMatch.opta_uuid || ffhMatch.opta_id,
-        season_prediction: ffhMatch.season_prediction,
-        predictions_count: ffhMatch.predictions?.length || 0,
-        results_count: ffhMatch.results?.length || 0
-      });
-    }
-    
-    console.log('3. ENHANCEMENT RESULT:', {
-      name: enhancedResult.name,
-      full_name: enhancedResult.full_name,
-      position: enhancedResult.position,
-      team_abbr: enhancedResult.team_abbr,
-      predicted_points: enhancedResult.predicted_points,
-      sleeper_points: enhancedResult.sleeper_points,
-      ffh_matched: enhancedResult.ffh_matched,
-      enhancement_status: enhancedResult.enhancement_status,
-      sleeper_season_avg: enhancedResult.sleeper_season_avg
-    });
-    
-    console.log('=== END EDERSON ENHANCEMENT DEBUG ===\n');
-  }
-}
-
 // Cache for API responses
 let cachedData = null;
 let cacheTimestamp = null;
@@ -282,11 +235,6 @@ async function fetchFFHData() {
 
   const ffhData = await response.json();
   
-  // DEBUG: Log the actual response structure
-  console.log('🔍 FFH Response Structure Analysis:');
-  console.log('  - Response type:', typeof ffhData);
-  console.log('  - Is array?', Array.isArray(ffhData));
-  
   if (Array.isArray(ffhData)) {
     console.log('  - Direct array length:', ffhData.length);
     if (ffhData.length > 0) {
@@ -398,13 +346,6 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
 
   console.log(`✅ Enhanced ${sleeperPlayersArray.length} players with unified position authority`);
 
-  // Debug: Show goalkeeper count (positions working correctly)
-  const goalkeepers = sleeperPlayersArray.filter(p => p.position === 'GKP');
-  console.log(`🥅 GOALKEEPERS FOUND: ${goalkeepers.length}`);
-  goalkeepers.slice(0, 20).forEach(gk => {
-    console.log(`  ${gk.full_name || gk.name} (${gk.team || 'Unknown'}) - Position: ${gk.position}, Source: ${gk.fantasy_positions?.[0]}`);
-  });
-
   // **CRITICAL**: Match players using services - MUST succeed
   console.log('🎯 Matching players with FFH data using services...');
   
@@ -424,9 +365,6 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
           ffhMatch,
           currentGameweek
         );
-
-        // DEBUG: Check enhancement for Ederson specifically
-        debugPlayerEnhancement(sleeperPlayer, ffhMatch, enhancedPlayer);
         
         matchedPlayers.push(enhancedPlayer);
         matchCount++;

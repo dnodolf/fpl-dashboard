@@ -1254,52 +1254,6 @@ export default function FPLDashboard() {
   
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
 
-  // ADD THIS TEMPORARY DEBUG:
-  console.log('Hook returned:', { 
-    playersCount: players?.length, 
-    loading, 
-    error,
-    playersType: typeof players,
-    isArray: Array.isArray(players)
-  });
-
-// ADD OWNERSHIP DEBUG:
-if (players && players.length > 0) {
-  console.log('🔍 Full player structure - first player:');
-  const firstPlayer = players[0];
-  console.log('  All keys:', Object.keys(firstPlayer));
-  console.log('  Full player object:', firstPlayer);
-  
-  console.log('🔍 Ownership debug - first 5 players:');
-  players.slice(0, 5).forEach((player, i) => {
-    console.log(`  Player ${i + 1}:`, {
-      name: player.name || player.web_name || player.first_name,
-      sleeper_id: player.sleeper_id,
-      owned_by: player.owned_by,
-      owner_name: player.owner_name,
-      ownership_keys: Object.keys(player).filter(key => key.includes('own') || key.includes('user')),
-      all_keys: Object.keys(player).slice(0, 10) // First 10 keys to see structure
-    });
-  });
-}
-
-// ADD PPG DEBUG:
-if (players && players.length > 0) {
-  console.log('🔍 PPG field analysis - first player with predictions:');
-  const playerWithPreds = players.find(p => p.predicted_points > 0);
-  if (playerWithPreds) {
-    const ppgKeys = Object.keys(playerWithPreds).filter(key => 
-      key.includes('ppg') || key.includes('avg') || key.includes('points')
-    );
-    console.log('  PPG-related keys:', ppgKeys);
-    console.log('  Sample values:', {
-      predicted_points: playerWithPreds.predicted_points,
-      total_points: playerWithPreds.total_points,
-      ppg_keys: ppgKeys.map(key => `${key}: ${playerWithPreds[key]}`)
-    });
-  }
-}
-
   // Load gameweek data
   useEffect(() => {
     const loadGameweek = async () => {
