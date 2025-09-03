@@ -6,6 +6,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#3b82f6',
 }
 
 // Metadata export (viewport removed)
@@ -13,7 +14,6 @@ export const metadata = {
   title: 'FPL Roster Explorer',
   description: 'Advanced Fantasy Premier League Analysis Tool',
   manifest: '/manifest.json',
-  themeColor: '#3b82f6',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
