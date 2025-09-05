@@ -1167,8 +1167,8 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
         {/* Top Row: Title, Gameweek, Update Button */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>⚽ FPL Dashboard</h1>
-            
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>⚽ Fantasy FC Playbook</h1>
+           
             {/* Data Freshness Indicator */}
             <div className="flex items-center gap-2 text-sm">
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${freshnessStatus.color}-100 text-${freshnessStatus.color}-800`}>

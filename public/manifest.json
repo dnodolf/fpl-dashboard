@@ -1,7 +1,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'FPL Roster Explorer',
+  title: 'Fantasy FC Playbook',
   description: 'Advanced Fantasy Premier League Analysis Tool',
   manifest: '/manifest.json',
   themeColor: '#3b82f6',
@@ -9,7 +9,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'FPL Explorer'
+    title: 'Fantasy FC Playbook'
   }
 }
 
@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
         <meta name="theme-color" content="#3b82f6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="FPL Explorer" />
+        <meta name="apple-mobile-web-app-title" content="Fantasy FC Playbook" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body className="antialiased">

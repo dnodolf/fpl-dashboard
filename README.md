@@ -1,8 +1,8 @@
-# FPL Dashboard - Comprehensive Project Documentation
+# Fantasy FC Playbook - Comprehensive Project Documentation
 
 ## Project Overview
 
-**Project Name**: FPL Dashboard  
+**Project Name**: Fantasy FC Playbook  
 **Purpose**: Advanced fantasy football analytics platform that matches Sleeper Fantasy Football players with Fantasy Football Hub (FFH) predictions using Opta IDs  
 **Status**: Production Ready with Hardcoded Gameweek System  
 **Current Version**: 2.8 - Hardcoded Gameweek Implementation  
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-The FPL Dashboard is a sophisticated Next.js application that bridges the gap between Sleeper Fantasy Football league management and Fantasy Football Hub's predictive analytics. The system achieves 98% player matching accuracy through Opta ID matching and provides real-time performance insights, lineup optimization, transfer recommendations, and reliable gameweek tracking.
+The Fantasy FC Playbook is a sophisticated Next.js application that bridges the gap between Sleeper Fantasy Football league management and Fantasy Football Hub's predictive analytics. The system achieves 98% player matching accuracy through Opta ID matching and provides real-time performance insights, lineup optimization, transfer recommendations, and reliable gameweek tracking.
 
 **Latest Achievement**: Implemented bulletproof hardcoded gameweek system eliminating API dependencies and reliability issues.
 
@@ -476,7 +476,7 @@ GET /api/fpl-gameweek
 **User Experience**: Enhanced - clean gameweek display, actionable recommendations ✅  
 **Maintainability**: Self-maintaining with annual gameweek schedule updates ✅  
 
-The FPL Dashboard v2.8 represents a significant maturity milestone, eliminating the last major reliability concern (gameweek detection) while maintaining all advanced features. The system is now production-ready for the entire 2025-26 season with minimal maintenance requirements.
+The Fantasy FC Playbook v2.8 represents a significant maturity milestone, eliminating the last major reliability concern (gameweek detection) while maintaining all advanced features. The system is now production-ready for the entire 2025-26 season with minimal maintenance requirements.
 
 ---
 
