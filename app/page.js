@@ -1235,8 +1235,8 @@ export default function FPLDashboard() {
   const [filters, setFilters] = useState({
     position: 'all',
     team: 'all',
-    owner: 'all',
-    minPoints: 0,
+    owner: 'my_players_and_free_agents',
+    minPoints: 0.1,
     search: ''
   });
   const [isDarkMode, setIsDarkMode] = useState(true);
