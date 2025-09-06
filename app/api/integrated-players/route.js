@@ -331,7 +331,12 @@ async function integratePlayersWithOptaMatching() {
 const sleeperPlayersArray = Object.entries(sleeperData.players)
   .filter(([id, player]) => player && typeof player === 'object')
   .map(([id, player]) => {
-    const playerName = player.full_name || player.name || 'Unknown Player';
+    const playerName = player.full_name || 
+                   player.name || 
+                   player.web_name ||
+                   (player.first_name && player.last_name ? 
+                     `${player.first_name} ${player.last_name}` : '') ||
+                   'Unknown Player';
     const position = normalizePosition(player); // ✅ FIXED - pass whole player object
     
     return {

@@ -361,18 +361,22 @@ const getSleeperPositionStyle = (position) => {
     case 'GKP':
     case 'GK':
     case 'G':
-      return 'bg-yellow-100 text-yellow-800 border border-yellow-300'; // Goalkeeper - Yellow
+      // Sleeper GKP: Better contrast yellow
+      return 'bg-yellow-600 text-white border border-yellow-500'; 
     case 'DEF':
     case 'D':
-      return 'bg-cyan-100 text-cyan-800 border border-cyan-300'; // Defender - Cyan/Light Blue
+      // Sleeper DEF: Better contrast cyan
+      return 'bg-cyan-600 text-white border border-cyan-500'; 
     case 'MID':
     case 'M':
-      return 'bg-green-100 text-green-800 border border-green-300'; // Midfielder - Green
+      // Sleeper MID: Better contrast pink
+      return 'bg-pink-600 text-white border border-pink-500'; 
     case 'FWD':
     case 'F':
-      return 'bg-red-100 text-red-800 border border-red-300'; // Forward - Red
+      // Sleeper FWD: Better contrast purple
+      return 'bg-purple-600 text-white border border-purple-500'; 
     default:
-      return 'bg-gray-100 text-gray-800 border border-gray-300';
+      return 'bg-gray-600 text-white border border-gray-500';
   }
 };
 
@@ -672,7 +676,9 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
 
   const unmatchedPlayers = optaAnalysis?.unmatchedSleeperWithOpta || [];
-  
+
+  console.log('UNMATCHED PLAYERS RAW DATA:', unmatchedPlayers.slice(0, 3));
+
   if (unmatchedPlayers.length === 0) {
     return (
       <div className={`rounded-lg shadow-sm border p-6 text-center ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
@@ -900,29 +906,29 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
             </tr>
           </thead>
           <tbody className={`divide-y ${isDarkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-            {currentPlayers.length > 0 ? (
-              currentPlayers.map((player, index) => (
-                <tr key={`unmatched-${startIndex + index}`} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {player.name || 'Unknown'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      getSleeperPositionStyle(player.position)
-                    }`}>
-                      {player.position || 'N/A'}
-                    </span>
-                  </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                    {player.team || 'N/A'}
-                  </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {player.opta_id || 'N/A'}
-                  </td>
-                </tr>
-              ))
+{currentPlayers.length > 0 ? (
+  currentPlayers.map((player, index) => (
+    <tr key={`unmatched-${startIndex + index}`} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          {player.full_name || player.name || 'Unknown'}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          getSleeperPositionStyle(player.position)
+        }`}>
+          {player.position || 'N/A'}
+        </span>
+      </td>
+      <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+        {player.team_abbr || player.team || 'Free Agent'}
+      </td>
+      <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        {player.opta_id || 'N/A'}
+      </td>
+    </tr>
+  ))
             ) : (
               <tr>
                 <td colSpan={4} className={`px-6 py-4 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>

@@ -200,17 +200,38 @@ export class PlayerMatchingService {
           usedFFHIds.add(ffhId);
           stats.optaMatches++;
         }
-      } else {
-        // Track unmatched Sleeper players with Opta IDs
-        stats.unmatchedSleeperWithOpta.push({
-          opta_id: optaId,
-          name: sleeperInfo.name,
-          team: sleeperInfo.team,
-          position: sleeperInfo.position,
-          player: sleeperInfo.player
-        });
-      }
+} else {
+  // Track unmatched Sleeper players with Opta IDs - FIXED DATA EXTRACTION
+  const player = sleeperInfo.player;
+  
+  // Comprehensive data extraction from original Sleeper player
+  const extractedData = {
+    opta_id: optaId,
+    name: player.full_name || 
+          player.name || 
+          player.web_name ||
+          (player.first_name && player.last_name ? 
+            `${player.first_name} ${player.last_name}` : '') ||
+          'Unknown',
+    team: player.team_abbr || 
+          player.team || 
+          player.team_name ||
+          'N/A',
+    position: normalizePosition(player),
+    // Preserve original player object for any additional data needs
+    player: player
+  };
+  
+  stats.unmatchedSleeperWithOpta.push(extractedData);
+}
     }
+
+    console.log('🔍 SLEEPER OPTA MAP DEBUG:', {
+      totalSleeperPlayers: sleeperPlayers.length,
+      sleeperWithOpta: stats.sleeperWithOpta,
+      sleeperOptaMapSize: sleeperOptaMap.size,
+      sampleSleeperOptaEntries: Array.from(sleeperOptaMap.entries()).slice(0, 3)
+    });
 
     // Calculate rates
     const sleeperOptaRate = Math.round((stats.sleeperWithOpta / sleeperPlayers.length) * 100);

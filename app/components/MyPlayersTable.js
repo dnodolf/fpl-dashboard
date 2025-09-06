@@ -1,4 +1,4 @@
-// app/components/MyPlayersTable.js - COMPLETE CORRECTED FILE
+// app/components/MyPlayersTable.js - COMPLETE CORRECTED FILE WITH SLEEPER COLORS
 import { useState, useEffect } from 'react';
 
 const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds = [] }) => {
@@ -184,16 +184,47 @@ const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds
       <span className="text-blue-500 ml-1">↓</span>;
   };
 
-  // Get position badge color
-  const getPositionBadgeColor = (position) => {
-    switch(position) {
-      case 'GKP': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'DEF': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'MID': return 'bg-green-100 text-green-800 border-green-200';
-      case 'FWD': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  // Get SLEEPER position badge color - LIGHT MODE
+// Light mode - better contrast
+const getSleeperPositionBadgeColor = (position) => {
+  switch(position) {
+    case 'GKP':
+    case 'GK': 
+    case 'G':
+      return 'bg-yellow-600 text-white border-yellow-500';
+    case 'DEF':
+    case 'D':
+      return 'bg-cyan-600 text-white border-cyan-500';
+    case 'MID':
+    case 'M':
+      return 'bg-pink-600 text-white border-pink-500';
+    case 'FWD':
+    case 'F':
+      return 'bg-purple-600 text-white border-purple-500';
+    default: 
+      return 'bg-gray-600 text-white border-gray-500';
+  }
+};
+// Dark mode - even better contrast
+const getSleeperPositionBadgeDarkMode = (position) => {
+  switch(position) {
+    case 'GKP':
+    case 'GK': 
+    case 'G':
+      return 'bg-yellow-500 text-black border-yellow-400';
+    case 'DEF':
+    case 'D':
+      return 'bg-cyan-500 text-black border-cyan-400';
+    case 'MID':
+    case 'M':
+      return 'bg-pink-500 text-white border-pink-400';
+    case 'FWD':
+    case 'F':
+      return 'bg-purple-500 text-white border-purple-400';
+    default: 
+      return 'bg-gray-500 text-white border-gray-400';
+  }
+};
 
   // Get fixture difficulty color
   const getFixtureDifficultyColor = (difficulty) => {
@@ -373,12 +404,12 @@ const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds
                       </div>
                     </td>
 
-                    {/* Position */}
+                    {/* Position - UPDATED WITH SLEEPER COLORS */}
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                         isDarkMode ? 
-                          'bg-gray-700 text-gray-300 border-gray-600' :
-                          getPositionBadgeColor(player.position)
+                          getSleeperPositionBadgeDarkMode(player.position) :
+                          getSleeperPositionBadgeColor(player.position)
                       }`}>
                         {player.position || 'N/A'}
                       </span>

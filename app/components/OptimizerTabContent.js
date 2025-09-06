@@ -1,8 +1,42 @@
 // app/components/OptimizerTabContent.js - COMPLETE UPDATED FILE
-// Enhanced Optimizer Tab Component with all fixes
+// Enhanced Optimizer Tab Component with Sleeper position colors
 
 import { useState, useEffect } from 'react';
 import MyPlayersTable from './MyPlayersTable.js';
+
+// ----------------- SLEEPER POSITION COLORS FUNCTIONS -----------------
+// Get Sleeper position badge classes for player cards
+const getSleeperPositionCardStyle = (position, isDarkMode = false) => {
+  const baseClasses = 'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border';
+  
+  switch (position) {
+    case 'GKP':
+    case 'GK':
+    case 'G':
+      return `${baseClasses} ${isDarkMode 
+        ? 'bg-yellow-500 text-black border-yellow-400' 
+        : 'bg-yellow-600 text-white border-yellow-500'}`;
+    case 'DEF':
+    case 'D':
+      return `${baseClasses} ${isDarkMode 
+        ? 'bg-cyan-500 text-black border-cyan-400' 
+        : 'bg-cyan-600 text-white border-cyan-500'}`;
+    case 'MID':
+    case 'M':
+      return `${baseClasses} ${isDarkMode 
+        ? 'bg-pink-500 text-white border-pink-400' 
+        : 'bg-pink-600 text-white border-pink-500'}`;
+    case 'FWD':
+    case 'F':
+      return `${baseClasses} ${isDarkMode 
+        ? 'bg-purple-500 text-white border-purple-400' 
+        : 'bg-purple-600 text-white border-purple-500'}`;
+    default:
+      return `${baseClasses} ${isDarkMode 
+        ? 'bg-gray-500 text-white border-gray-400' 
+        : 'bg-gray-600 text-white border-gray-500'}`;
+  }
+};
 
 // ----------------- OPTIMIZER HOOK -----------------
 function useOptimizerData(userId = 'ThatDerekGuy') {
@@ -121,7 +155,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
     }
   };
 
-  // Player Card Component - OPTIMIZED FOR READABILITY
+  // Player Card Component - UPDATED WITH SLEEPER COLORS AND PREDICTED MINUTES
   const PlayerCard = ({ player, isInOptimal = false }) => {
     // Extract last name only for better readability
     const getLastName = (player) => {
@@ -133,8 +167,34 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
       return 'Unknown';
     };
 
-    // Check if player is optimal (only for current lineup)
-    const playerIsOptimal = !isOptimal && optimalPlayerIds.includes(player.id || player.player_id || player.sleeper_id);
+    // FIXED: Check if this player is in the optimal lineup
+    // We need to check if this specific player ID is in the optimalPlayerIds array
+    const playerId = player.id || player.player_id || player.sleeper_id;
+    const isPlayerOptimal = optimalPlayerIds.includes(playerId);
+
+    // Extract predicted minutes
+    const getPredictedMinutes = (player) => {
+      // Try current gameweek prediction first
+      if (player.current_gameweek_prediction?.predicted_mins) {
+        return Math.round(player.current_gameweek_prediction.predicted_mins);
+      }
+      
+      // Try predictions array for current GW
+      if (player.predictions && Array.isArray(player.predictions)) {
+        const firstPred = player.predictions[0];
+        if (firstPred?.xmins) {
+          return Math.round(firstPred.xmins);
+        }
+      }
+      
+      // Try other fields
+      if (player.predicted_mins) return Math.round(player.predicted_mins);
+      if (player.xmins) return Math.round(player.xmins);
+      
+      return null;
+    };
+
+    const predictedMinutes = getPredictedMinutes(player);
 
     return (
       <div className={`relative flex flex-col items-center p-2 m-1 rounded-lg border text-xs ${
@@ -143,30 +203,46 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
           : 'bg-white border-gray-300 text-gray-900'
       }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
         
-        {/* Optimization Indicator - Only show on current lineup */}
-        {!isOptimal && (
+        {/* FIXED: Checkmark logic - Only show on optimal lineup side */}
+        {isOptimal && (
           <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-            playerIsOptimal 
+            isPlayerOptimal 
               ? 'bg-green-500 text-white' 
               : 'bg-red-500 text-white'
           }`}>
-            {playerIsOptimal ? '✓' : '✗'}
+            {isPlayerOptimal ? '✓' : '✗'}
           </div>
         )}
         
         <div className="font-medium text-center leading-tight truncate w-full" title={player.full_name || player.name}>
           {getLastName(player)}
         </div>
-        <div className="opacity-75 text-xs">{player.team_abbr || player.team}</div>
+        
+        {/* Position badge with Sleeper colors */}
+        <div className="mt-1">
+          <span className={getSleeperPositionCardStyle(player.position, isDarkMode)}>
+            {player.position || 'N/A'}
+          </span>
+        </div>
+        
+        <div className="opacity-75 text-xs mt-1">{player.team_abbr || player.team}</div>
+        
+        {/* Predicted Points */}
         <div className="font-semibold mt-1">
           {(() => {
-            // Extract predicted points
             const points = player.current_gw_prediction || 
                           player.predicted_pts || 
                           player.points || 0;
             return typeof points === 'number' ? points.toFixed(1) : '0.0';
           })()}
         </div>
+        
+        {/* Predicted Minutes */}
+        {predictedMinutes && (
+          <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            {predictedMinutes}min
+          </div>
+        )}
       </div>
     );
   };
@@ -178,7 +254,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
   return (
     <div className={`relative border-2 rounded-lg overflow-hidden ${
       isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'
-    } ${isOptimal ? 'ring-2 ring-green-500' : ''}`} style={{ height: '420px' }}>
+      } ${isOptimal ? 'ring-2 ring-green-500' : ''}`} style={{ height: '480px' }}>
       
       {/* Field Background */}
       <div className="absolute inset-2 bg-gradient-to-b from-green-600 to-green-700 rounded-lg opacity-20"></div>
@@ -198,13 +274,13 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
       </div>
       
       {/* Formation Layout - PROPER FORMATION STRUCTURE */}
-      <div className="relative z-10 h-full flex flex-col justify-between py-12 px-4">
+      <div className="relative z-10 h-full flex flex-col justify-between py-8 px-4">
         
         {/* Forwards - Show exactly layout.fwd players */}
         {layout.fwd > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.FWD.slice(0, layout.fwd).map((player, idx) => (
-              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={optimalPlayerIds.includes(player.id || player.player_id || player.sleeper_id)} />
+              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
             ))}
             {/* Fill missing FWD slots if needed */}
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
@@ -222,7 +298,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.mid > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.MID.slice(0, layout.mid).map((player, idx) => (
-              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={optimalPlayerIds.includes(player.id || player.player_id || player.sleeper_id)} />
+              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
             ))}
             {/* Fill missing MID slots if needed */}
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
@@ -240,7 +316,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.def > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.DEF.slice(0, layout.def).map((player, idx) => (
-              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={optimalPlayerIds.includes(player.id || player.player_id || player.sleeper_id)} />
+              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
             ))}
             {/* Fill missing DEF slots if needed */}
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
@@ -257,7 +333,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {/* Goalkeeper - Always show 1 */}
         <div className="flex justify-center">
           {playersByPosition.GKP.slice(0, 1).map((player, idx) => (
-            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={optimalPlayerIds.includes(player.id || player.player_id || player.sleeper_id)} />
+            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
           ))}
           {/* Show empty GKP slot if needed */}
           {playersByPosition.GKP.length === 0 && (
