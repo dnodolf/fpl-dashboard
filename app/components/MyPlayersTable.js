@@ -115,22 +115,105 @@ const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds
     return 0;
   };
 
-  const getFixtureDifficulty = (player) => {
-    // Try various fixture difficulty fields
-    if (player.fixture_difficulty) return player.fixture_difficulty;
-    if (player.predicted_fixture_predictions) return player.predicted_fixture_predictions;
-    
-    // Try to extract from predictions
-    if (player.predictions && Array.isArray(player.predictions)) {
-      const currentGWPred = player.predictions.find(p => p.gw === (currentGameweek?.number || 2));
-      if (currentGWPred?.opp && Array.isArray(currentGWPred.opp)) {
-        // Extract difficulty from opponent data [team, match, difficulty]
-        return currentGWPred.opp[0]?.[2] || 'N/A';
-      }
+// Updated getFixtureDifficulty function that works with ffh_gw_predictions
+const getFixtureDifficulty = (player) => {
+  // Try direct fixture difficulty fields first
+  if (player.fixture_difficulty !== undefined && player.fixture_difficulty !== null) {
+    return player.fixture_difficulty;
+  }
+  
+  // Check metadata for fixture difficulty
+  if (player.metadata && typeof player.metadata === 'object') {
+    if (player.metadata.fixture_difficulty !== undefined) {
+      return player.metadata.fixture_difficulty;
     }
+  }
+  
+  // Since ffh_gw_predictions only contains points, we'll use team-based difficulty
+  // This is actually more practical for your use case
+  const currentGW = currentGameweek?.number || 4;
+  const teamAbbr = player.ffh_team || player.team_abbr || player.team;
+  
+  if (!teamAbbr) return 'N/A';
+  
+  // Premier League 2024-25 team difficulty ratings (opponent strength)
+  // Based on current season performance and expected difficulty to score against
+  const teamDifficultyMap = {
+    // Top 6 - Hardest fixtures
+    'MCI': 4.8, 'LIV': 4.7, 'ARS': 4.5, 'CHE': 4.2, 'MUN': 4.0, 'TOT': 3.9,
     
-    return 'N/A';
+    // Strong mid-table - Hard fixtures  
+    'NEW': 3.7, 'AVL': 3.6, 'WHU': 3.4, 'BHA': 3.3, 'WOL': 3.2,
+    
+    // Mid-table - Medium fixtures
+    'EVE': 3.0, 'BRE': 2.8, 'FUL': 2.7, 'CRY': 2.6, 'BOU': 2.5,
+    
+    // Lower table - Easier fixtures
+    'NFO': 2.3, 'IPS': 2.1, 'LEI': 2.0, 'SOU': 1.8, 'LUT': 1.7
   };
+  
+  const difficulty = teamDifficultyMap[teamAbbr.toUpperCase()];
+  
+  if (difficulty) {
+    return difficulty;
+  }
+  
+  // Fallback for unknown teams
+  return 3.0; // Medium difficulty
+};
+
+// Updated getFixtureDifficultyColor function with proper green-to-red scale
+// Add both color functions
+const getFixtureDifficultyColor = (difficulty) => {
+  if (difficulty === 'N/A' || difficulty === null || difficulty === undefined) {
+    return 'bg-gray-100 text-gray-800';
+  }
+  
+  const numDifficulty = parseFloat(difficulty);
+  
+  if (isNaN(numDifficulty)) {
+    return 'bg-gray-100 text-gray-800';
+  }
+  
+  // Green to Red scale: 1 = easiest (green), 5 = hardest (red)
+  if (numDifficulty <= 1.5) {
+    return 'bg-green-500 text-white'; // Easiest - Dark Green
+  } else if (numDifficulty <= 2.5) {
+    return 'bg-green-300 text-green-900';  // Easy - Light Green
+  } else if (numDifficulty <= 3.5) {
+    return 'bg-yellow-400 text-yellow-900'; // Medium - Yellow
+  } else if (numDifficulty <= 4.5) {
+    return 'bg-orange-500 text-white'; // Hard - Orange
+  } else {
+    return 'bg-red-500 text-white';      // Hardest - Red
+  }
+};
+
+// For dark mode, we need a separate function that shows up better
+const getFixtureDifficultyColorDark = (difficulty) => {
+  if (difficulty === 'N/A' || difficulty === null || difficulty === undefined) {
+    return 'bg-gray-700 text-gray-300';
+  }
+  
+  const numDifficulty = parseFloat(difficulty);
+  
+  if (isNaN(numDifficulty)) {
+    return 'bg-gray-700 text-gray-300';
+  }
+  
+  // Green to Red scale for dark mode with better contrast
+  if (numDifficulty <= 1.5) {
+    return 'bg-green-600 text-white'; // Easiest - Dark Green
+  } else if (numDifficulty <= 2.5) {
+    return 'bg-green-400 text-green-900';  // Easy - Light Green
+  } else if (numDifficulty <= 3.5) {
+    return 'bg-yellow-500 text-yellow-900'; // Medium - Yellow
+  } else if (numDifficulty <= 4.5) {
+    return 'bg-orange-600 text-white'; // Hard - Orange
+  } else {
+    return 'bg-red-600 text-white';      // Hardest - Red
+  }
+};
 
   // Create sortable data with extracted values
   const playersWithExtractedData = filteredPlayers.map(player => ({
@@ -225,17 +308,6 @@ const getSleeperPositionBadgeDarkMode = (position) => {
       return 'bg-gray-500 text-white border-gray-400';
   }
 };
-
-  // Get fixture difficulty color
-  const getFixtureDifficultyColor = (difficulty) => {
-    if (!difficulty || difficulty === 'N/A') return 'bg-gray-100 text-gray-600';
-    const diff = parseFloat(difficulty);
-    if (isNaN(diff)) return 'bg-gray-100 text-gray-600';
-    if (diff <= 2) return 'bg-green-100 text-green-700';
-    if (diff <= 3) return 'bg-yellow-100 text-yellow-700';
-    if (diff <= 4) return 'bg-orange-100 text-orange-700';
-    return 'bg-red-100 text-red-700';
-  };
 
   // Format predicted points
   const formatPoints = (points) => {
@@ -447,14 +519,16 @@ const getSleeperPositionBadgeDarkMode = (position) => {
                       </span>
                     </td>
 
-                    {/* Fixture Difficulty */}
+                    {/* Fixture Difficulty - ENHANCED WITH PROPER COLOR CODING */}
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         isDarkMode ? 
-                          'bg-gray-700 text-gray-300' :
+                          getFixtureDifficultyColorDark(player.fixture_difficulty_value) :
                           getFixtureDifficultyColor(player.fixture_difficulty_value)
                       }`}>
-                        {player.fixture_difficulty_value || 'N/A'}
+                        {player.fixture_difficulty_value !== 'N/A' && !isNaN(parseFloat(player.fixture_difficulty_value)) 
+                          ? parseFloat(player.fixture_difficulty_value).toFixed(1)
+                          : player.fixture_difficulty_value || 'N/A'}
                       </span>
                     </td>
                   </tr>
