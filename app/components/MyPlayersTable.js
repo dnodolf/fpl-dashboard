@@ -453,15 +453,8 @@ const getSleeperPositionBadgeDarkMode = (position) => {
 
                     {/* Player Name */}
                     <td className="px-4 py-3">
-                      <div>
-                        <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {player.web_name || player.name || 'Unknown Player'}
-                        </div>
-                        {player.full_name && player.full_name !== (player.web_name || player.name) && (
-                          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {player.full_name}
-                          </div>
-                        )}
+                      <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {player.full_name || player.web_name || player.name || 'Unknown Player'}
                       </div>
                     </td>
 
