@@ -57,58 +57,47 @@ const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds
   };
 
   const getPlayerPredictedMinutes = (player) => {
-    // Try current gameweek prediction first
-    if (player.current_gameweek_prediction?.predicted_mins) {
-      return player.current_gameweek_prediction.predicted_mins;
-    }
-    
-    // Try predictions array for current GW
-    if (player.predictions && Array.isArray(player.predictions)) {
-      const currentGWPred = player.predictions.find(p => p.gw === (currentGameweek?.number || 2));
-      if (currentGWPred?.xmins) {
-        return currentGWPred.xmins;
+  if (player.ffh_gw_minutes) {
+    try {
+      const gwMinutes = JSON.parse(player.ffh_gw_minutes);
+      const currentGW = currentGameweek?.number;
+      
+      if (currentGW && gwMinutes[currentGW]) {
+        return Math.round(gwMinutes[currentGW]);
       }
-      // Fall back to first available prediction
-      const firstPred = player.predictions[0];
-      if (firstPred?.xmins) {
-        return firstPred.xmins;
-      }
+    } catch (e) {
+      console.warn('Error parsing ffh_gw_minutes:', e);
     }
-    
-    // Try current predictions array
-    if (player.current_predictions && Array.isArray(player.current_predictions)) {
-      const latest = player.current_predictions[0];
-      if (latest?.predicted_mins || latest?.xmins) {
-        return latest.predicted_mins || latest.xmins;
-      }
-    }
-    
-    // Try upcoming predictions array
-    if (player.upcoming_predictions && Array.isArray(player.upcoming_predictions)) {
-      const next = player.upcoming_predictions[0];
-      if (next?.predicted_mins || next?.xmins) {
-        return next.predicted_mins || next.xmins;
-      }
-    }
-    
-    return player.predicted_mins || player.xmins || 0;
-  };
+  }
+  
+  return 0;
+};
 
   const getPlayerPPG = (player) => {
-    // FFH form data PPG
+    // PRIORITY 1: Use Sleeper season average (predicted PPG after conversion) 
+    if (player.sleeper_season_avg && player.sleeper_season_avg > 0) {
+      return player.sleeper_season_avg;
+    }
+    
+    // PRIORITY 2: FFH form data PPG
     if (player.form_data?.ppg) return player.form_data.ppg;
     
-    // Current PPG
+    // PRIORITY 3: Current PPG
     if (player.current_ppg) return player.current_ppg;
     
-    // Calculated PPG
+    // PRIORITY 4: Calculated PPG
     if (player.ppg) return player.ppg;
     
-    // Season average
+    // PRIORITY 5: Season average fallback
     if (player.season_prediction_avg) return player.season_prediction_avg;
     
-    // Fallback calculation
-    if (player.total_points && player.games_played) {
+    // PRIORITY 6: FFH season average
+    if (player.ffh_season_avg && player.ffh_season_avg > 0) {
+      return player.ffh_season_avg;
+    }
+    
+    // PRIORITY 7: Fallback calculation
+    if (player.total_points && player.games_played && player.games_played > 0) {
       return player.total_points / player.games_played;
     }
     

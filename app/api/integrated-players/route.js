@@ -116,6 +116,44 @@ function extractAllGameweekPredictions(ffhPlayer) {
 }
 
 /**
+ * Extract gameweek minutes predictions from FFH player data
+ * Extracts xmins from predictions array and mins from results array
+ */
+function extractAllGameweekMinutes(ffhPlayer) {
+  const allMinutes = new Map(); // Use Map to avoid duplicates and maintain order
+  
+  // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
+  if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
+    ffhPlayer.predictions.forEach(pred => {
+      if (pred.gw && pred.xmins) {
+        allMinutes.set(pred.gw, pred.xmins);
+      }
+    });
+  }
+  
+  // Step 2: Process the 'results' array (past gameweeks)
+  // Results take PRIORITY over predictions for the same gameweek
+  if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
+    ffhPlayer.results
+      .filter(result => result.season === 2025) // Only current season
+      .forEach(result => {
+        if (result.gw && result.mins !== undefined) {
+          // Override prediction with actual result for same gameweek
+          allMinutes.set(result.gw, result.mins);
+        }
+      });
+  }
+  
+  // Convert Map to object with string keys (for JSON compatibility)
+  const minutesObject = {};
+  for (const [gw, mins] of allMinutes) {
+    minutesObject[gw.toString()] = mins;
+  }
+  
+  return minutesObject;
+}
+
+/**
  * Extract team code for display
  */
 function extractTeamCode(ffhPlayer) {
@@ -370,6 +408,14 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
           ffhMatch,
           currentGameweek
         );
+        
+        // Extract and add FFH minutes data
+        const ffhMinutes = extractAllGameweekMinutes(ffhMatch);
+        if (Object.keys(ffhMinutes).length > 0) {
+          enhancedPlayer.ffh_gw_minutes = JSON.stringify(ffhMinutes);
+        } else {
+          enhancedPlayer.ffh_gw_minutes = null;
+        }
         
         matchedPlayers.push(enhancedPlayer);
         matchCount++;
