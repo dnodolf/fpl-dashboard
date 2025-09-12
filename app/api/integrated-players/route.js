@@ -3,11 +3,140 @@
 import { NextResponse } from 'next/server';
 import GameweekService from '../../services/gameweekService.js';
 import { normalizePosition } from '../../../utils/positionUtils.js';
+import sleeperPredictionServiceV3 from '../../services/sleeperPredictionServiceV3';
+import ffhStatsService from '../../services/ffhStatsService';
 
 // Cache for API responses
 let cachedData = null;
 let cacheTimestamp = null;
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) {
+  try {
+    console.log('DEBUG: V3 enhancement starting with', matchedPlayers.length, 'players');
+    
+    // Step 1: Get current season stats
+    console.log('DEBUG: Fetching FFH stats...');
+    const ffhStatsData = await Promise.race([
+      ffhStatsService.fetchCurrentSeasonStats(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('FFH stats timeout')), 10000))
+    ]);
+    console.log('DEBUG: FFH stats loaded:', ffhStatsData.totalPlayers, 'players');
+    
+    // Step 2: Get Sleeper scoring
+    console.log('DEBUG: Fetching Sleeper scoring...');
+    const sleeperScoring = await Promise.race([
+      fetchSleeperScoringSettings(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Sleeper scoring timeout')), 5000))
+    ]);
+    console.log('DEBUG: Sleeper scoring loaded, keys:', Object.keys(sleeperScoring).length);
+    
+    // Step 3: Initialize V3 engine
+    console.log('DEBUG: Initializing V3 engine...');
+    await sleeperPredictionServiceV3.initialize(sleeperScoring, ffhStatsService);
+    console.log('DEBUG: V3 engine initialized');
+    
+    // Step 4: Process players with detailed logging
+    console.log('DEBUG: Starting player processing...');
+    const enhancedPlayers = [];
+    let processedCount = 0;
+    
+    for (const player of matchedPlayers) {
+      processedCount++;
+      
+      if (processedCount % 50 === 0) {
+        console.log(`DEBUG: Processed ${processedCount}/${matchedPlayers.length} players`);
+      }
+      
+      try {
+        // Find matching FFH stats player
+        const ffhStatsPlayer = findFFHStatsMatch(player, ffhStatsData.players);
+        
+        if (ffhStatsPlayer) {
+          // Calculate V3 bonus points
+          const v3BonusResult = sleeperPredictionServiceV3.calculateSleeperBonusPoints(ffhStatsPlayer);
+          
+          // Simple enhancement for now
+          enhancedPlayers.push({
+            ...player,
+            v3_predicted_points: (player.predicted_points || 0) + v3BonusResult.totalBonusPoints * 35,
+            v3_current_gw_prediction: (player.predicted_points || 0) / 35 + v3BonusResult.totalBonusPoints,
+            v3_bonus_points_per_game: v3BonusResult.totalBonusPoints,
+            prediction_model: 'v3_enhanced'
+          });
+        } else {
+          enhancedPlayers.push({
+            ...player,
+            v3_predicted_points: player.predicted_points || 0,
+            v3_current_gw_prediction: (player.predicted_points || 0) / 35,
+            v3_bonus_points_per_game: 0,
+            prediction_model: 'v3_fallback'
+          });
+        }
+      } catch (playerError) {
+        console.error(`DEBUG: Error processing player ${player.name}:`, playerError.message);
+        enhancedPlayers.push({
+          ...player,
+          prediction_model: 'v3_player_error'
+        });
+      }
+    }
+    
+    console.log('DEBUG: Player processing complete');
+    
+    // Simple stats calculation
+    const successfulV3 = enhancedPlayers.filter(p => p.prediction_model === 'v3_enhanced');
+    const v3Stats = {
+      totalPlayers: enhancedPlayers.length,
+      v3Enhanced: successfulV3.length,
+      v3Coverage: Math.round((successfulV3.length / enhancedPlayers.length) * 100),
+      averageImprovement: 0 // Simplified for debugging
+    };
+    
+    console.log('DEBUG: V3 enhancement complete:', v3Stats);
+    
+    return {
+      players: enhancedPlayers,
+      v3Stats: v3Stats
+    };
+    
+  } catch (error) {
+    console.error('DEBUG: V3 enhancement failed at top level:', error);
+    throw error; // Re-throw to see where it fails
+  }
+}
+
+// Helper function for matching
+function findFFHStatsMatch(sleeperPlayer, ffhStatsPlayers) {
+  return ffhStatsPlayers.find(ffh => {
+    const sleeperName = (sleeperPlayer.full_name || sleeperPlayer.name || '').toLowerCase();
+    const ffhName = (ffh.web_name || '').toLowerCase();
+    const sleeperTeam = (sleeperPlayer.team_abbr || sleeperPlayer.team || '').toUpperCase();
+    const ffhTeam = (ffh.teamContext?.code_name || '').toUpperCase();
+    
+    const namesSimilar = sleeperName.includes(ffhName) || ffhName.includes(sleeperName);
+    const teamsMatch = sleeperTeam === ffhTeam;
+    
+    return namesSimilar && teamsMatch;
+  });
+}
+
+// Helper function for Sleeper scoring (if you don't already have this)
+async function fetchSleeperScoringSettings() {
+  try {
+    const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
+    const response = await fetch(`https://api.sleeper.app/v1/league/${leagueId}`);
+    const leagueData = await response.json();
+    return leagueData.scoring_settings || {};
+  } catch (error) {
+    console.error('Error fetching Sleeper scoring:', error);
+    return {
+      'pos_gk_sv': 1, 'pos_d_tkw': 1, 'pos_d_int': 0.5, 
+      'pos_m_kp': 1, 'pos_m_tkw': 0.5, 'pos_m_int': 1, 
+      'pos_f_sot': 1, 'pos_f_kp': 0.5
+    };
+  }
+}
 
 /**
  * Fail-fast import wrapper - no fallbacks, system errors if services unavailable
@@ -113,6 +242,44 @@ function extractAllGameweekPredictions(ffhPlayer) {
     upcoming: upcomingPredictions,
     current: currentPredictions
   };
+}
+
+/**
+ * Extract gameweek minutes predictions from FFH player data
+ * Extracts xmins from predictions array and mins from results array
+ */
+function extractAllGameweekMinutes(ffhPlayer) {
+  const allMinutes = new Map(); // Use Map to avoid duplicates and maintain order
+  
+  // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
+  if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
+    ffhPlayer.predictions.forEach(pred => {
+      if (pred.gw && pred.xmins) {
+        allMinutes.set(pred.gw, pred.xmins);
+      }
+    });
+  }
+  
+  // Step 2: Process the 'results' array (past gameweeks)
+  // Results take PRIORITY over predictions for the same gameweek
+  if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
+    ffhPlayer.results
+      .filter(result => result.season === 2025) // Only current season
+      .forEach(result => {
+        if (result.gw && result.mins !== undefined) {
+          // Override prediction with actual result for same gameweek
+          allMinutes.set(result.gw, result.mins);
+        }
+      });
+  }
+  
+  // Convert Map to object with string keys (for JSON compatibility)
+  const minutesObject = {};
+  for (const [gw, mins] of allMinutes) {
+    minutesObject[gw.toString()] = mins;
+  }
+  
+  return minutesObject;
 }
 
 /**
@@ -284,39 +451,12 @@ async function fetchFFHData() {
 /**
  * FAIL-FAST INTEGRATION - No fallbacks, system errors if any component fails
  */
-async function integratePlayersWithOptaMatching() {
+async function integratePlayersWithOptaMatching(currentGameweek) {
   console.log('🚀 Starting FAIL-FAST integration - all services required...');
   
   // Import services - MUST succeed
   console.log('🔧 Importing required services...');
   const services = await importServices(); // Will throw if any service fails
-  
-  // Get current gameweek - simplified direct approach
-  let currentGameweek = 3; // Default fallback
-  try {
-    console.log('📅 Getting current gameweek directly from FPL API...');
-    const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/', {
-      headers: {
-        'User-Agent': 'FPL-Dashboard/1.0',
-        'Accept': 'application/json',
-      },
-      signal: AbortSignal.timeout(10000)
-    });
-    
-    if (response.ok) {
-      const fplData = await response.json();
-      const currentEvent = fplData.events?.find(event => event.is_current) || 
-                          fplData.events?.find(event => event.is_next);
-      if (currentEvent) {
-        currentGameweek = currentEvent.id;
-      }
-    }
-    
-    console.log(`📅 Current gameweek: ${currentGameweek}`);
-  } catch (error) {
-    console.warn('Using fallback gameweek:', error.message);
-    console.log(`📅 Fallback gameweek: ${currentGameweek}`);
-  }
   
   // Fetch data from both sources - BOTH must succeed
   console.log('📡 Fetching data from all required APIs...');
@@ -370,6 +510,14 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
           ffhMatch,
           currentGameweek
         );
+        
+        // Extract and add FFH minutes data
+        const ffhMinutes = extractAllGameweekMinutes(ffhMatch);
+        if (Object.keys(ffhMinutes).length > 0) {
+          enhancedPlayer.ffh_gw_minutes = JSON.stringify(ffhMinutes);
+        } else {
+          enhancedPlayer.ffh_gw_minutes = null;
+        }
         
         matchedPlayers.push(enhancedPlayer);
         matchCount++;
@@ -434,33 +582,80 @@ export async function POST(request) {
       }
     }
 
-// Fresh data integration
-const players = await integratePlayersWithOptaMatching();
+    // Get current gameweek here
+    let currentGameweek = 3; // Default fallback
+    try {
+      console.log('📅 Getting current gameweek directly from FPL API...');
+      const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/', {
+        headers: {
+          'User-Agent': 'FPL-Dashboard/1.0',
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (response.ok) {
+        const fplData = await response.json();
+        const currentEvent = fplData.events?.find(event => event.is_current) || 
+                            fplData.events?.find(event => event.is_next);
+        if (currentEvent) {
+          currentGameweek = currentEvent.id;
+        }
+      }
+      
+      console.log(`📅 Current gameweek: ${currentGameweek}`);
+    } catch (error) {
+      console.warn('Using fallback gameweek:', error.message);
+    }
 
-// Calculate matching statistics from final processed players
-const playersWithPredictions = players.filter(p => p.predicted_points > 0);
-const playersWithOpta = players.filter(p => p.opta_id);
-const matchedPlayers = players.filter(p => p.ffh_matched !== false);
+    // Fresh data integration
+    const players = await integratePlayersWithOptaMatching(currentGameweek); // Pass it here
 
-// Create response data with proper matching statistics
+    // Enhanced player processing with V3 predictions
+    console.log('🚀 Starting V3 prediction enhancement...');
+    const v3EnhancedResult = await enhancePlayersWithV3Predictions(players, currentGameweek);
+
+const finalPlayers = v3EnhancedResult.players;
+const v3Statistics = v3EnhancedResult.v3Stats;
+
+console.log(`✅ V3 Enhancement complete: ${v3Statistics.v3Enhanced}/${v3Statistics.totalPlayers} players enhanced`);
+
+// Calculate matching statistics from V3 enhanced players
+const playersWithPredictions = finalPlayers.filter(p => p.predicted_points > 0);
+const playersWithOpta = finalPlayers.filter(p => p.opta_id);
+const matchedPlayers = finalPlayers.filter(p => p.ffh_matched !== false);
+
+// Create response data with V3 integration
 const responseData = {
   success: true,
-  players: players,
-  count: players.length,
+  players: finalPlayers,
+  count: finalPlayers.length,
   timestamp: new Date().toISOString(),
+  
+  // V3 Enhancement Statistics
+  v3Enhancement: {
+    enabled: true,
+    coverage: v3Statistics.v3Coverage + '%',
+    averageImprovement: v3Statistics.averageImprovement + ' PPG',
+    totalPlayersEnhanced: v3Statistics.v3Enhanced,
+    biggestWinners: v3Statistics.biggestWinners,
+    positionBreakdown: v3Statistics.positionBreakdown,
+    enhancementStatus: v3Statistics.error ? 'error' : 'success'
+  },
+  
   stats: {
-    totalPlayers: players.length,
+    totalPlayers: finalPlayers.length,
     playersWithPredictions: playersWithPredictions.length,
-    sleeperTotal: players.length,
+    sleeperTotal: finalPlayers.length,
     ffhTotal: 612, // From your API logs
     optaAnalysis: {
       sleeperWithOpta: playersWithOpta.length,
-      sleeperOptaRate: ((playersWithOpta.length / players.length) * 100).toFixed(1),
+      sleeperOptaRate: ((playersWithOpta.length / finalPlayers.length) * 100).toFixed(1),
       ffhWithOpta: 612, // From your API logs - all FFH players have Opta
       ffhOptaRate: "100.0",
       optaMatches: matchedPlayers.length,
       optaMatchRate: ((matchedPlayers.length / 612) * 100).toFixed(1),
-      unmatchedSleeperWithOpta: players.filter(p => p.opta_id && p.ffh_matched === false)
+      unmatchedSleeperWithOpta: finalPlayers.filter(p => p.opta_id && p.ffh_matched === false)
     }
   }
 };

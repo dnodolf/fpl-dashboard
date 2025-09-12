@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import GameweekService from './services/gameweekService';
+import v3ScoringService from './services/v3ScoringService';
 import { OptimizerTabContent } from './components/OptimizerTabContent';
 import TransferTabContent from './components/TransferTabContent';
 
@@ -462,7 +463,8 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
 };
 
 // ----------------- OTHER STATS COMPONENTS (UNCHANGED) -----------------
-const OptimizerStats = ({ isDarkMode }) => {
+const OptimizerStats = ({ isDarkMode, scoringMode = 'existing', currentGameweek = { number: 4 } }) => {
+  const [rawData, setRawData] = useState(null); // Store raw API data
   const [stats, setStats] = useState({
     currentPoints: 0,
     optimalPoints: 0,
@@ -479,28 +481,19 @@ const OptimizerStats = ({ isDarkMode }) => {
         const response = await fetch('/api/optimizer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: 'ThatDerekGuy', forceRefresh: false })
+          body: JSON.stringify({ 
+            userId: 'ThatDerekGuy', 
+            forceRefresh: false,
+            scoringMode: scoringMode,
+            currentGameweek: currentGameweek.number || 4
+          })
         });
         
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            // Calculate optimal player stats
-            const optimalPlayerIds = data.optimal?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
-            const currentPlayerIds = data.current?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
-            
-            const optimalPlayersInCurrent = currentPlayerIds.filter(id => optimalPlayerIds.includes(id)).length;
-            const totalPlayers = currentPlayerIds.length || 11;
-            const optimalPlayerPercentage = totalPlayers > 0 ? (optimalPlayersInCurrent / totalPlayers) * 100 : 0;
-            
-            setStats({
-              currentPoints: data.stats?.currentPoints || 0,
-              optimalPoints: data.stats?.optimalPoints || 0,
-              optimalPlayerPercentage,
-              playersToSwap: totalPlayers - optimalPlayersInCurrent,
-              optimalPlayersInCurrent,
-              totalPlayers
-            });
+            // Store raw data for recalculation
+            setRawData(data);
           }
         }
       } catch (error) {
@@ -511,7 +504,56 @@ const OptimizerStats = ({ isDarkMode }) => {
     };
 
     fetchOptimizerStats();
-  }, []);
+  }, [scoringMode, currentGameweek.number]); // Refetch when scoring mode or gameweek changes
+
+  // Recalculate stats when scoring mode or raw data changes
+  useEffect(() => {
+    if (!rawData) return;
+
+    console.log('📊 OptimizerStats recalculating with scoring mode:', scoringMode);
+    
+    const { current, optimal } = rawData;
+    
+    // Calculate points using the same logic as OptimizerTabContent
+    const currentPoints = current?.players ? current.players.reduce((sum, player) => {
+      let points = 0;
+      if (scoringMode === 'v3') {
+        points = player.v3_current_gw || 0;
+      } else {
+        points = player.current_gw_prediction || 0;
+      }
+      return sum + points;
+    }, 0) : 0;
+
+    const optimalPoints = optimal?.players ? optimal.players.reduce((sum, player) => {
+      let points = 0;
+      if (scoringMode === 'v3') {
+        points = player.v3_current_gw || 0;
+      } else {
+        points = player.current_gw_prediction || 0;
+      }
+      return sum + points;
+    }, 0) : 0;
+
+    console.log('📊 Calculated points:', { currentPoints, optimalPoints, scoringMode });
+
+    // Calculate optimal player stats
+    const optimalPlayerIds = optimal?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
+    const currentPlayerIds = current?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
+    
+    const optimalPlayersInCurrent = currentPlayerIds.filter(id => optimalPlayerIds.includes(id)).length;
+    const totalPlayers = currentPlayerIds.length || 11;
+    const optimalPlayerPercentage = totalPlayers > 0 ? (optimalPlayersInCurrent / totalPlayers) * 100 : 0;
+    
+    setStats({
+      currentPoints,
+      optimalPoints,
+      optimalPlayerPercentage,
+      playersToSwap: totalPlayers - optimalPlayersInCurrent,
+      optimalPlayersInCurrent,
+      totalPlayers
+    });
+  }, [rawData, scoringMode]);
 
   if (loading) {
     return (
@@ -589,8 +631,8 @@ const OptimizerStats = ({ isDarkMode }) => {
 
 const TransferStats = ({ players, isDarkMode }) => {
   // Calculate transfer analytics - FIX: Use correct ownership logic
-  const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
-  const myPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy'); // YOUR players specifically
+  const freeAgents = processedPlayers.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
+  const myPlayers = processedPlayers.filter(p => p.owned_by === 'ThatDerekGuy'); // YOUR players specifically
   
   // Find outperforming free agents compared to YOUR players
   const outperformingFAs = freeAgents.filter(fa => {
@@ -1163,7 +1205,7 @@ const GameweekDisplay = ({ gameweek, isDarkMode }) => {
 };
 
 // ----------------- DASHBOARD HEADER COMPONENT -----------------
-const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek }) => {
+const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
   const cacheAge = CacheManager.getAge();
 
@@ -1186,6 +1228,25 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
           <div className="flex items-center gap-4">
             {/* Current Gameweek with Enhanced Display */}
             <GameweekDisplay gameweek={currentGameweek} isDarkMode={isDarkMode} />
+
+            {/* Scoring Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Scoring:
+              </span>
+              <button
+                onClick={() => setScoringMode(scoringMode === 'existing' ? 'v3' : 'existing')}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                  scoringMode === 'v3'
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : isDarkMode 
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {scoringMode === 'v3' ? '🚀 v3' : '📊 Standard'}
+              </button>
+            </div>
 
             {/* Dark Mode Toggle */}
             <button
@@ -1239,7 +1300,7 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
 export default function FPLDashboard() {
   const [activeTab, setActiveTab] = useState('players');
   const [filters, setFilters] = useState({
-    position: 'all',
+    position: [], // Changed to array for multi-select
     team: 'all',
     owner: 'my_players_and_free_agents',
     minPoints: 0.1,
@@ -1247,6 +1308,7 @@ export default function FPLDashboard() {
   });
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' });
+  const [scoringMode, setScoringMode] = useState('existing'); // 'existing' or 'v3'
   
   // Current gameweek state
   const [currentGameweek, setCurrentGameweek] = useState({
@@ -1259,6 +1321,9 @@ export default function FPLDashboard() {
   });
   
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
+  
+  // Processed players with scoring mode applied
+  const [processedPlayers, setProcessedPlayers] = useState([]);
 
   // Load gameweek data
   useEffect(() => {
@@ -1282,6 +1347,20 @@ export default function FPLDashboard() {
 
     loadGameweek();
   }, []);
+
+  // Process players when scoring mode or players change
+  useEffect(() => {
+    if (players && Array.isArray(players)) {
+      if (scoringMode === 'v3') {
+        console.log('🚀 Applying V3 scoring to players');
+        const enhancedPlayers = v3ScoringService.applyV3Scoring(players, currentGameweek.number);
+        setProcessedPlayers(enhancedPlayers);
+      } else {
+        console.log('📊 Using standard scoring');
+        setProcessedPlayers(players);
+      }
+    }
+  }, [players, scoringMode, currentGameweek.number]);
 
   // Update data function
   const updateData = (type = 'manual', forceRefresh = true, useCache = false) => {
@@ -1310,12 +1389,7 @@ export default function FPLDashboard() {
       case 'team':
         return player.team || '';
       case 'sleeper_points_ros':
-        if (player.sleeper_season_total) return player.sleeper_season_total;
-        if (player.sleeper_season_avg) return player.sleeper_season_avg * 38;
-        if (player.ffh_season_prediction) return player.ffh_season_prediction;
-        if (player.predicted_pts) return player.predicted_pts;
-        if (player.total_points) return player.total_points;
-        return 0;
+        return v3ScoringService.getScoringValue(player, 'points_ros', scoringMode);
       case 'sleeper_points_next5':
         if (player.sleeper_gw_predictions) {
           try {
@@ -1377,23 +1451,24 @@ export default function FPLDashboard() {
   };
 
   // Filter players based on current filters
-  const filteredPlayers = players.filter(player => {
+  const filteredPlayers = processedPlayers.filter(player => {
     // EPL TEAMS ONLY: Only show players from actual EPL teams
     if (!isEPLPlayer(player)) {
       return false;
     }
 
-    // Position filter
-    if (filters.position !== 'all') {
+    // Position filter - multi-select
+    if (filters.position.length > 0) {
       const playerPos = player.position;
-      const filterPos = filters.position;
-      
-      // Handle goalkeeper variations
-      if (filterPos === 'GKP') {
-        if (playerPos !== 'GKP' && playerPos !== 'GK') return false;
-      } else {
-        if (playerPos !== filterPos) return false;
-      }
+      const isPositionMatch = filters.position.some(filterPos => {
+        // Handle goalkeeper variations
+        if (filterPos === 'GKP') {
+          return playerPos === 'GKP' || playerPos === 'GK';
+        } else {
+          return playerPos === filterPos;
+        }
+      });
+      if (!isPositionMatch) return false;
     }
 
 // Team filter  
@@ -1473,7 +1548,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
 
   // Get unique teams and owners for filter dropdowns
   const teams = EPL_TEAMS.sort();
-  const owners = [...new Set(players.filter(isEPLPlayer).map(p => p.owned_by).filter(Boolean))].sort();
+  const owners = [...new Set(processedPlayers.filter(isEPLPlayer).map(p => p.owned_by).filter(Boolean))].sort();
 
   // Render sort icon
   const renderSortIcon = (columnKey) => {
@@ -1524,11 +1599,11 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
       case 'players': 
         return null; // No stats cards for players tab
       case 'matching': 
-        return <MatchingStats players={players} integration={integration} isDarkMode={isDarkMode} />;
+        return <MatchingStats players={processedPlayers} integration={integration} isDarkMode={isDarkMode} />;
       case 'optimizer': 
-        return <OptimizerStats isDarkMode={isDarkMode} />;
+        return <OptimizerStats isDarkMode={isDarkMode} scoringMode={scoringMode} currentGameweek={currentGameweek} />;
       case 'transfers': 
-        return <TransferStats players={players} isDarkMode={isDarkMode} />;
+        return <TransferStats players={processedPlayers} isDarkMode={isDarkMode} />;
       default: 
         return null;
     }
@@ -1543,11 +1618,13 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
           lastUpdated={lastUpdated}
-          players={players}
+          players={processedPlayers}
           updateData={updateData}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           currentGameweek={currentGameweek}
+          scoringMode={scoringMode}
+          setScoringMode={setScoringMode}
         />
 
         {/* Main Content */}
@@ -1562,26 +1639,42 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
               {/* Filters */}
               <div className={`p-4 rounded-lg mb-6 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {/* Position Filter */}
+                  {/* Position Filter - Multi-select */}
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Position
+                      Position ({filters.position.length > 0 ? filters.position.length : 'All'})
                     </label>
-                    <select
-                      value={filters.position}
-                      onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
-                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="all">All Positions</option>
-                      <option value="GKP">Goalkeeper</option>
-                      <option value="DEF">Defender</option>
-                      <option value="MID">Midfielder</option>
-                      <option value="FWD">Forward</option>
-                    </select>
+                    <div className={`p-2 border rounded-md ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600' 
+                        : 'bg-white border-gray-300'
+                    }`}>
+                      {['GKP', 'DEF', 'MID', 'FWD'].map(pos => (
+                        <label key={pos} className="flex items-center mb-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={filters.position.includes(pos)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFilters(prev => ({ 
+                                  ...prev, 
+                                  position: [...prev.position, pos] 
+                                }));
+                              } else {
+                                setFilters(prev => ({ 
+                                  ...prev, 
+                                  position: prev.position.filter(p => p !== pos) 
+                                }));
+                              }
+                            }}
+                            className="mr-2 text-blue-500 focus:ring-blue-500"
+                          />
+                          <span className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {pos === 'GKP' ? 'Goalkeeper' : pos === 'DEF' ? 'Defender' : pos === 'MID' ? 'Midfielder' : 'Forward'}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Team Filter */}
@@ -1673,8 +1766,8 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                 <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
                   <span className="ml-2 text-xs">
-                    (Free Agents: {players.filter(p => !p.owned_by || p.owned_by === 'Free Agent').length}, 
-                     Owned: {players.filter(p => p.owned_by && p.owned_by !== 'Free Agent').length})
+                    (Free Agents: {processedPlayers.filter(p => !p.owned_by || p.owned_by === 'Free Agent').length}, 
+                     Owned: {processedPlayers.filter(p => p.owned_by && p.owned_by !== 'Free Agent').length})
                   </span>
                 </div>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
@@ -1735,7 +1828,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                           onClick={() => handleSort('sleeper_points_ros')}
                         >
                           <div className="flex items-center">
-                            ROS Points {renderSortIcon('sleeper_points_ros')}
+                            ROS Points {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('sleeper_points_ros')}
                           </div>
                         </th>
                         <th 
@@ -1775,7 +1868,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                           onClick={() => handleSort('predicted_ppg')}
                         >
                           <div className="flex items-center">
-                            PPG (Predicted) {renderSortIcon('predicted_ppg')}
+                            PPG (Predicted) {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_ppg')}
                           </div>
                         </th>
                       </tr>
@@ -1822,12 +1915,8 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
 </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {(() => {
-                              if (player.sleeper_season_total) return player.sleeper_season_total.toFixed(1);
-                              if (player.sleeper_season_avg) return (player.sleeper_season_avg * 38).toFixed(1);
-                              if (player.ffh_season_prediction) return player.ffh_season_prediction.toFixed(1);
-                              if (player.predicted_pts) return player.predicted_pts.toFixed(1);
-                              if (player.total_points) return player.total_points.toFixed(1);
-                              return 'N/A';
+                              const seasonTotal = v3ScoringService.getScoringValue(player, 'season_total', scoringMode);
+                              return seasonTotal > 0 ? seasonTotal.toFixed(1) : 'N/A';
                             })()}
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
@@ -1921,10 +2010,16 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                             })()}
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {player.ffh_season_avg ? player.ffh_season_avg.toFixed(1) : 'N/A'}
+                            {(() => {
+                              const currentPpg = player.ffh_season_avg || (player.sleeper_season_total ? player.sleeper_season_total / 38 : 0);
+                              return currentPpg > 0 ? currentPpg.toFixed(1) : 'N/A';
+                            })()}
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {player.sleeper_season_avg ? player.sleeper_season_avg.toFixed(1) : 'N/A'}
+                            {(() => {
+                              const predictedPpg = v3ScoringService.getScoringValue(player, 'season_avg', scoringMode);
+                              return predictedPpg > 0 ? predictedPpg.toFixed(1) : 'N/A';
+                            })()}
                           </td>
                         </tr>
                       ))}
@@ -1940,7 +2035,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                   <button
                     onClick={() => {
                       setFilters({
-                        position: 'all',
+                        position: [], // Clear to empty array
                         team: 'all',
                         owner: 'all',
                         minPoints: 0,
@@ -1958,22 +2053,23 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
 
           {/* Matching statistics and information */}
           {activeTab === 'matching' && (
-            <MatchingTabContent players={players} integration={integration} isDarkMode={isDarkMode} />
+            <MatchingTabContent players={processedPlayers} integration={integration} isDarkMode={isDarkMode} />
           )}
 
           {/* Optimizing lineup for the current GW */}
           {activeTab === 'optimizer' && (
             <OptimizerTabContent 
               isDarkMode={isDarkMode} 
-              players={players}
+              players={processedPlayers}
               currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
             />
           )}
           
           {/* Get recommendations and explore free agents to pick up */}
           {activeTab === 'transfers' && (
             <TransferTabContent 
-              players={players}
+              players={processedPlayers}
               currentGameweek={currentGameweek} 
               isDarkMode={isDarkMode}
             />

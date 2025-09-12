@@ -1,7 +1,8 @@
 // app/components/MyPlayersTable.js - COMPLETE CORRECTED FILE WITH SLEEPER COLORS
 import { useState, useEffect } from 'react';
+import v3ScoringService from '../services/v3ScoringService.js';
 
-const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds = [] }) => {
+const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds = [], scoringMode = 'existing' }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -22,6 +23,17 @@ const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds
 
   // Enhanced data extraction functions
   const getPlayerPredictedPoints = (player) => {
+    // Use explicit field-based logic to match optimizer components
+    if (scoringMode === 'v3') {
+      const points = player.v3_current_gw || 0;
+      return points;
+    } else {
+      return player.current_gw_prediction || 0;
+    }
+  };
+  
+  // Legacy function for backward compatibility (now uses v3 service)
+  const getPlayerPredictedPointsLegacy = (player) => {
     // Try current gameweek prediction first
     if (player.current_gameweek_prediction?.predicted_pts) {
       return player.current_gameweek_prediction.predicted_pts;
@@ -57,58 +69,57 @@ const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds
   };
 
   const getPlayerPredictedMinutes = (player) => {
-    // Try current gameweek prediction first
-    if (player.current_gameweek_prediction?.predicted_mins) {
-      return player.current_gameweek_prediction.predicted_mins;
-    }
-    
-    // Try predictions array for current GW
-    if (player.predictions && Array.isArray(player.predictions)) {
-      const currentGWPred = player.predictions.find(p => p.gw === (currentGameweek?.number || 2));
-      if (currentGWPred?.xmins) {
-        return currentGWPred.xmins;
+  if (player.ffh_gw_minutes) {
+    try {
+      const gwMinutes = JSON.parse(player.ffh_gw_minutes);
+      const currentGW = currentGameweek?.number;
+      
+      if (currentGW && gwMinutes[currentGW]) {
+        return Math.round(gwMinutes[currentGW]);
       }
-      // Fall back to first available prediction
-      const firstPred = player.predictions[0];
-      if (firstPred?.xmins) {
-        return firstPred.xmins;
-      }
+    } catch (e) {
+      console.warn('Error parsing ffh_gw_minutes:', e);
     }
-    
-    // Try current predictions array
-    if (player.current_predictions && Array.isArray(player.current_predictions)) {
-      const latest = player.current_predictions[0];
-      if (latest?.predicted_mins || latest?.xmins) {
-        return latest.predicted_mins || latest.xmins;
-      }
-    }
-    
-    // Try upcoming predictions array
-    if (player.upcoming_predictions && Array.isArray(player.upcoming_predictions)) {
-      const next = player.upcoming_predictions[0];
-      if (next?.predicted_mins || next?.xmins) {
-        return next.predicted_mins || next.xmins;
-      }
-    }
-    
-    return player.predicted_mins || player.xmins || 0;
-  };
+  }
+  
+  return 0;
+};
 
   const getPlayerPPG = (player) => {
-    // FFH form data PPG
+    // Use explicit field-based logic for season average
+    if (scoringMode === 'v3') {
+      return player.v3_season_avg || 0;
+    } else {
+      return player.sleeper_season_avg || 0;
+    }
+  };
+  
+  // Legacy PPG function for reference
+  const getPlayerPPGLegacy = (player) => {
+    // PRIORITY 1: Use Sleeper season average (predicted PPG after conversion) 
+    if (player.sleeper_season_avg && player.sleeper_season_avg > 0) {
+      return player.sleeper_season_avg;
+    }
+    
+    // PRIORITY 2: FFH form data PPG
     if (player.form_data?.ppg) return player.form_data.ppg;
     
-    // Current PPG
+    // PRIORITY 3: Current PPG
     if (player.current_ppg) return player.current_ppg;
     
-    // Calculated PPG
+    // PRIORITY 4: Calculated PPG
     if (player.ppg) return player.ppg;
     
-    // Season average
+    // PRIORITY 5: Season average fallback
     if (player.season_prediction_avg) return player.season_prediction_avg;
     
-    // Fallback calculation
-    if (player.total_points && player.games_played) {
+    // PRIORITY 6: FFH season average
+    if (player.ffh_season_avg && player.ffh_season_avg > 0) {
+      return player.ffh_season_avg;
+    }
+    
+    // PRIORITY 7: Fallback calculation
+    if (player.total_points && player.games_played && player.games_played > 0) {
       return player.total_points / player.games_played;
     }
     
@@ -411,7 +422,7 @@ const getSleeperPositionBadgeDarkMode = (position) => {
                     isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
                   }`}
                 >
-                  Predicted Points {renderSortIcon('predicted_points')}
+                  Predicted Points {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_points')}
                 </th>
                 <th 
                   onClick={() => handleSort('predicted_minutes')}
@@ -427,7 +438,7 @@ const getSleeperPositionBadgeDarkMode = (position) => {
                     isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
                   }`}
                 >
-                  PPG {renderSortIcon('ppg_value')}
+                  PPG {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
                 </th>
                 <th 
                   onClick={() => handleSort('fixture_difficulty_value')}
@@ -442,7 +453,7 @@ const getSleeperPositionBadgeDarkMode = (position) => {
             <tbody className={`divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
               {sortedPlayers.map((player, index) => {
                 const playerId = player.player_id || player.sleeper_id || player.id;
-                const isOptimal = optimalPlayerIds.includes(playerId);
+                const isOptimal = Array.isArray(optimalPlayerIds) ? optimalPlayerIds.includes(playerId) : false;
                 
                 return (
                   <tr 
@@ -464,15 +475,8 @@ const getSleeperPositionBadgeDarkMode = (position) => {
 
                     {/* Player Name */}
                     <td className="px-4 py-3">
-                      <div>
-                        <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {player.web_name || player.name || 'Unknown Player'}
-                        </div>
-                        {player.full_name && player.full_name !== (player.web_name || player.name) && (
-                          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {player.full_name}
-                          </div>
-                        )}
+                      <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {player.full_name || player.web_name || player.name || 'Unknown Player'}
                       </div>
                     </td>
 

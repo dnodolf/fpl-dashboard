@@ -20,9 +20,14 @@ export class FormationOptimizerService {
   };
 
   /**
-   * Get player's predicted points - enhanced with multiple fallback strategies
+   * Get player's predicted points - enhanced with multiple fallback strategies including v3 scoring
    */
   getPlayerPoints(player) {
+    // Priority 0: V3 current gameweek prediction (if available)
+    if (player.v3_current_gw && player.v3_current_gw > 0) {
+      return player.v3_current_gw;
+    }
+    
     // Priority 1: Use current gameweek Sleeper prediction
     if (player.current_gw_prediction && player.current_gw_prediction > 0) {
       return player.current_gw_prediction;
@@ -33,17 +38,22 @@ export class FormationOptimizerService {
       return player.next_gw_prediction;
     }
     
-    // Priority 3: Use predicted PPG
+    // Priority 3: V3 season average (if available)
+    if (player.v3_season_avg && player.v3_season_avg > 0) {
+      return player.v3_season_avg;
+    }
+    
+    // Priority 4: Use predicted PPG
     if (player.predicted_ppg && player.predicted_ppg > 0) {
       return player.predicted_ppg;
     }
     
-    // Priority 4: Use season average
+    // Priority 5: Use season average
     if (player.sleeper_season_avg && player.sleeper_season_avg > 0) {
       return player.sleeper_season_avg;
     }
     
-    // Priority 5: Use current PPG
+    // Priority 6: Use current PPG
     if (player.current_ppg && player.current_ppg > 0) {
       return player.current_ppg;
     }

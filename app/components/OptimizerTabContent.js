@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import MyPlayersTable from './MyPlayersTable.js';
+import v3ScoringService from '../services/v3ScoringService.js';
 
 // ----------------- SLEEPER POSITION COLORS FUNCTIONS -----------------
 // Get Sleeper position badge classes for player cards
@@ -39,7 +40,7 @@ const getSleeperPositionCardStyle = (position, isDarkMode = false) => {
 };
 
 // ----------------- OPTIMIZER HOOK -----------------
-function useOptimizerData(userId = 'ThatDerekGuy') {
+function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', currentGameweek = 2) {
   const [data, setData] = useState({
     loading: true,
     error: null,
@@ -69,7 +70,9 @@ function useOptimizerData(userId = 'ThatDerekGuy') {
         body: JSON.stringify({
           userId,
           forceRefresh,
-          analysisType: 'current_roster'
+          analysisType: 'current_roster',
+          scoringMode,
+          currentGameweek
         })
       });
 
@@ -100,13 +103,13 @@ function useOptimizerData(userId = 'ThatDerekGuy') {
 
   useEffect(() => {
     fetchOptimizerData();
-  }, [userId]);
+  }, [userId, scoringMode, currentGameweek]);
 
   return { ...data, refetch: fetchOptimizerData };
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimalPlayerIds = [] }) => {
+const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimalPlayerIds = [], scoringMode = 'existing' }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
@@ -156,7 +159,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
   };
 
   // Player Card Component - UPDATED WITH SLEEPER COLORS AND PREDICTED MINUTES
-  const PlayerCard = ({ player, isInOptimal = false }) => {
+  const PlayerCard = ({ player, isInOptimal = false, scoringMode = 'existing' }) => {
     // Extract last name only for better readability
     const getLastName = (player) => {
       if (player.web_name) return player.web_name;
@@ -230,10 +233,14 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {/* Predicted Points */}
         <div className="font-semibold mt-1">
           {(() => {
-            const points = player.current_gw_prediction || 
-                          player.predicted_pts || 
-                          player.points || 0;
-            return typeof points === 'number' ? points.toFixed(1) : '0.0';
+            // Use explicit field-based logic to match FormationVisualization
+            let points = 0;
+            if (scoringMode === 'v3') {
+              points = player.v3_current_gw || 0;
+            } else {
+              points = player.current_gw_prediction || 0;
+            }
+            return points.toFixed(1);
           })()}
         </div>
         
@@ -248,7 +255,16 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
   };
 
   const currentFormation = lineup.formation || 'Unknown';
-  const totalPoints = lineup.points || lineup.totalPoints || 0;
+  // Recalculate total points based on current scoring mode - be very specific about which field to use
+  const totalPoints = lineup.players ? lineup.players.reduce((sum, player) => {
+    let points = 0;
+    if (scoringMode === 'v3') {
+      points = player.v3_current_gw || 0;
+    } else {
+      points = player.current_gw_prediction || 0;
+    }
+    return sum + points;
+  }, 0) : (lineup.points || lineup.totalPoints || 0);
   const layout = getFormationLayout(currentFormation);
   
   return (
@@ -280,7 +296,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.fwd > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.FWD.slice(0, layout.fwd).map((player, idx) => (
-              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
+              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
             ))}
             {/* Fill missing FWD slots if needed */}
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
@@ -298,7 +314,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.mid > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.MID.slice(0, layout.mid).map((player, idx) => (
-              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
+              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
             ))}
             {/* Fill missing MID slots if needed */}
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
@@ -316,7 +332,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.def > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.DEF.slice(0, layout.def).map((player, idx) => (
-              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
+              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
             ))}
             {/* Fill missing DEF slots if needed */}
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
@@ -333,7 +349,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {/* Goalkeeper - Always show 1 */}
         <div className="flex justify-center">
           {playersByPosition.GKP.slice(0, 1).map((player, idx) => (
-            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={isOptimal} />
+            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
           ))}
           {/* Show empty GKP slot if needed */}
           {playersByPosition.GKP.length === 0 && (
@@ -351,7 +367,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
 };
 
 // ----------------- ACTIONABLE RECOMMENDATIONS COMPONENT -----------------
-const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMode }) => {
+const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMode, recalculatedStats, scoringMode = 'existing' }) => {
   if (!recommendations || recommendations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
@@ -372,13 +388,73 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
   const getActionableChanges = () => {
     const changes = [];
     
-    // Formation change recommendation
-    if (current?.formation !== optimal?.formation) {
+    // Formation change recommendation using recalculated stats
+    if (recalculatedStats?.formationChange) {
       changes.push({
         type: 'formation',
         action: `Switch from ${current?.formation} to ${optimal?.formation}`,
-        reason: `Gain ${((optimal?.points || 0) - (current?.points || 0)).toFixed(1)} points`,
+        reason: `Gain ${recalculatedStats.improvement.toFixed(1)} points`,
         priority: 'high'
+      });
+    }
+    
+    // Add specific player swap recommendations
+    if (current?.players && optimal?.players) {
+      const currentPlayerIdsForSwaps = new Set(current.players.map(p => p.sleeper_id || p.id || p.player_id));
+      const optimalPlayers = optimal.players.filter(p => {
+        const playerId = p.sleeper_id || p.id || p.player_id;
+        return !currentPlayerIdsForSwaps.has(playerId);
+      });
+      
+      // Show top 3 player swaps
+      optimalPlayers.slice(0, 3).forEach(newPlayer => {
+        let newPlayerPoints = 0;
+        if (scoringMode === 'v3') {
+          newPlayerPoints = newPlayer.v3_current_gw || 0;
+        } else {
+          newPlayerPoints = newPlayer.current_gw_prediction || 0;
+        }
+        
+        // Find the player they would replace (same position)
+        const currentSamePosition = current.players.filter(p => p.position === newPlayer.position);
+        const worstCurrentPlayer = currentSamePosition.reduce((worst, player) => {
+          let playerPoints = 0;
+          if (scoringMode === 'v3') {
+            playerPoints = player.v3_current_gw || 0;
+          } else {
+            playerPoints = player.current_gw_prediction || 0;
+          }
+          
+          let worstPoints = 999;
+          if (worst) {
+            if (scoringMode === 'v3') {
+              worstPoints = worst.v3_current_gw || 0;
+            } else {
+              worstPoints = worst.current_gw_prediction || 0;
+            }
+          }
+          
+          return playerPoints < worstPoints ? player : worst;
+        }, null);
+        
+        if (worstCurrentPlayer) {
+          let worstPoints = 0;
+          if (scoringMode === 'v3') {
+            worstPoints = worstCurrentPlayer.v3_current_gw || 0;
+          } else {
+            worstPoints = worstCurrentPlayer.current_gw_prediction || 0;
+          }
+          
+          const improvement = newPlayerPoints - worstPoints;
+          if (improvement > 0.5) { // Only show if meaningful improvement
+            changes.push({
+              type: 'player',
+              action: `Replace ${worstCurrentPlayer.name || worstCurrentPlayer.web_name} with ${newPlayer.name || newPlayer.web_name}`,
+              reason: `+${improvement.toFixed(1)} points`,
+              priority: improvement > 2 ? 'high' : 'medium'
+            });
+          }
+        }
       });
     }
     
@@ -442,7 +518,7 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
 };
 
 // ----------------- FORMATION COMPARISON COMPONENT - FIXED LAYOUT -----------------
-const FormationComparison = ({ allFormations, currentFormation, isDarkMode }) => {
+const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scoringMode = 'existing' }) => {
   if (!allFormations || allFormations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
@@ -459,21 +535,40 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode }) =>
     );
   }
 
-  // Sort formations by points and validity - valid formations first, then by points
-  const sortedFormations = [...allFormations].sort((a, b) => {
-    const aValid = a.valid !== false && (a.points || a.totalPoints || 0) > 0;
-    const bValid = b.valid !== false && (b.points || b.totalPoints || 0) > 0;
+  // Recalculate formation points based on current scoring mode
+  const formationsWithRecalculatedPoints = allFormations.map(formation => {
+    if (!formation.players || !Array.isArray(formation.players)) {
+      return { ...formation, recalculatedPoints: 0 };
+    }
+    
+    const recalculatedPoints = formation.players.reduce((sum, player) => {
+      let points = 0;
+      if (scoringMode === 'v3') {
+        points = player.v3_current_gw || 0;
+      } else {
+        points = player.current_gw_prediction || 0;
+      }
+      return sum + points;
+    }, 0);
+    
+    return { ...formation, recalculatedPoints };
+  });
+
+  // Sort formations by recalculated points and validity
+  const sortedFormations = [...formationsWithRecalculatedPoints].sort((a, b) => {
+    const aValid = a.valid !== false && a.recalculatedPoints > 0;
+    const bValid = b.valid !== false && b.recalculatedPoints > 0;
     
     // Valid formations first
     if (aValid && !bValid) return -1;
     if (!aValid && bValid) return 1;
     
-    // Within same validity, sort by points
-    return (b.points || b.totalPoints || 0) - (a.points || a.totalPoints || 0);
+    // Within same validity, sort by recalculated points
+    return b.recalculatedPoints - a.recalculatedPoints;
   });
   
-  const bestFormation = sortedFormations.find(f => f.valid !== false && (f.points || f.totalPoints || 0) > 0);
-  const bestPoints = bestFormation?.points || bestFormation?.totalPoints || 0;
+  const bestFormation = sortedFormations.find(f => f.valid !== false && f.recalculatedPoints > 0);
+  const bestPoints = bestFormation?.recalculatedPoints || 0;
 
   return (
     <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
@@ -488,7 +583,7 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode }) =>
             const formationName = formation.formation || formation.name || 'Unknown';
             const isCurrent = formationName === currentFormation;
             const isBest = formation === bestFormation;
-            const formationPoints = formation.points || formation.totalPoints || 0;
+            const formationPoints = formation.recalculatedPoints;
             const pointsDiff = bestPoints - formationPoints;
             const isInvalid = formation.valid === false || formationPoints === 0;
             
@@ -572,7 +667,7 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode }) =>
 };
 
 // ----------------- MAIN OPTIMIZER TAB CONTENT - ENHANCED -----------------
-export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) => {
+export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scoringMode = 'existing' }) => {
   const { 
     loading, 
     error, 
@@ -583,23 +678,59 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
     allFormations,
     roster,
     refetch 
-  } = useOptimizerData();
+  } = useOptimizerData('ThatDerekGuy', scoringMode, currentGameweek?.number || 2);
 
-  // Calculate optimal player IDs for comparison - FIXED
-  const optimalPlayerIds = optimal?.players?.map(p => {
+  // Calculate optimal player IDs for comparison - for FormationVisualization checkmarks
+  const optimalPlayerIdsForDisplay = optimal?.players?.map(p => {
     const id = p.id || p.player_id || p.sleeper_id;
-    console.log('Optimal player ID:', id, 'for player:', p.name || p.web_name);
     return id;
   }) || [];
   
-  const currentPlayerIds = current?.players?.map(p => {
-    const id = p.id || p.player_id || p.sleeper_id;
-    console.log('Current player ID:', id, 'for player:', p.name || p.web_name);
-    return id;
-  }) || [];
+  // Recalculate points based on current scoring mode - use explicit field logic
+  const currentPoints = current?.players ? current.players.reduce((sum, player) => {
+    let points = 0;
+    if (scoringMode === 'v3') {
+      points = player.v3_current_gw || 0;
+    } else {
+      points = player.current_gw_prediction || 0;
+    }
+    return sum + points;
+  }, 0) : (stats.currentPoints || 0);
+
+  const optimalPoints = optimal?.players ? optimal.players.reduce((sum, player) => {
+    let points = 0;
+    if (scoringMode === 'v3') {
+      points = player.v3_current_gw || 0;
+    } else {
+      points = player.current_gw_prediction || 0;
+    }
+    return sum + points;
+  }, 0) : (stats.optimalPoints || 0);
+
+  // Recalculate all stats based on new point values
+  const improvement = optimalPoints - currentPoints;
+  const efficiency = currentPoints > 0 ? (optimalPoints / currentPoints) * 100 : 0;
   
-  console.log('All optimal IDs:', optimalPlayerIds);
-  console.log('All current IDs:', currentPlayerIds);
+  // Calculate how many players need to be swapped
+  const currentPlayerIds = new Set(current?.players?.map(p => p.sleeper_id || p.id || p.player_id) || []);
+  const optimalPlayerIds = new Set(optimal?.players?.map(p => p.sleeper_id || p.id || p.player_id) || []);
+  const playersToSwap = current?.players ? current.players.filter(p => {
+    const playerId = p.sleeper_id || p.id || p.player_id;
+    return !optimalPlayerIds.has(playerId);
+  }).length : 0;
+  
+  // Check if formation change is needed
+  const formationChange = current?.formation !== optimal?.formation;
+
+  // Create updated stats object
+  const recalculatedStats = {
+    currentPoints,
+    optimalPoints,
+    improvement,
+    efficiency,
+    playersToSwap,
+    formationChange
+  };
 
   if (loading) {
     return (
@@ -656,7 +787,7 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
                 ACTIVE
               </span>
               <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {current?.formation || 'N/A'} • {stats.currentPoints.toFixed(1)} points
+                {current?.formation || 'N/A'} • {currentPoints.toFixed(1)} points
               </span>
             </div>
           </div>
@@ -664,7 +795,8 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
           <FormationVisualization 
             lineup={current} 
             isDarkMode={isDarkMode} 
-            optimalPlayerIds={optimalPlayerIds}
+            optimalPlayerIds={optimalPlayerIdsForDisplay}
+            scoringMode={scoringMode}
           />
         </div>
 
@@ -679,7 +811,7 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
                 RECOMMENDED
               </span>
               <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {optimal?.formation || 'N/A'} • {stats.optimalPoints.toFixed(1)} points
+                {optimal?.formation || 'N/A'} • {optimalPoints.toFixed(1)} points
               </span>
             </div>
           </div>
@@ -687,7 +819,8 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
             lineup={optimal} 
             isDarkMode={isDarkMode} 
             isOptimal={true}
-            optimalPlayerIds={optimalPlayerIds}
+            optimalPlayerIds={optimalPlayerIdsForDisplay}
+            scoringMode={scoringMode}
           />
         </div>
       </div>
@@ -698,12 +831,15 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
           recommendations={recommendations} 
           current={current}
           optimal={optimal}
-          isDarkMode={isDarkMode} 
+          isDarkMode={isDarkMode}
+          recalculatedStats={recalculatedStats}
+          scoringMode={scoringMode}
         />
         <FormationComparison 
           allFormations={allFormations} 
           currentFormation={current?.formation} 
-          isDarkMode={isDarkMode} 
+          isDarkMode={isDarkMode}
+          scoringMode={scoringMode}
         />
       </div>
 
@@ -713,7 +849,8 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek }) =>
           players={players || []} 
           isDarkMode={isDarkMode}
           currentGameweek={currentGameweek}
-          optimalPlayerIds={optimalPlayerIds}
+          optimalPlayerIds={optimalPlayerIdsForDisplay}
+          scoringMode={scoringMode}
         />
       </div>
 
