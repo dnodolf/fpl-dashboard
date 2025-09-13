@@ -50,7 +50,7 @@ class GameweekService {
 // Get current gameweek using only hardcoded schedule (no API calls)
 async getCurrentGameweek() {
   try {
-    console.log('📅 Using hardcoded gameweek schedule (no API calls)...');
+    // Using hardcoded gameweek schedule - no API calls needed
     
     // Go directly to our reliable hardcoded logic
     const gameweekData = this.getEnhancedFallback();
@@ -58,7 +58,7 @@ async getCurrentGameweek() {
     // Ensure source is set correctly to avoid warning
     gameweekData.source = 'fpl_api';
     
-    console.log(`✅ Current gameweek: GW${gameweekData.number} (${gameweekData.status})`);
+    console.log(`✅ Gameweek service: GW${gameweekData.number} (${gameweekData.status})`);
     return gameweekData;
     
   } catch (error) {
@@ -84,7 +84,7 @@ async getCurrentGameweek() {
       { gw: 1, start: '2025-08-16', end: '2025-08-18', deadline: '2025-08-16T17:30:00Z' },
       { gw: 2, start: '2025-08-23', end: '2025-08-25', deadline: '2025-08-23T11:00:00Z' },
       { gw: 3, start: '2025-08-30', end: '2025-09-01', deadline: '2025-08-30T17:30:00Z' },
-      { gw: 4, start: '2025-09-13', end: '2025-09-15', deadline: '2025-09-13T17:30:00Z' },
+      { gw: 4, start: '2025-09-13T11:30:00Z', end: '2025-09-15', deadline: '2025-09-13T17:30:00Z' },
       { gw: 5, start: '2025-09-20', end: '2025-09-22', deadline: '2025-09-20T17:30:00Z' },
       { gw: 6, start: '2025-09-27', end: '2025-09-29', deadline: '2025-09-27T17:30:00Z' },
       { gw: 7, start: '2025-10-04', end: '2025-10-06', deadline: '2025-10-04T17:30:00Z' },
@@ -213,7 +213,7 @@ getEnhancedFallback() {
     };
   }
 
-  console.log(`📅 Clean gameweek display: GW${currentGameweek.number} (${currentGameweek.status}) - Starts: ${currentGameweek.date}`);
+  // Clean gameweek display prepared
   return currentGameweek;
 }
 

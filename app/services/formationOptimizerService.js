@@ -8,14 +8,13 @@ export class FormationOptimizerService {
     this.cache = new Map();
   }
 
-  // Valid formation configurations  
+  // Valid formation configurations - exactly 6 formations to evaluate
   static VALID_FORMATIONS = {
-    '3-4-3': { GKP: 1, DEF: 3, MID: 4, FWD: 3 },
     '3-5-2': { GKP: 1, DEF: 3, MID: 5, FWD: 2 },
-    '4-3-3': { GKP: 1, DEF: 4, MID: 3, FWD: 3 },
     '4-4-2': { GKP: 1, DEF: 4, MID: 4, FWD: 2 },
     '4-5-1': { GKP: 1, DEF: 4, MID: 5, FWD: 1 },
-    '5-3-2': { GKP: 1, DEF: 5, MID: 3, FWD: 2 },
+    '3-4-3': { GKP: 1, DEF: 3, MID: 4, FWD: 3 },
+    '4-3-3': { GKP: 1, DEF: 4, MID: 3, FWD: 3 },
     '5-4-1': { GKP: 1, DEF: 5, MID: 4, FWD: 1 }
   };
 
@@ -416,11 +415,11 @@ export class FormationOptimizerService {
       // Generate recommendations
       const recommendations = [];
       
-      if (improvement > 0.5) {
+      if (currentFormation !== optimalFormation.formation) {
         recommendations.push({
           type: 'formation_change',
-          message: `Switch to ${optimalFormation.formation} for +${improvement.toFixed(1)} points`,
-          impact: improvement,
+          message: `Switch from ${currentFormation} to ${optimalFormation.formation}`,
+          impact: 0, // Don't show points for formation changes
           formation: optimalFormation.formation
         });
       }
@@ -460,7 +459,7 @@ export class FormationOptimizerService {
         improvement: Math.round(improvement * 100) / 100,
         efficiency: Math.round(efficiency * 100) / 100,
         recommendations: recommendations.slice(0, 5), // Top 5 recommendations
-        allFormations: validFormations
+        allFormations: allFormationResults
       };
 
     } catch (error) {

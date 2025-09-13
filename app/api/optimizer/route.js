@@ -16,7 +16,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 /**
  * Fetch integrated player data
  */
-async function fetchPlayerData(baseUrl) {
+async function fetchPlayerData(baseUrl, forceRefresh = false) {
   try {
     const response = await fetch(`${baseUrl}/api/integrated-players`, {
       method: 'POST',
@@ -24,7 +24,7 @@ async function fetchPlayerData(baseUrl) {
       body: JSON.stringify({
         includeMatching: true,
         includeScoring: true,
-        forceRefresh: false
+        forceRefresh: forceRefresh
       })
     });
 
@@ -64,12 +64,20 @@ export async function POST(request) {
 
     console.log(`🔍 OPTIMIZER: Starting ${analysisType} analysis for ${userId}`);
 
+    // Clear service cache if force refresh
+    if (forceRefresh) {
+      console.log('🔄 Clearing optimizer service cache due to forceRefresh');
+      const { FormationOptimizerService } = await import('../../services/formationOptimizerService.js');
+      const optimizerService = new FormationOptimizerService();
+      optimizerService.clearCache();
+    }
+
     // Get base URL for API calls
     const { protocol, host } = new URL(request.url);
     const baseUrl = `${protocol}//${host}`;
 
-    // Fetch integrated player data
-    let players = await fetchPlayerData(baseUrl);
+    // Fetch integrated player data (pass forceRefresh to clear player data cache too)
+    let players = await fetchPlayerData(baseUrl, forceRefresh);
     
     if (!players || players.length === 0) {
       throw new Error('No player data available');
@@ -78,7 +86,13 @@ export async function POST(request) {
     // Apply v3 scoring if needed
     if (scoringMode === 'v3') {
       console.log(`🚀 Applying v3 scoring to ${players.length} players`);
-      const currentGameweek = requestData.currentGameweek || 2; // Get from request or fallback
+      if (!requestData.currentGameweek) {
+        throw new Error('currentGameweek is required for v3 scoring mode');
+      }
+      // Convert number to gameweek object if needed
+      const currentGameweek = typeof requestData.currentGameweek === 'number' 
+        ? { number: requestData.currentGameweek }
+        : requestData.currentGameweek;
       players = v3ScoringService.applyV3Scoring(players, currentGameweek);
     }
 

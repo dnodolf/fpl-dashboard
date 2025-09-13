@@ -40,7 +40,7 @@ const getSleeperPositionCardStyle = (position, isDarkMode = false) => {
 };
 
 // ----------------- OPTIMIZER HOOK -----------------
-function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', currentGameweek = 2) {
+function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', currentGameweek) {
   const [data, setData] = useState({
     loading: true,
     error: null,
@@ -64,6 +64,11 @@ function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', cur
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
 
+      // Validate currentGameweek if using v3 scoring
+      if (scoringMode === 'v3' && !currentGameweek?.number) {
+        throw new Error('Current gameweek data is required for v3 scoring mode');
+      }
+
       const response = await fetch('/api/optimizer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,7 +77,7 @@ function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', cur
           forceRefresh,
           analysisType: 'current_roster',
           scoringMode,
-          currentGameweek
+          currentGameweek: currentGameweek?.number || currentGameweek
         })
       });
 
@@ -109,7 +114,7 @@ function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', cur
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimalPlayerIds = [], scoringMode = 'existing' }) => {
+const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimalPlayerIds = [], scoringMode = 'existing', currentLineup = null }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
@@ -145,21 +150,20 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
       return { def: parts[0], mid: parts[1], fwd: parts[2] };
     }
     
-    // Handle common formation patterns
+    // Handle the 6 formation patterns we evaluate
     switch(formation) {
       case '3-5-2': return { def: 3, mid: 5, fwd: 2 };
-      case '4-5-1': return { def: 4, mid: 5, fwd: 1 };
       case '4-4-2': return { def: 4, mid: 4, fwd: 2 };
-      case '4-3-3': return { def: 4, mid: 3, fwd: 3 };
+      case '4-5-1': return { def: 4, mid: 5, fwd: 1 };
       case '3-4-3': return { def: 3, mid: 4, fwd: 3 };
+      case '4-3-3': return { def: 4, mid: 3, fwd: 3 };
       case '5-4-1': return { def: 5, mid: 4, fwd: 1 };
-      case '5-3-2': return { def: 5, mid: 3, fwd: 2 };
       default: return { def: 4, mid: 4, fwd: 2 }; // fallback
     }
   };
 
   // Player Card Component - UPDATED WITH SLEEPER COLORS AND PREDICTED MINUTES
-  const PlayerCard = ({ player, isInOptimal = false, scoringMode = 'existing' }) => {
+  const PlayerCard = ({ player, isInOptimal = false, scoringMode = 'existing', currentLineup = null }) => {
     // Extract last name only for better readability
     const getLastName = (player) => {
       if (player.web_name) return player.web_name;
@@ -170,10 +174,13 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
       return 'Unknown';
     };
 
-    // FIXED: Check if this player is in the optimal lineup
-    // We need to check if this specific player ID is in the optimalPlayerIds array
+    // Check if this player is in current lineup (for showing correct indicators)
     const playerId = player.id || player.player_id || player.sleeper_id;
-    const isPlayerOptimal = optimalPlayerIds.includes(playerId);
+    
+    // For optimal lineup display: ✓ if player is ALSO in current, ✗ if player is NOT in current
+    // We need to compare against current lineup, not optimal lineup
+    const currentPlayerIds = currentLineup?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
+    const isInCurrentLineup = currentPlayerIds.includes(playerId);
 
     // Extract predicted minutes
     const getPredictedMinutes = (player) => {
@@ -206,14 +213,14 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
           : 'bg-white border-gray-300 text-gray-900'
       }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
         
-        {/* FIXED: Checkmark logic - Only show on optimal lineup side */}
+        {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
         {isOptimal && (
           <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-            isPlayerOptimal 
+            isInCurrentLineup 
               ? 'bg-green-500 text-white' 
               : 'bg-red-500 text-white'
           }`}>
-            {isPlayerOptimal ? '✓' : '✗'}
+            {isInCurrentLineup ? '✓' : '✗'}
           </div>
         )}
         
@@ -296,7 +303,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.fwd > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.FWD.slice(0, layout.fwd).map((player, idx) => (
-              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
+              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
             ))}
             {/* Fill missing FWD slots if needed */}
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
@@ -314,7 +321,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.mid > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.MID.slice(0, layout.mid).map((player, idx) => (
-              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
+              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
             ))}
             {/* Fill missing MID slots if needed */}
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
@@ -332,7 +339,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {layout.def > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.DEF.slice(0, layout.def).map((player, idx) => (
-              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
+              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
             ))}
             {/* Fill missing DEF slots if needed */}
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
@@ -349,7 +356,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         {/* Goalkeeper - Always show 1 */}
         <div className="flex justify-center">
           {playersByPosition.GKP.slice(0, 1).map((player, idx) => (
-            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} />
+            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
           ))}
           {/* Show empty GKP slot if needed */}
           {playersByPosition.GKP.length === 0 && (
@@ -384,88 +391,25 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
     );
   }
 
-  // Generate clear, actionable recommendations
+  // Use API recommendations directly 
   const getActionableChanges = () => {
     const changes = [];
     
-    // Formation change recommendation using recalculated stats
-    if (recalculatedStats?.formationChange) {
-      changes.push({
-        type: 'formation',
-        action: `Switch from ${current?.formation} to ${optimal?.formation}`,
-        reason: `Gain ${recalculatedStats.improvement.toFixed(1)} points`,
-        priority: 'high'
-      });
-    }
-    
-    // Add specific player swap recommendations
-    if (current?.players && optimal?.players) {
-      const currentPlayerIdsForSwaps = new Set(current.players.map(p => p.sleeper_id || p.id || p.player_id));
-      const optimalPlayers = optimal.players.filter(p => {
-        const playerId = p.sleeper_id || p.id || p.player_id;
-        return !currentPlayerIdsForSwaps.has(playerId);
-      });
-      
-      // Show top 3 player swaps
-      optimalPlayers.slice(0, 3).forEach(newPlayer => {
-        let newPlayerPoints = 0;
-        if (scoringMode === 'v3') {
-          newPlayerPoints = newPlayer.v3_current_gw || 0;
-        } else {
-          newPlayerPoints = newPlayer.current_gw_prediction || 0;
-        }
-        
-        // Find the player they would replace (same position)
-        const currentSamePosition = current.players.filter(p => p.position === newPlayer.position);
-        const worstCurrentPlayer = currentSamePosition.reduce((worst, player) => {
-          let playerPoints = 0;
-          if (scoringMode === 'v3') {
-            playerPoints = player.v3_current_gw || 0;
-          } else {
-            playerPoints = player.current_gw_prediction || 0;
-          }
-          
-          let worstPoints = 999;
-          if (worst) {
-            if (scoringMode === 'v3') {
-              worstPoints = worst.v3_current_gw || 0;
-            } else {
-              worstPoints = worst.current_gw_prediction || 0;
-            }
-          }
-          
-          return playerPoints < worstPoints ? player : worst;
-        }, null);
-        
-        if (worstCurrentPlayer) {
-          let worstPoints = 0;
-          if (scoringMode === 'v3') {
-            worstPoints = worstCurrentPlayer.v3_current_gw || 0;
-          } else {
-            worstPoints = worstCurrentPlayer.current_gw_prediction || 0;
-          }
-          
-          const improvement = newPlayerPoints - worstPoints;
-          if (improvement > 0.5) { // Only show if meaningful improvement
-            changes.push({
-              type: 'player',
-              action: `Replace ${worstCurrentPlayer.name || worstCurrentPlayer.web_name} with ${newPlayer.name || newPlayer.web_name}`,
-              reason: `+${improvement.toFixed(1)} points`,
-              priority: improvement > 2 ? 'high' : 'medium'
-            });
-          }
-        }
-      });
-    }
-    
-    // Add specific player swaps from recommendations
-    recommendations.slice(0, 3).forEach(rec => {
-      if (rec.action && rec.improvement) {
+    // Process API recommendations
+    recommendations.forEach(rec => {
+      if (rec.type === 'player_swap' && rec.message && rec.impact) {
         changes.push({
           type: 'player',
-          action: rec.action,
-          reason: `+${rec.improvement.toFixed(1)} points`,
-          priority: rec.improvement > 1 ? 'high' : 'medium'
+          action: rec.message,
+          reason: `+${rec.impact.toFixed(1)} points`,
+          priority: rec.impact > 1 ? 'high' : 'medium'
+        });
+      } else if (rec.type === 'formation_change' && rec.message) {
+        changes.push({
+          type: 'formation', 
+          action: rec.message,
+          reason: 'Formation adjustment needed',
+          priority: 'high'
         });
       }
     });
@@ -668,6 +612,16 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scor
 
 // ----------------- MAIN OPTIMIZER TAB CONTENT - ENHANCED -----------------
 export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scoringMode = 'existing' }) => {
+  // Don't render if gameweek data isn't loaded for v3 scoring
+  if (scoringMode === 'v3' && !currentGameweek?.number) {
+    return (
+      <div className={`p-8 text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p>Loading gameweek data for v3 scoring...</p>
+      </div>
+    );
+  }
+
   const { 
     loading, 
     error, 
@@ -675,10 +629,10 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
     current, 
     optimal, 
     recommendations, 
-    allFormations,
+    formations,
     roster,
     refetch 
-  } = useOptimizerData('ThatDerekGuy', scoringMode, currentGameweek?.number || 2);
+  } = useOptimizerData('ThatDerekGuy', scoringMode, currentGameweek);
 
   // Calculate optimal player IDs for comparison - for FormationVisualization checkmarks
   const optimalPlayerIdsForDisplay = optimal?.players?.map(p => {
@@ -765,10 +719,8 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
     );
   }
 
-  // DEBUG: Log formation data
-  console.log('Current formation from API:', current?.formation);
-  console.log('Optimal formation from API:', optimal?.formation);
-  console.log('All formations:', allFormations);
+  // Clean optimizer summary
+  console.log(`⚡ Optimizer: ${current?.formation || 'N/A'} → ${optimal?.formation || 'N/A'} (${formations?.length || 0} evaluated)`);
 
   return (
     <div className="space-y-6">
@@ -821,6 +773,7 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
             isOptimal={true}
             optimalPlayerIds={optimalPlayerIdsForDisplay}
             scoringMode={scoringMode}
+            currentLineup={current}
           />
         </div>
       </div>
@@ -836,7 +789,7 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
           scoringMode={scoringMode}
         />
         <FormationComparison 
-          allFormations={allFormations} 
+          allFormations={formations} 
           currentFormation={current?.formation} 
           isDarkMode={isDarkMode}
           scoringMode={scoringMode}

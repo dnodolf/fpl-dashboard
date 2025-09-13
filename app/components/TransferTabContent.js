@@ -1,5 +1,6 @@
 // app/components/TransferTabContent.js
 // Transfer analysis component following existing dashboard patterns
+'use client';
 
 import { useState, useMemo } from 'react';
 
@@ -20,101 +21,204 @@ const TEAM_DIFFICULTY = {
   'LUT': 1, 'BUR': 1, 'MUN': 4, 'WHU': 3, 'NFO': 2
 };
 
-const TransferTabContent = ({ players, currentGameweek, isDarkMode }) => {
-  const [selectedGameweeks, setSelectedGameweeks] = useState(5); // Default next 5 games
-  const [selectedPosition, setSelectedPosition] = useState('all');
-  const [showUpgradesOnly, setShowUpgradesOnly] = useState(true);
+const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode = 'existing' }) => {
+  // Calculate default gameweek range: current GW + next 4 (total of 5)
+  const currentGW = currentGameweek?.number;
+  const defaultStartGW = currentGW;
+  const defaultEndGW = currentGW + 4;
+  
+  const [startGameweek, setStartGameweek] = useState(defaultStartGW);
+  const [endGameweek, setEndGameweek] = useState(defaultEndGW);
+  const [selectedPositions, setSelectedPositions] = useState([]);
   const [selectedComparison, setSelectedComparison] = useState(null);
 
-  // Calculate transfer recommendations
+  // Calculate transfer recommendations with efficient approach
   const transferRecommendations = useMemo(() => {
     if (!players || players.length === 0) return [];
 
     const myPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy');
     const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
+    const gameweekCount = endGameweek - startGameweek + 1;
 
-    console.log('=== RECOMMENDATION DEBUG ===');
-    console.log('My players count:', myPlayers.length);
-    console.log('My player names:', myPlayers.map(p => p.name));
-    console.log('Free agents count:', freeAgents.length);
+    // Only log once per unique calculation to avoid spam
+    const logKey = `${freeAgents.length}-${startGameweek}-${endGameweek}`;
+    if (!window.lastTransferLog || window.lastTransferLog !== logKey) {
+      console.log(`🔄 Transfers: ${freeAgents.length} free agents | GW${startGameweek}-${endGameweek} (${gameweekCount}wks)`);
+      window.lastTransferLog = logKey;
+    }
 
-    const recommendations = [];
-
-    // Group by position for better comparisons
+    // Step 1: Find top 5 players in each position based on predicted points
     const positions = ['GKP', 'DEF', 'MID', 'FWD'];
+    const topPlayersByPosition = {};
     
     positions.forEach(position => {
+      const positionPlayers = freeAgents.filter(p => p.position === position);
+      
+      // Calculate points for each player and sort by highest
+      const playersWithPoints = positionPlayers.map(player => ({
+        ...player,
+        calculatedPoints: getGameweekRangePoints(player, startGameweek, endGameweek)
+      }));
+      
+      // Get top 5 for this position
+      topPlayersByPosition[position] = playersWithPoints
+        .sort((a, b) => b.calculatedPoints - a.calculatedPoints)
+        .slice(0, 5);
+        
+      // Removed individual position logging - will show summary only
+    });
+
+    // Step 2: Always show top 5 available in each position (regardless of net gain)
+    const recommendations = [];
+    
+    positions.forEach(position => {
+      const topPlayersInPosition = topPlayersByPosition[position];
       const myPositionPlayers = myPlayers.filter(p => p.position === position);
-      const freeAgentsPosition = freeAgents.filter(p => p.position === position);
-
-      console.log(`${position} - My players:`, myPositionPlayers.map(p => p.name));
-      console.log(`${position} - Free agents:`, freeAgentsPosition.length);
-
-      myPositionPlayers.forEach(myPlayer => {
-        freeAgentsPosition.forEach(freeAgent => {
-          const myPlayerPoints = getNextXGameweekPoints(myPlayer, selectedGameweeks);
-          const freeAgentPoints = getNextXGameweekPoints(freeAgent, selectedGameweeks);
-          
-          const netGain = freeAgentPoints - myPlayerPoints;
-
-          console.log(`Comparing: ${myPlayer.name} (${myPlayerPoints.toFixed(1)}) vs ${freeAgent.name} (${freeAgentPoints.toFixed(1)}) = ${netGain.toFixed(1)} gain`);
-
-          if (netGain > 0.1) { // Lowered threshold for testing
-            recommendations.push({
-              currentPlayer: myPlayer,
-              recommendedPlayer: freeAgent,
-              netGain: netGain,
-              confidence: getRecommendationConfidence(freeAgent),
-              fixtureRating: getFixtureRating(freeAgent, selectedGameweeks),
-              formTrend: getFormTrend(freeAgent),
-              minutesExpected: getExpectedMinutes(freeAgent, selectedGameweeks)
-            });
-          }
-        });
+      
+      topPlayersInPosition.forEach(topPlayer => {
+        // For each top player, find the best comparison from my current players
+        let bestCurrentPlayer = null;
+        let bestNetGain = -Infinity;
+        
+        if (position === 'GKP') {
+          // GKP: only compare against my GKPs
+          myPositionPlayers.forEach(myPlayer => {
+            const myPlayerPoints = getGameweekRangePoints(myPlayer, startGameweek, endGameweek);
+            const netGain = topPlayer.calculatedPoints - myPlayerPoints;
+            if (netGain > bestNetGain) {
+              bestNetGain = netGain;
+              bestCurrentPlayer = myPlayer;
+            }
+          });
+        } else {
+          // Outfield: compare against all my outfield players
+          const myOutfieldPlayers = myPlayers.filter(p => ['DEF', 'MID', 'FWD'].includes(p.position));
+          myOutfieldPlayers.forEach(myPlayer => {
+            const myPlayerPoints = getGameweekRangePoints(myPlayer, startGameweek, endGameweek);
+            const netGain = topPlayer.calculatedPoints - myPlayerPoints;
+            if (netGain > bestNetGain) {
+              bestNetGain = netGain;
+              bestCurrentPlayer = myPlayer;
+            }
+          });
+        }
+        
+        // Add recommendation (even if net negative)
+        if (bestCurrentPlayer) {
+          recommendations.push({
+            currentPlayer: bestCurrentPlayer,
+            recommendedPlayer: topPlayer,
+            netGain: bestNetGain,
+            confidence: getRecommendationConfidence(topPlayer),
+            fixtureRating: getFixtureRating(topPlayer, gameweekCount),
+            formTrend: getFormTrend(topPlayer),
+            minutesExpected: getExpectedMinutes(topPlayer, gameweekCount),
+            topPlayerRank: topPlayersInPosition.indexOf(topPlayer) + 1 // 1-5 rank in position
+          });
+        }
       });
     });
 
-    console.log('Final recommendations:', recommendations.map(r => `${r.currentPlayer.name} -> ${r.recommendedPlayer.name} (+${r.netGain.toFixed(1)})`));
-
-    // Sort by net gain descending
+    // Create position summary for logging (only if we logged the initial message)
+    if (!window.lastTransferPoolLog || window.lastTransferPoolLog !== logKey) {
+      const positionCounts = positions.map(pos => `${pos}:${topPlayersByPosition[pos]?.length || 0}`).join(' ');
+      console.log(`📊 Transfer pool: ${recommendations.length} total (${positionCounts})`);
+      window.lastTransferPoolLog = logKey;
+    }
+    
+    // Step 3: Sort by position first, then by rank within position
     return recommendations
-      .sort((a, b) => b.netGain - a.netGain)
-      .slice(0, 20); // Top 20 recommendations
+      .sort((a, b) => {
+        // First sort by position order
+        const posOrder = ['GKP', 'DEF', 'MID', 'FWD'];
+        const posA = posOrder.indexOf(a.recommendedPlayer.position);
+        const posB = posOrder.indexOf(b.recommendedPlayer.position);
+        if (posA !== posB) return posA - posB;
+        
+        // Then by rank within position (1st, 2nd, 3rd, etc.)
+        return a.topPlayerRank - b.topPlayerRank;
+      });
 
-  }, [players, selectedGameweeks]);
+  }, [players, startGameweek, endGameweek, scoringMode]);
 
-  // Filter recommendations based on position and upgrades toggle
-  const filteredRecommendations = useMemo(() => {
-    let filtered = transferRecommendations;
-
-    if (selectedPosition !== 'all') {
-      filtered = filtered.filter(rec => rec.currentPlayer.position === selectedPosition);
+  // Position colors for consistency (matching your image)
+  const getPositionColor = (position) => {
+    switch (position) {
+      case 'FWD': return { 
+        bg: 'bg-purple-100', 
+        text: 'text-purple-800', 
+        border: 'border-purple-200', 
+        accent: 'bg-purple-500',
+        pill: 'bg-gradient-to-r from-purple-500 to-purple-600'
+      };
+      case 'MID': return { 
+        bg: 'bg-pink-100', 
+        text: 'text-pink-800', 
+        border: 'border-pink-200', 
+        accent: 'bg-pink-500',
+        pill: 'bg-gradient-to-r from-pink-500 to-pink-600'
+      };
+      case 'DEF': return { 
+        bg: 'bg-teal-100', 
+        text: 'text-teal-800', 
+        border: 'border-teal-200', 
+        accent: 'bg-teal-500',
+        pill: 'bg-gradient-to-r from-teal-500 to-teal-600'
+      };
+      case 'GKP': return { 
+        bg: 'bg-yellow-100', 
+        text: 'text-yellow-800', 
+        border: 'border-yellow-200', 
+        accent: 'bg-yellow-500',
+        pill: 'bg-gradient-to-r from-yellow-500 to-yellow-600'
+      };
+      default: return { 
+        bg: 'bg-gray-100', 
+        text: 'text-gray-800', 
+        border: 'border-gray-200', 
+        accent: 'bg-gray-500',
+        pill: 'bg-gray-500'
+      };
     }
+  };
 
-    if (showUpgradesOnly) {
-      filtered = filtered.filter(rec => rec.netGain > 0);
-    }
-
-    return filtered;
-  }, [transferRecommendations, selectedPosition, showUpgradesOnly]);
+  const handlePositionToggle = (position) => {
+    setSelectedPositions(prev => 
+      prev.includes(position) 
+        ? prev.filter(p => p !== position)
+        : [...prev, position]
+    );
+  };
 
   // Helper functions
-  function getNextXGameweekPoints(player, gameweeks) {
-    if (!player.predictions || !Array.isArray(player.predictions)) return 0;
+  function getGameweekRangePoints(player, startGW, endGW) {
+    // Calculate points for a specific gameweek range
+    if (!player.predictions || !Array.isArray(player.predictions)) {
+      // Fallback if no predictions available
+      const fallbackPpg = scoringMode === 'v3' ? (player.v3_current_gw || 0) : (player.current_gw_prediction || 0);
+      const gameweekCount = endGW - startGW + 1;
+      return fallbackPpg * gameweekCount;
+    }
     
-    const currentGW = currentGameweek?.number || 2;
-    const targetGameweeks = Array.from({length: gameweeks}, (_, i) => currentGW + i);
+    let totalPoints = 0;
     
-    return targetGameweeks.reduce((total, gw) => {
+    for (let gw = startGW; gw <= endGW; gw++) {
       const prediction = player.predictions.find(p => p.gw === gw);
-      return total + (prediction?.predicted_pts || 0);
-    }, 0);
+      if (prediction) {
+        const gwPoints = scoringMode === 'v3' 
+          ? (prediction.v3_predicted_pts || prediction.predicted_pts || 0)
+          : (prediction.predicted_pts || 0);
+        totalPoints += gwPoints;
+      }
+    }
+    
+    return totalPoints;
   }
 
   function getExpectedMinutes(player, gameweeks) {
     if (!player.predictions || !Array.isArray(player.predictions)) return 0;
     
-    const currentGW = currentGameweek?.number || 2;
+    const currentGW = currentGameweek?.number;
     const targetGameweeks = Array.from({length: gameweeks}, (_, i) => currentGW + i);
     
     const totalMinutes = targetGameweeks.reduce((total, gw) => {
@@ -134,13 +238,18 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode }) => {
   }
 
   function getFormTrend(player) {
-    // Simple form calculation based on recent points
-    const recent = player.predictions?.slice(0, 3) || [];
-    const avgRecent = recent.reduce((sum, p) => sum + (p.predicted_pts || 0), 0) / Math.max(recent.length, 1);
+    // Enhanced form calculation using available data
+    const currentPpg = player.ppg_value || player.sleeper_season_avg || 0;
+    const rosPoints = player.sleeper_points_ros || player.predicted_points || 0;
+    const seasonGames = 38;
+    const projectedPpg = rosPoints / seasonGames;
     
-    if (avgRecent > 6) return 'up';
-    if (avgRecent > 4) return 'neutral';
-    return 'down';
+    // Compare current PPG vs projected PPG
+    const formDiff = currentPpg - projectedPpg;
+    
+    if (formDiff > 0.5) return 'up';
+    if (formDiff < -0.5) return 'down';
+    return 'neutral';
   }
 
   function getRecommendationConfidence(player) {
@@ -192,145 +301,235 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode }) => {
     );
   }
 
+  function renderInjuryBadge(injuryStatus) {
+    if (!injuryStatus) return null;
+    
+    const normalizedStatus = injuryStatus.toLowerCase();
+    let config;
+    
+    if (normalizedStatus.includes('out') || normalizedStatus.includes('injured')) {
+      config = { 
+        bg: 'bg-red-100', 
+        text: 'text-red-800', 
+        border: 'border-red-200',
+        icon: '🏥', 
+        label: 'OUT' 
+      };
+    } else if (normalizedStatus.includes('gtd') || normalizedStatus.includes('doubtful') || normalizedStatus.includes('questionable')) {
+      config = { 
+        bg: 'bg-yellow-100', 
+        text: 'text-yellow-800', 
+        border: 'border-yellow-200',
+        icon: '⚠️', 
+        label: 'GTD' 
+      };
+    } else if (normalizedStatus.includes('fit') || normalizedStatus.includes('available')) {
+      config = { 
+        bg: 'bg-green-100', 
+        text: 'text-green-800', 
+        border: 'border-green-200',
+        icon: '✅', 
+        label: 'FIT' 
+      };
+    } else {
+      config = { 
+        bg: 'bg-gray-100', 
+        text: 'text-gray-800', 
+        border: 'border-gray-200',
+        icon: '❓', 
+        label: injuryStatus.substring(0, 3).toUpperCase() 
+      };
+    }
+    
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
+        <span className="mr-1">{config.icon}</span>
+        {config.label}
+      </span>
+    );
+  }
+
   return (
     <div className="space-y-6">
       
       {/* Controls Section */}
       <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-        <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex flex-wrap gap-4 items-center justify-between">
           
-          {/* Gameweeks Slider */}
+          {/* Position Multi-Select Filter - Left Side */}
           <div className="flex items-center gap-3">
             <label className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Next {selectedGameweeks} games
+              Positions:
             </label>
-            <input
-              type="range"
-              min="3"
-              max="10"
-              value={selectedGameweeks}
-              onChange={(e) => setSelectedGameweeks(parseInt(e.target.value))}
-              className="w-20"
-            />
+            <div className="flex gap-2">
+              {['GKP', 'DEF', 'MID', 'FWD'].map(position => {
+                const colors = getPositionColor(position);
+                const isSelected = selectedPositions.includes(position);
+                return (
+                  <button
+                    key={position}
+                    onClick={() => handlePositionToggle(position)}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${
+                      isSelected 
+                        ? `${colors.pill} text-white shadow-lg`
+                        : isDarkMode 
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    {position}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Position Filter */}
-          <div>
-            <select
-              value={selectedPosition}
-              onChange={(e) => setSelectedPosition(e.target.value)}
-              className={`p-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isDarkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            >
-              <option value="all">All Positions</option>
-              <option value="GKP">Goalkeepers</option>
-              <option value="DEF">Defenders</option>
-              <option value="MID">Midfielders</option>
-              <option value="FWD">Forwards</option>
-            </select>
-          </div>
-
-          {/* Show Upgrades Only Toggle */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="upgradesOnly"
-              checked={showUpgradesOnly}
-              onChange={(e) => setShowUpgradesOnly(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
-            />
-            <label htmlFor="upgradesOnly" className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Show upgrades only
-            </label>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              GW {startGameweek} to {endGameweek} ({endGameweek - startGameweek + 1} weeks)
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Recommendations Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredRecommendations.map((rec, index) => (
-          <div
-            key={`${rec.currentPlayer.player_id}-${rec.recommendedPlayer.player_id}`}
-            className={`p-4 rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow ${
-              isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-750' : 'bg-white border-gray-200 hover:bg-gray-50'
-            }`}
-            onClick={() => setSelectedComparison(rec)}
-          >
-            
-            {/* Header: Position & Net Gain */}
-            <div className="flex items-center justify-between mb-3">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                rec.currentPlayer.position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
-                rec.currentPlayer.position === 'DEF' ? 'bg-green-100 text-green-800' :
-                rec.currentPlayer.position === 'MID' ? 'bg-blue-100 text-blue-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {rec.currentPlayer.position}
-              </span>
-              <span className="text-lg font-bold text-green-600">
-                +{rec.netGain.toFixed(1)}
-              </span>
-            </div>
-
-            {/* Player Swap */}
-            <div className="space-y-2 mb-3">
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <span className="text-red-500">OUT:</span> {rec.currentPlayer.web_name}
-              </div>
-              <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                <span className="text-green-500">IN:</span> {rec.recommendedPlayer.web_name}
-              </div>
-              <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                {rec.recommendedPlayer.team_abbr}
-              </div>
-            </div>
-
-            {/* Key Stats */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Next {selectedGameweeks} games
-                </span>
-                <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {getNextXGameweekPoints(rec.recommendedPlayer, selectedGameweeks).toFixed(1)} pts
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  ~{rec.minutesExpected} mins/game
-                </span>
-                <div className="flex items-center gap-1">
-                  {renderFormTrendIcon(rec.formTrend)}
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Form
-                  </span>
+      {/* Position Sections */}
+      <div className="space-y-6">
+        {['FWD', 'MID', 'DEF', 'GKP'].filter(position => selectedPositions.length === 0 || selectedPositions.includes(position)).map(position => {
+          const positionPlayers = transferRecommendations.filter(rec => rec.recommendedPlayer.position === position);
+          const myPositionPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy' && p.position === position);
+          const colors = getPositionColor(position);
+          
+          return (
+            <div key={position} className={`rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              {/* Position Header with pill style */}
+              <div className={`px-6 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-4">
+                  <div className={`px-4 py-2 rounded-full ${colors.pill} text-white font-semibold text-sm shadow-lg`}>
+                    {position}
+                  </div>
+                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {position === 'FWD' ? 'Forwards' : 
+                     position === 'MID' ? 'Midfielders' : 
+                     position === 'DEF' ? 'Defenders' : 'Goalkeepers'}
+                  </h3>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-xs">
-                  {renderFixtureDifficultyBadge(rec.fixtureRating)}
-                </span>
-                {renderConfidenceBadge(rec.confidence)}
+              
+              {/* Two Column Layout */}
+              <div className="grid grid-cols-2 gap-0">
+                
+                {/* Left Column - Available Players */}
+                <div className={`border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <div className={`px-4 py-3 bg-opacity-50 ${isDarkMode ? 'bg-green-900' : 'bg-green-50'}`}>
+                    <h4 className={`text-sm font-medium ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
+                      Top 5 Available
+                    </h4>
+                  </div>
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {positionPlayers.length > 0 ? positionPlayers.map((rec, index) => (
+                      <div
+                        key={`avail-${rec.recommendedPlayer.player_id}`}
+                        className={`p-3 cursor-pointer transition-colors hover:bg-opacity-50 ${
+                          isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => setSelectedComparison(rec)}
+                      >
+                        <div className="flex items-center justify-between">
+                          {/* Player Info */}
+                          <div className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full ${colors.accent} flex items-center justify-center text-xs font-semibold text-white`}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {rec.recommendedPlayer.web_name || rec.recommendedPlayer.name}
+                              </div>
+                              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {rec.recommendedPlayer.team_abbr}
+                                {rec.recommendedPlayer.injury_status && (
+                                  <span className="ml-1 text-xs">
+                                    {rec.recommendedPlayer.injury_status.includes('out') ? '🔴' :
+                                     rec.recommendedPlayer.injury_status.includes('gtd') ? '🟡' : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Points */}
+                          <div className="text-right">
+                            <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {rec.recommendedPlayer.calculatedPoints.toFixed(1)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className={`p-3 text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        No available players
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Right Column - My Roster */}
+                <div>
+                  <div className={`px-4 py-3 bg-opacity-50 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-50'}`}>
+                    <h4 className={`text-sm font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                      My Roster
+                    </h4>
+                  </div>
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {myPositionPlayers.length > 0 ? myPositionPlayers.map((player, index) => (
+                      <div
+                        key={`my-${player.player_id}`}
+                        className="p-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          {/* Player Info */}
+                          <div className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full ${colors.accent} flex items-center justify-center text-xs font-semibold text-white opacity-60`}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {player.web_name || player.name}
+                              </div>
+                              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {player.team_abbr}
+                                {player.injury_status && (
+                                  <span className="ml-1 text-xs">
+                                    {player.injury_status.includes('out') ? '🔴' :
+                                     player.injury_status.includes('gtd') ? '🟡' : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Points */}
+                          <div className="text-right">
+                            <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {getGameweekRangePoints(player, startGameweek, endGameweek).toFixed(1)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className={`p-3 text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        No players in roster
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Click indicator */}
-            <div className={`mt-3 pt-2 border-t text-center text-xs ${
-              isDarkMode ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-500'
-            }`}>
-              Click to compare
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* No results message */}
-      {filteredRecommendations.length === 0 && (
+      {transferRecommendations.length === 0 && (
         <div className={`text-center py-8 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
           <div className={`text-2xl mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             🎉
@@ -348,7 +547,8 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode }) => {
       {selectedComparison && (
         <ComparisonModal
           comparison={selectedComparison}
-          selectedGameweeks={selectedGameweeks}
+          startGameweek={startGameweek}
+          endGameweek={endGameweek}
           currentGameweek={currentGameweek}
           isDarkMode={isDarkMode}
           onClose={() => setSelectedComparison(null)}
@@ -359,21 +559,22 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode }) => {
 };
 
 // Comparison Modal Component
-const ComparisonModal = ({ comparison, selectedGameweeks, currentGameweek, isDarkMode, onClose }) => {
-  const currentGW = currentGameweek?.number || 2;
+const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGameweek, isDarkMode, onClose }) => {
+  const gameweekCount = endGameweek - startGameweek + 1;
   
   // Get gameweek predictions for both players
   const getGameweekPredictions = (player) => {
     if (!player.predictions) return [];
-    return Array.from({length: selectedGameweeks}, (_, i) => {
-      const gw = currentGW + i;
+    const predictions = [];
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
       const prediction = player.predictions.find(p => p.gw === gw);
-      return {
+      predictions.push({
         gameweek: gw,
         points: prediction?.predicted_pts || 0,
         minutes: prediction?.predicted_mins || 0
-      };
-    });
+      });
+    }
+    return predictions;
   };
 
   const currentPredictions = getGameweekPredictions(comparison.currentPlayer);
@@ -425,7 +626,7 @@ const ComparisonModal = ({ comparison, selectedGameweeks, currentGameweek, isDar
                   Team: {comparison.currentPlayer.team_abbr}
                 </div>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Next {selectedGameweeks}: {getGameweekPredictions(comparison.currentPlayer).reduce((sum, p) => sum + p.points, 0).toFixed(1)} pts
+                  GW{startGameweek}-{endGameweek}: {getGameweekPredictions(comparison.currentPlayer).reduce((sum, p) => sum + p.points, 0).toFixed(1)} pts
                 </div>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Owner: {comparison.currentPlayer.owned_by}
@@ -452,7 +653,7 @@ const ComparisonModal = ({ comparison, selectedGameweeks, currentGameweek, isDar
                   Team: {comparison.recommendedPlayer.team_abbr}
                 </div>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Next {selectedGameweeks}: {getGameweekPredictions(comparison.recommendedPlayer).reduce((sum, p) => sum + p.points, 0).toFixed(1)} pts
+                  GW{startGameweek}-{endGameweek}: {getGameweekPredictions(comparison.recommendedPlayer).reduce((sum, p) => sum + p.points, 0).toFixed(1)} pts
                 </div>
                 <div className={`text-lg font-bold text-green-600`}>
                   Net gain: +{comparison.netGain.toFixed(1)}
@@ -464,7 +665,7 @@ const ComparisonModal = ({ comparison, selectedGameweeks, currentGameweek, isDar
           {/* Gameweek Breakdown */}
           <div className="mb-6">
             <h4 className={`text-lg font-medium mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Next {selectedGameweeks} Gameweeks
+              Gameweeks {startGameweek}-{endGameweek} ({gameweekCount} GWs)
             </h4>
             
             <div className={`overflow-x-auto border rounded-lg ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -486,9 +687,9 @@ const ComparisonModal = ({ comparison, selectedGameweeks, currentGameweek, isDar
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                  {Array.from({length: selectedGameweeks}, (_, i) => {
-                    const current = currentPredictions[i] || { gameweek: currentGW + i, points: 0, minutes: 0 };
-                    const recommended = recommendedPredictions[i] || { gameweek: currentGW + i, points: 0, minutes: 0 };
+                  {Array.from({length: gameweekCount}, (_, i) => {
+                    const current = currentPredictions[i] || { gameweek: startGameweek + i, points: 0, minutes: 0 };
+                    const recommended = recommendedPredictions[i] || { gameweek: startGameweek + i, points: 0, minutes: 0 };
                     const diff = recommended.points - current.points;
                     
                     return (

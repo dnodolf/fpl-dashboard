@@ -102,6 +102,97 @@ function calculateFixtureMultiplier(player, currentGameweek) {
  */
 export function calculateV3Prediction(player, currentGameweek) {
   try {
+    // Check if FFH predicts 0 minutes or 0 points for current gameweek - respect that prediction
+    if (!currentGameweek?.number) {
+      console.error('❌ V3 Scoring: No currentGameweek provided - this is a critical error');
+      throw new Error('currentGameweek is required for V3 scoring calculations');
+    }
+    const currentGW = currentGameweek.number;
+    const currentGwPrediction = player.predictions?.find(p => p.gw === currentGW);
+    
+    // Also check current_gw_prediction field directly if no predictions array
+    const directCurrentPrediction = player.current_gw_prediction || 0;
+    
+    // Check if player has FFH data but no prediction for current gameweek
+    const hasFFHData = player.ffh_matched || player.ffh_gw_predictions;
+    const hasFFHGWPredictions = player.ffh_gw_predictions && player.ffh_gw_predictions !== '{}';
+    
+    // If player has FFH data but no prediction for current GW, it means 0 prediction
+    if (hasFFHData && hasFFHGWPredictions) {
+      try {
+        const ffhGwPreds = JSON.parse(player.ffh_gw_predictions);
+        const ffhCurrentGwPred = ffhGwPreds[currentGW.toString()];
+        
+        // If FFH has predictions but specifically excludes current GW, that means 0
+        if (ffhCurrentGwPred === undefined || ffhCurrentGwPred === 0) {
+          // Only log for debug mode or specific players - reduce console spam
+          return {
+            v3_season_total: 0,
+            v3_season_avg: 0,
+            v3_current_gw: 0,
+            v3_adjustments: {
+              position: 1.0,
+              form: 1.0,
+              fixture: 1.0,
+              total: 1.0
+            },
+            v3_confidence: 'low'
+          };
+        }
+      } catch (error) {
+        console.warn('Error parsing FFH GW predictions for', player.name, error);
+      }
+    }
+    
+    // If no predictions array but we have direct prediction of 0, respect that
+    if (!player.predictions && directCurrentPrediction === 0) {
+      // Reduced logging - only for important cases
+      return {
+        v3_season_total: 0,
+        v3_season_avg: 0,
+        v3_current_gw: 0,
+        v3_adjustments: {
+          position: 1.0,
+          form: 1.0,
+          fixture: 1.0,
+          total: 1.0
+        },
+        v3_confidence: 'low'
+      };
+    }
+    
+    // Debug logging for Lammens specifically
+    if ((player.name && player.name.includes('Lammens')) || (player.web_name && player.web_name.includes('Lammens'))) {
+      console.log(`🔍 V3 Debug for ${player.name || player.web_name}:`, {
+        currentGW,
+        hasPredictions: !!player.predictions,
+        predictionsLength: player.predictions?.length,
+        currentGwPrediction,
+        directCurrentPrediction,
+        predicted_mins: currentGwPrediction?.predicted_mins,
+        predicted_pts: currentGwPrediction?.predicted_pts,
+        shouldReturn0: currentGwPrediction && (currentGwPrediction.predicted_mins === 0 || currentGwPrediction.predicted_pts === 0),
+        directPredictionIs0: directCurrentPrediction === 0
+      });
+    }
+    
+    if (currentGwPrediction && (currentGwPrediction.predicted_mins === 0 || currentGwPrediction.predicted_pts === 0)) {
+      // If FFH specifically predicts 0 minutes or 0 points, respect that
+      console.log(`🚫 V3 returning 0 for ${player.name || player.web_name} due to 0 prediction`);
+      return {
+        v3_season_total: 0,
+        v3_season_avg: 0,
+        v3_current_gw: 0,
+        v3_adjustments: {
+          position: 1.0,
+          form: 1.0,
+          fixture: 1.0,
+          total: 1.0
+        },
+        v3_confidence: 'low'
+      };
+    }
+    
     // Get base prediction from existing scoring
     const basePrediction = player.sleeper_season_total || 
                           player.ffh_season_prediction || 
@@ -109,16 +200,7 @@ export function calculateV3Prediction(player, currentGameweek) {
                           (player.current_gw_prediction ? player.current_gw_prediction * 38 : 0) || // Estimate season from gameweek
                           0;
     
-    // Debug logging for Bruno Fernandes specifically
-    if ((player.name && player.name.includes('Bruno')) || (player.web_name && player.web_name.includes('Bruno'))) {
-      console.log(`🔍 V3 Debug for ${player.name || player.web_name}:`, {
-        basePrediction,
-        sleeper_season_total: player.sleeper_season_total,
-        predicted_points: player.predicted_points,
-        current_gw_prediction: player.current_gw_prediction,
-        calculatedBasePrediction: player.current_gw_prediction ? player.current_gw_prediction * 38 : 0
-      });
-    }
+    // Debug logging removed for production
     
     if (basePrediction === 0) {
       return {
@@ -175,10 +257,7 @@ export function calculateV3Prediction(player, currentGameweek) {
       v3_calculation_source: 'enhanced'
     };
     
-    // Debug logging for Bruno Fernandes specifically
-    if ((player.name && player.name.includes('Bruno')) || (player.web_name && player.web_name.includes('Bruno'))) {
-      console.log(`🔍 V3 Result for ${player.name || player.web_name}:`, result);
-    }
+    // Debug logging removed for production
     
     return result;
   } catch (error) {
@@ -206,10 +285,24 @@ export function applyV3Scoring(players, currentGameweek) {
     return players;
   }
   
-  console.log(`🚀 Applying V3 scoring to ${players.length} players for GW${currentGameweek}`);
+  if (!currentGameweek?.number) {
+    console.error('❌ applyV3Scoring: No currentGameweek provided');
+    throw new Error('currentGameweek is required for V3 scoring');
+  }
   
-  return players.map(player => {
+  console.log(`🚀 V3 Scoring: ${players.length} players for GW${currentGameweek.number}`);
+  
+  let playersWithPredictions = 0;
+  let playersWithZeroPredictions = 0;
+  
+  const enhancedPlayers = players.map(player => {
     const v3Results = calculateV3Prediction(player, currentGameweek);
+    
+    if (v3Results.v3_current_gw > 0) {
+      playersWithPredictions++;
+    } else {
+      playersWithZeroPredictions++;
+    }
     
     return {
       ...player,
@@ -218,6 +311,10 @@ export function applyV3Scoring(players, currentGameweek) {
       v3_timestamp: new Date().toISOString()
     };
   });
+  
+  console.log(`📊 V3 Summary: ${playersWithPredictions} players with predictions, ${playersWithZeroPredictions} with 0/no predictions`);
+  
+  return enhancedPlayers;
 }
 
 /**

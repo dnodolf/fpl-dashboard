@@ -41,7 +41,7 @@ const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds
     
     // Try predictions array for current GW
     if (player.predictions && Array.isArray(player.predictions)) {
-      const currentGWPred = player.predictions.find(p => p.gw === (currentGameweek?.number || 2));
+      const currentGWPred = player.predictions.find(p => p.gw === currentGameweek?.number);
       if (currentGWPred?.predicted_pts) {
         return currentGWPred.predicted_pts;
       }
@@ -142,7 +142,7 @@ const getFixtureDifficulty = (player) => {
   
   // Since ffh_gw_predictions only contains points, we'll use team-based difficulty
   // This is actually more practical for your use case
-  const currentGW = currentGameweek?.number || 4;
+  const currentGW = currentGameweek?.number;
   const teamAbbr = player.ffh_team || player.team_abbr || player.team;
   
   if (!teamAbbr) return 'N/A';

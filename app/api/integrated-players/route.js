@@ -13,40 +13,25 @@ const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
 async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) {
   try {
-    console.log('DEBUG: V3 enhancement starting with', matchedPlayers.length, 'players');
-    
-    // Step 1: Get current season stats
-    console.log('DEBUG: Fetching FFH stats...');
+    // Initialize V3 prediction engine
     const ffhStatsData = await Promise.race([
       ffhStatsService.fetchCurrentSeasonStats(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('FFH stats timeout')), 10000))
     ]);
-    console.log('DEBUG: FFH stats loaded:', ffhStatsData.totalPlayers, 'players');
     
-    // Step 2: Get Sleeper scoring
-    console.log('DEBUG: Fetching Sleeper scoring...');
     const sleeperScoring = await Promise.race([
       fetchSleeperScoringSettings(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Sleeper scoring timeout')), 5000))
     ]);
-    console.log('DEBUG: Sleeper scoring loaded, keys:', Object.keys(sleeperScoring).length);
     
-    // Step 3: Initialize V3 engine
-    console.log('DEBUG: Initializing V3 engine...');
     await sleeperPredictionServiceV3.initialize(sleeperScoring, ffhStatsService);
-    console.log('DEBUG: V3 engine initialized');
-    
-    // Step 4: Process players with detailed logging
-    console.log('DEBUG: Starting player processing...');
     const enhancedPlayers = [];
     let processedCount = 0;
     
     for (const player of matchedPlayers) {
       processedCount++;
       
-      if (processedCount % 50 === 0) {
-        console.log(`DEBUG: Processed ${processedCount}/${matchedPlayers.length} players`);
-      }
+      // Processing players silently
       
       try {
         // Find matching FFH stats player
@@ -316,7 +301,7 @@ function fallbackConvertFFHToSleeper(ffhPrediction, position) {
  */
 async function fetchSleeperData() {
   try {
-    console.log('⚡ Fetching Sleeper data directly from API...');
+    console.log('📡 Pipeline: Fetching Sleeper players & rosters');
     const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
     
     const [playersResponse, rostersResponse, usersResponse] = await Promise.all([
@@ -371,7 +356,7 @@ async function fetchSleeperData() {
  * Fetch FFH data directly from FFH API - corrected for direct array response
  */
 async function fetchFFHData() {
-  console.log('🔥 Fetching FFH players data directly from FFH API...');
+  console.log('📡 Pipeline: Fetching FFH predictions & stats');
   
   const ffhBaseUrl = 'https://data.fantasyfootballhub.co.uk/api';
   const authStatic = process.env.FFH_AUTH_STATIC || 'r5C(e3.JeS^:_7LF';
@@ -452,14 +437,11 @@ async function fetchFFHData() {
  * FAIL-FAST INTEGRATION - No fallbacks, system errors if any component fails
  */
 async function integratePlayersWithOptaMatching(currentGameweek) {
-  console.log('🚀 Starting FAIL-FAST integration - all services required...');
-  
-  // Import services - MUST succeed
-  console.log('🔧 Importing required services...');
+  console.log('🔗 Pipeline: Starting player integration');
   const services = await importServices(); // Will throw if any service fails
   
   // Fetch data from both sources - BOTH must succeed
-  console.log('📡 Fetching data from all required APIs...');
+  // Data sources fetched above
   const [sleeperData, ffhData] = await Promise.all([
     fetchSleeperData(), // Will throw if fails
     fetchFFHData()      // Will throw if fails
@@ -489,7 +471,7 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
     };
   });
 
-  console.log(`✅ Enhanced ${sleeperPlayersArray.length} players with unified position authority`);
+  console.log(`🔗 Pipeline: Matched ${sleeperPlayersArray.length} players with FFH data`);
 
   // **CRITICAL**: Match players using services - MUST succeed
   console.log('🎯 Matching players with FFH data using services...');
@@ -582,30 +564,17 @@ export async function POST(request) {
       }
     }
 
-    // Get current gameweek here
-    let currentGameweek = 3; // Default fallback
+    // Get current gameweek from authoritative service
+    let currentGameweek;
     try {
-      console.log('📅 Getting current gameweek directly from FPL API...');
-      const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/', {
-        headers: {
-          'User-Agent': 'FPL-Dashboard/1.0',
-          'Accept': 'application/json',
-        },
-        signal: AbortSignal.timeout(10000)
-      });
-      
-      if (response.ok) {
-        const fplData = await response.json();
-        const currentEvent = fplData.events?.find(event => event.is_current) || 
-                            fplData.events?.find(event => event.is_next);
-        if (currentEvent) {
-          currentGameweek = currentEvent.id;
-        }
-      }
-      
+      console.log('📅 Getting current gameweek from authoritative service...');
+      const gameweekService = (await import('../../services/gameweekService.js')).default;
+      const gameweekData = await gameweekService.getCurrentGameweek();
+      currentGameweek = gameweekData.number;
       console.log(`📅 Current gameweek: ${currentGameweek}`);
     } catch (error) {
-      console.warn('Using fallback gameweek:', error.message);
+      console.error('❌ Failed to get current gameweek from authoritative service:', error);
+      throw new Error('Cannot proceed without current gameweek information');
     }
 
     // Fresh data integration
@@ -618,7 +587,7 @@ export async function POST(request) {
 const finalPlayers = v3EnhancedResult.players;
 const v3Statistics = v3EnhancedResult.v3Stats;
 
-console.log(`✅ V3 Enhancement complete: ${v3Statistics.v3Enhanced}/${v3Statistics.totalPlayers} players enhanced`);
+console.log(`✅ Pipeline: V3 scoring applied to ${v3Statistics.v3Enhanced}/${v3Statistics.totalPlayers} players`);
 
 // Calculate matching statistics from V3 enhanced players
 const playersWithPredictions = finalPlayers.filter(p => p.predicted_points > 0);
