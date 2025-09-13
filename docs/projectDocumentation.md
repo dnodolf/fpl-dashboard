@@ -19,7 +19,7 @@
 
 ### Project Identity
 - **Name**: Fantasy FC Playbook
-- **Version**: 3.0 - Enhanced UI & Robust Analytics Platform
+- **Version**: 3.0 - Enhanced UI & Intelligent Predictive Scoring
 - **Status**: Production Ready
 - **Last Updated**: December 2024
 - **Codebase Size**: ~25,000 lines of code
@@ -195,23 +195,40 @@ class FormationOptimizerService {
 }
 ```
 
-#### 4. V3 Enhanced Scoring System
+#### 4. V3 Enhanced Scoring System with Minutes Weighting
 ```javascript
 class V3ScoringService {
-  calculateEnhancedPrediction(player, ffhStats, sleeperScoring) {
-    // Position-specific enhancement multipliers
-    const multipliers = {
-      GKP: 1.25, // Enhanced clean sheet weighting
-      DEF: 1.15, // Defensive action bonuses
-      MID: 1.10, // All-around contribution
-      FWD: 1.05  // Goal scoring focus
-    };
+  calculateMinutesWeight(predictedMinutes) {
+    // Revolutionary minutes weighting eliminates rotation risk inflation
+    if (!predictedMinutes || predictedMinutes <= 0) return 0;
+    if (predictedMinutes < 30) return 0.1;  // 90% penalty for rotation risks
+    if (predictedMinutes < 45) return 0.4;  // 60% penalty for low minutes
+    if (predictedMinutes < 60) return 0.7;  // 30% penalty for moderate minutes
+    if (predictedMinutes < 75) return 0.9;  // 10% penalty for decent minutes
+    return 1.0; // Full value for 75+ minutes
+  }
 
-    // Form-based adjustments
-    const formMultiplier = this.calculateFormMultiplier(player.recentForm);
+  calculateV3Prediction(player, currentGameweek) {
+    // Method 1: Gameweek summation (preferred - no naive extrapolation)
+    if (player.predictions && player.predictions.length >= 10) {
+      let totalV3Points = 0;
+      for (const gwPred of player.predictions) {
+        const basePoints = gwPred.predicted_pts || 0;
+        const minutesWeight = this.calculateMinutesWeight(gwPred.predicted_mins);
+        const multipliers = this.calculateAllMultipliers(player);
+        totalV3Points += basePoints * minutesWeight * multipliers;
+      }
 
-    // Enhanced prediction calculation
-    return basePrediction * multipliers[position] * formMultiplier;
+      return {
+        v3_season_total: Math.round(totalV3Points * 38 / player.predictions.length),
+        v3_calculation_source: 'gameweek_summation',
+        v3_confidence: player.predictions.length >= 15 ? 'high' : 'medium'
+      };
+    }
+
+    // Method 2: Fallback with minutes weighting
+    const minutesWeight = this.calculateMinutesWeight(player.predicted_mins);
+    return player.predicted_pts * minutesWeight * this.calculateAllMultipliers(player);
   }
 }
 ```
@@ -1334,4 +1351,4 @@ The clean codebase, comprehensive documentation, and modular architecture ensure
 ---
 
 *Last Updated: December 2024*
-*Version: 3.0 - Enhanced UI & Robust Analytics Platform*
+*Version: 3.0 - Enhanced UI & Intelligent Predictive Scoring*

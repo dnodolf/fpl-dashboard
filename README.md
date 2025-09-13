@@ -14,7 +14,8 @@
 
 ### 🎯 Player Data Integration
 - **98% Match Accuracy** via Opta ID-based player matching between Sleeper and Fantasy Football Hub
-- **Dual Scoring Systems**: Traditional FPL scoring + V3 enhanced predictive scoring
+- **Intelligent V3 Scoring**: Minutes-weighted predictions with gameweek summation methodology
+- **Rotation Risk Modeling**: Heavy penalties for low playing time predictions (30 mins = 90% reduction)
 - **Position Authority**: Sleeper position data takes absolute precedence (100% accuracy)
 - **Smart Fallback**: Graceful degradation to Sleeper-only mode when external APIs fail
 
@@ -186,9 +187,11 @@ npm run lint
 
 ## 📈 Recent Updates
 
-### v3.0 - Enhanced UI & Analytics Platform
+### v3.0 - Enhanced UI & Intelligent Predictive Scoring
 - Streamlined gameweek range controls with intuitive arrow navigation
 - Improved transfer tab user experience with position-consistent filtering
+- **Revolutionary V3 Scoring**: Minutes-weighted predictions eliminate rotation risk overvaluation
+- **Gameweek Summation**: Individual gameweek predictions summed for realistic season totals
 - Enhanced console logging with smart deduplication
 - Robust error handling and compilation fixes
 

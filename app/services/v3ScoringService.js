@@ -98,170 +98,171 @@ function calculateFixtureMultiplier(player, currentGameweek) {
 }
 
 /**
- * Enhanced V3 prediction calculation
+ * Calculate minutes weighting factor based on predicted playing time
+ */
+function calculateMinutesWeight(predictedMinutes) {
+  if (!predictedMinutes || predictedMinutes <= 0) return 0;
+
+  // Heavy penalty for low minutes
+  if (predictedMinutes < 30) return 0.1;  // 10% value for very low minutes
+  if (predictedMinutes < 45) return 0.4;  // 40% value for low minutes
+  if (predictedMinutes < 60) return 0.7;  // 70% value for moderate minutes
+  if (predictedMinutes < 75) return 0.9;  // 90% value for decent minutes
+
+  return 1.0; // Full value for 75+ minutes
+}
+
+/**
+ * Enhanced V3 prediction calculation with minutes weighting and gameweek summation
  */
 export function calculateV3Prediction(player, currentGameweek) {
   try {
-    // Check if FFH predicts 0 minutes or 0 points for current gameweek - respect that prediction
     if (!currentGameweek?.number) {
-      console.error('❌ V3 Scoring: No currentGameweek provided - this is a critical error');
+      console.error('❌ V3 Scoring: No currentGameweek provided');
       throw new Error('currentGameweek is required for V3 scoring calculations');
     }
+
     const currentGW = currentGameweek.number;
-    const currentGwPrediction = player.predictions?.find(p => p.gw === currentGW);
-    
-    // Also check current_gw_prediction field directly if no predictions array
-    const directCurrentPrediction = player.current_gw_prediction || 0;
-    
-    // Check if player has FFH data but no prediction for current gameweek
-    const hasFFHData = player.ffh_matched || player.ffh_gw_predictions;
-    const hasFFHGWPredictions = player.ffh_gw_predictions && player.ffh_gw_predictions !== '{}';
-    
-    // If player has FFH data but no prediction for current GW, it means 0 prediction
-    if (hasFFHData && hasFFHGWPredictions) {
+    const position = player.position || 'MID';
+    const positionMultiplier = V3_POSITION_MULTIPLIERS[position.toUpperCase()] || 1.0;
+
+    // Calculate form and fixture multipliers
+    const formMultiplier = calculateFormMultiplier(player);
+    const fixtureMultiplier = calculateFixtureMultiplier(player, currentGameweek);
+    const totalMultiplier = positionMultiplier * formMultiplier * fixtureMultiplier;
+
+    // Method 1: Use individual gameweek predictions if available
+    if (player.predictions && Array.isArray(player.predictions)) {
+      const gwPredictions = player.predictions.filter(p => p.gw && p.predicted_pts !== undefined);
+
+      if (gwPredictions.length >= 10) { // Need substantial prediction data
+        let totalV3Points = 0;
+        let currentGwV3 = 0;
+        let validPredictions = 0;
+
+        for (const gwPred of gwPredictions) {
+          const basePoints = gwPred.predicted_pts || 0;
+          const minutesWeight = calculateMinutesWeight(gwPred.predicted_mins);
+
+          // Apply minutes weighting and v3 multipliers
+          const v3Points = basePoints * minutesWeight * totalMultiplier;
+          totalV3Points += v3Points;
+          validPredictions++;
+
+          // Track current gameweek specifically
+          if (gwPred.gw === currentGW) {
+            currentGwV3 = v3Points;
+          }
+        }
+
+        // Extrapolate to full season based on actual predictions
+        const avgPerValidGW = totalV3Points / validPredictions;
+        const estimatedSeasonTotal = avgPerValidGW * 38;
+
+        return {
+          v3_season_total: Math.round(estimatedSeasonTotal * 100) / 100,
+          v3_season_avg: Math.round(avgPerValidGW * 100) / 100,
+          v3_current_gw: Math.round(currentGwV3 * 100) / 100,
+          v3_adjustments: {
+            position: positionMultiplier,
+            form: formMultiplier,
+            fixture: fixtureMultiplier,
+            total: totalMultiplier,
+            minutes_weight: 'gameweek_specific'
+          },
+          v3_calculation_source: 'gameweek_summation',
+          v3_confidence: validPredictions >= 15 ? 'high' : 'medium'
+        };
+      }
+    }
+
+    // Method 2: Use FFH gameweek predictions if available
+    if (player.ffh_gw_predictions) {
       try {
         const ffhGwPreds = JSON.parse(player.ffh_gw_predictions);
-        const ffhCurrentGwPred = ffhGwPreds[currentGW.toString()];
-        
-        // If FFH has predictions but specifically excludes current GW, that means 0
-        if (ffhCurrentGwPred === undefined || ffhCurrentGwPred === 0) {
-          // Only log for debug mode or specific players - reduce console spam
+        const gwKeys = Object.keys(ffhGwPreds).filter(gw => ffhGwPreds[gw] > 0);
+
+        if (gwKeys.length >= 10) {
+          let totalV3Points = 0;
+          let currentGwV3 = 0;
+
+          for (const gw of gwKeys) {
+            const basePoints = ffhGwPreds[gw];
+            // Get corresponding minutes if available
+            const minutesKey = `${gw}_mins`;
+            const predictedMinutes = player.ffh_gw_minutes?.[minutesKey] || 70; // Default 70 mins
+            const minutesWeight = calculateMinutesWeight(predictedMinutes);
+
+            const v3Points = basePoints * minutesWeight * totalMultiplier;
+            totalV3Points += v3Points;
+
+            if (parseInt(gw) === currentGW) {
+              currentGwV3 = v3Points;
+            }
+          }
+
+          const avgPerValidGW = totalV3Points / gwKeys.length;
+          const estimatedSeasonTotal = avgPerValidGW * 38;
+
           return {
-            v3_season_total: 0,
-            v3_season_avg: 0,
-            v3_current_gw: 0,
+            v3_season_total: Math.round(estimatedSeasonTotal * 100) / 100,
+            v3_season_avg: Math.round(avgPerValidGW * 100) / 100,
+            v3_current_gw: Math.round(currentGwV3 * 100) / 100,
             v3_adjustments: {
-              position: 1.0,
-              form: 1.0,
-              fixture: 1.0,
-              total: 1.0
+              position: positionMultiplier,
+              form: formMultiplier,
+              fixture: fixtureMultiplier,
+              total: totalMultiplier,
+              minutes_weight: 'estimated_default'
             },
-            v3_confidence: 'low'
+            v3_calculation_source: 'ffh_gameweek_summation',
+            v3_confidence: 'medium'
           };
         }
       } catch (error) {
         console.warn('Error parsing FFH GW predictions for', player.name, error);
       }
     }
-    
-    // If no predictions array but we have direct prediction of 0, respect that
-    if (!player.predictions && directCurrentPrediction === 0) {
-      // Reduced logging - only for important cases
-      return {
-        v3_season_total: 0,
-        v3_season_avg: 0,
-        v3_current_gw: 0,
-        v3_adjustments: {
-          position: 1.0,
-          form: 1.0,
-          fixture: 1.0,
-          total: 1.0
-        },
-        v3_confidence: 'low'
-      };
-    }
-    
-    // Debug logging for Lammens specifically
-    if ((player.name && player.name.includes('Lammens')) || (player.web_name && player.web_name.includes('Lammens'))) {
-      console.log(`🔍 V3 Debug for ${player.name || player.web_name}:`, {
-        currentGW,
-        hasPredictions: !!player.predictions,
-        predictionsLength: player.predictions?.length,
-        currentGwPrediction,
-        directCurrentPrediction,
-        predicted_mins: currentGwPrediction?.predicted_mins,
-        predicted_pts: currentGwPrediction?.predicted_pts,
-        shouldReturn0: currentGwPrediction && (currentGwPrediction.predicted_mins === 0 || currentGwPrediction.predicted_pts === 0),
-        directPredictionIs0: directCurrentPrediction === 0
-      });
-    }
-    
-    if (currentGwPrediction && (currentGwPrediction.predicted_mins === 0 || currentGwPrediction.predicted_pts === 0)) {
-      // If FFH specifically predicts 0 minutes or 0 points, respect that
-      console.log(`🚫 V3 returning 0 for ${player.name || player.web_name} due to 0 prediction`);
-      return {
-        v3_season_total: 0,
-        v3_season_avg: 0,
-        v3_current_gw: 0,
-        v3_adjustments: {
-          position: 1.0,
-          form: 1.0,
-          fixture: 1.0,
-          total: 1.0
-        },
-        v3_confidence: 'low'
-      };
-    }
-    
-    // Get base prediction from existing scoring
-    const basePrediction = player.sleeper_season_total || 
-                          player.ffh_season_prediction || 
-                          player.predicted_points || 
-                          (player.current_gw_prediction ? player.current_gw_prediction * 38 : 0) || // Estimate season from gameweek
-                          0;
-    
-    // Debug logging removed for production
-    
-    if (basePrediction === 0) {
-      return {
-        v3_season_total: 0,
-        v3_season_avg: 0,
-        v3_current_gw: 0,
-        v3_adjustments: {
-          position: 1.0,
-          form: 1.0,
-          fixture: 1.0
-        }
-      };
-    }
-    
-    // Apply V3 position multiplier
-    const position = player.position || 'MID';
-    const positionMultiplier = V3_POSITION_MULTIPLIERS[position.toUpperCase()] || 1.0;
-    
-    // Calculate form-based adjustment
-    const formMultiplier = calculateFormMultiplier(player);
-    
-    // Calculate fixture-based adjustment
-    const fixtureMultiplier = calculateFixtureMultiplier(player, currentGameweek);
-    
-    // Apply all multipliers
-    const totalMultiplier = positionMultiplier * formMultiplier * fixtureMultiplier;
-    const v3SeasonTotal = Math.round(basePrediction * totalMultiplier * 100) / 100;
-    const v3SeasonAvg = Math.round((v3SeasonTotal / 38) * 100) / 100;
-    
-    // Calculate current gameweek prediction
-    let v3CurrentGw = v3SeasonAvg;
-    
-    // Try to get specific gameweek prediction if available
-    try {
-      if (player.sleeper_gw_predictions) {
-        const gwPreds = JSON.parse(player.sleeper_gw_predictions);
-        const baseGwPred = gwPreds[currentGameweek] || v3SeasonAvg;
-        v3CurrentGw = Math.round(baseGwPred * totalMultiplier * 100) / 100;
+
+    // Method 3: Current gameweek prediction with minutes weighting (fallback)
+    const currentGwPrediction = player.predictions?.find(p => p.gw === currentGW);
+    const directCurrentPrediction = player.current_gw_prediction || 0;
+
+    if (currentGwPrediction || directCurrentPrediction > 0) {
+      const basePoints = currentGwPrediction?.predicted_pts || directCurrentPrediction;
+      const predictedMinutes = currentGwPrediction?.predicted_mins || 70;
+      const minutesWeight = calculateMinutesWeight(predictedMinutes);
+
+      if (basePoints === 0 || minutesWeight === 0) {
+        return {
+          v3_season_total: 0,
+          v3_season_avg: 0,
+          v3_current_gw: 0,
+          v3_adjustments: { position: 1.0, form: 1.0, fixture: 1.0, total: 1.0 },
+          v3_confidence: 'low'
+        };
       }
-    } catch (e) {
-      // Use season average if gameweek prediction fails
+
+      const v3CurrentGw = basePoints * minutesWeight * totalMultiplier;
+      const estimatedSeasonTotal = v3CurrentGw * 38; // Only as last resort
+
+      return {
+        v3_season_total: Math.round(estimatedSeasonTotal * 100) / 100,
+        v3_season_avg: Math.round(v3CurrentGw * 100) / 100,
+        v3_current_gw: Math.round(v3CurrentGw * 100) / 100,
+        v3_adjustments: {
+          position: positionMultiplier,
+          form: formMultiplier,
+          fixture: fixtureMultiplier,
+          total: totalMultiplier,
+          minutes_weight: minutesWeight
+        },
+        v3_calculation_source: 'current_gw_extrapolation',
+        v3_confidence: 'low'
+      };
     }
-    
-    const result = {
-      v3_season_total: v3SeasonTotal,
-      v3_season_avg: v3SeasonAvg,
-      v3_current_gw: v3CurrentGw,
-      v3_adjustments: {
-        position: positionMultiplier,
-        form: formMultiplier,
-        fixture: fixtureMultiplier,
-        total: totalMultiplier
-      },
-      v3_calculation_source: 'enhanced'
-    };
-    
-    // Debug logging removed for production
-    
-    return result;
-  } catch (error) {
-    console.error('V3 calculation error for', player.name, error);
+
+    // Method 4: Complete fallback - return zeros
     return {
       v3_season_total: 0,
       v3_season_avg: 0,
@@ -269,8 +270,20 @@ export function calculateV3Prediction(player, currentGameweek) {
       v3_adjustments: {
         position: 1.0,
         form: 1.0,
-        fixture: 1.0
+        fixture: 1.0,
+        total: 1.0
       },
+      v3_calculation_source: 'no_data',
+      v3_confidence: 'none'
+    };
+
+  } catch (error) {
+    console.error('V3 calculation error for', player.name, error);
+    return {
+      v3_season_total: 0,
+      v3_season_avg: 0,
+      v3_current_gw: 0,
+      v3_adjustments: { position: 1.0, form: 1.0, fixture: 1.0 },
       v3_calculation_error: error.message
     };
   }

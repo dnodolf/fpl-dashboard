@@ -16,7 +16,7 @@ npm run lint        # Run ESLint checks
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking.
 
-**Current Version**: v3.0 - Enhanced UI & Robust Analytics Platform
+**Current Version**: v3.0 - Enhanced UI & Intelligent Predictive Scoring
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -194,9 +194,12 @@ async function importServices() {
 
 ## Recent Technical Updates
 
-### v3.0 - Enhanced UI & Analytics Platform
+### v3.0 - Enhanced UI & Intelligent Predictive Scoring
 - Streamlined gameweek range controls with intuitive arrow navigation
 - Improved transfer tab user experience with position-consistent filtering
+- **Revolutionary V3 Scoring**: Minutes-weighted predictions eliminate rotation risk overvaluation
+- **Smart Gameweek Summation**: Individual gameweek predictions summed for realistic season totals
+- **Rotation Risk Modeling**: Heavy penalties for low playing time (30 mins = 90% reduction)
 - Enhanced console logging with smart deduplication
 - Robust error handling and compilation fixes
 - Replaced complex dual-handle sliders with reliable text-based controls
@@ -204,6 +207,8 @@ async function importServices() {
 ### Development Notes
 - **JSX Compilation**: Avoid styled-jsx for complex CSS-in-JS; use global CSS instead
 - **Range Controls**: Text-based inputs with arrow controls proved more reliable than dual-handle sliders
+- **V3 Scoring**: Minutes weighting is critical for realistic predictions - always consider playing time
+- **Prediction Methods**: Prefer gameweek summation over naive season extrapolation for accuracy
 - **Error Handling**: Always implement graceful fallbacks for external API dependencies
 - **Port Management**: Clean development environment setup (kill processes: `taskkill /F /IM node.exe`)
 
