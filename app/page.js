@@ -381,13 +381,13 @@ const getSleeperPositionStyle = (position) => {
 };
 
 // ----------------- NEW: ENHANCED MATCHING STATS COMPONENT -----------------
-const MatchingStats = ({ players, integration, isDarkMode }) => {
+const MatchingStats = ({ players, integration }) => {
   const optaAnalysis = integration?.optaAnalysis;
   
   if (!optaAnalysis) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+        <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
           <div className="text-center">
             <div className="text-lg font-medium text-gray-500">Loading matching statistics...</div>
           </div>
@@ -399,13 +399,13 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       {/* Sleeper Players with Opta ID */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-blue-600">
               {optaAnalysis.sleeperWithOpta?.toLocaleString()}/{integration.sleeperTotal?.toLocaleString()}
             </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className={`text-sm text-gray-400`}>
               Sleeper w/ Opta ({optaAnalysis.sleeperOptaRate}%)
             </div>
           </div>
@@ -414,13 +414,13 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
       </div>
 
       {/* FFH Players with Opta ID */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-green-600">
               {optaAnalysis.ffhWithOpta?.toLocaleString()}/{integration.ffhTotal?.toLocaleString()}
             </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className={`text-sm text-gray-400`}>
               FFH w/ Opta ({optaAnalysis.ffhOptaRate}%)
             </div>
           </div>
@@ -429,13 +429,13 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
       </div>
 
       {/* Successful Matches */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-purple-600">
               {optaAnalysis.optaMatches?.toLocaleString()}/{optaAnalysis.ffhWithOpta?.toLocaleString()}
             </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className={`text-sm text-gray-400`}>
               Successful Matches ({optaAnalysis.optaMatchRate}%)
             </div>
           </div>
@@ -444,13 +444,13 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
       </div>
 
       {/* Unmatched Sleeper Players */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-orange-600">
               {optaAnalysis.unmatchedSleeperWithOpta?.length?.toLocaleString() || 0}
             </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className={`text-sm text-gray-400`}>
               Unmatched Sleeper w/ Opta
             </div>
           </div>
@@ -462,7 +462,7 @@ const MatchingStats = ({ players, integration, isDarkMode }) => {
 };
 
 // ----------------- OTHER STATS COMPONENTS (UNCHANGED) -----------------
-const OptimizerStats = ({ isDarkMode, scoringMode = 'existing', currentGameweek = { number: 4 } }) => {
+const OptimizerStats = ({ scoringMode = 'existing', currentGameweek = { number: 4 } }) => {
   const [rawData, setRawData] = useState(null); // Store raw API data
   const [stats, setStats] = useState({
     currentPoints: 0,
@@ -558,7 +558,7 @@ const OptimizerStats = ({ isDarkMode, scoringMode = 'existing', currentGameweek 
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+          <div key={i} className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
             <div className="animate-pulse">
               <div className="h-8 bg-gray-300 rounded mb-2"></div>
               <div className="h-4 bg-gray-300 rounded"></div>
@@ -572,29 +572,29 @@ const OptimizerStats = ({ isDarkMode, scoringMode = 'existing', currentGameweek 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       {/* Current Roster Points */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-blue-600">{stats.currentPoints.toFixed(1)}</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Current Roster Points</div>
+            <div className={`text-sm text-gray-400`}>Current Roster Points</div>
           </div>
           <div className="text-blue-500 text-2xl">⚽</div>
         </div>
       </div>
 
       {/* Optimized Roster Points */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-green-600">{stats.optimalPoints.toFixed(1)}</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Optimized Roster Points</div>
+            <div className={`text-sm text-gray-400`}>Optimized Roster Points</div>
           </div>
           <div className="text-green-500 text-2xl">🎯</div>
         </div>
       </div>
 
       {/* % Optimal Players */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className={`text-2xl font-bold ${
@@ -606,7 +606,7 @@ const OptimizerStats = ({ isDarkMode, scoringMode = 'existing', currentGameweek 
             }`}>
               {stats.optimalPlayerPercentage.toFixed(0)}%
             </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className={`text-sm text-gray-400`}>
               % Optimal Players ({stats.optimalPlayersInCurrent}/{stats.totalPlayers})
             </div>
           </div>
@@ -615,11 +615,11 @@ const OptimizerStats = ({ isDarkMode, scoringMode = 'existing', currentGameweek 
       </div>
 
       {/* Players to Swap */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-red-600">{stats.playersToSwap}</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Players to Swap</div>
+            <div className={`text-sm text-gray-400`}>Players to Swap</div>
           </div>
           <div className="text-red-500 text-2xl">🔄</div>
         </div>
@@ -628,7 +628,7 @@ const OptimizerStats = ({ isDarkMode, scoringMode = 'existing', currentGameweek 
   );
 };
 
-const TransferStats = ({ players, isDarkMode }) => {
+const TransferStats = ({ players }) => {
   // Calculate transfer analytics - FIX: Use correct ownership logic
   const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
   const myPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy'); // YOUR players specifically
@@ -659,46 +659,46 @@ const TransferStats = ({ players, isDarkMode }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       {/* Available Free Agents */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-blue-600">{freeAgents.length}</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Available Free Agents</div>
+            <div className={`text-sm text-gray-400`}>Available Free Agents</div>
           </div>
           <div className="text-blue-500 text-2xl">🆓</div>
         </div>
       </div>
 
       {/* Outperforming Free Agents */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-green-600">{outperformingFAs.length}</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Upgrades Available</div>
+            <div className={`text-sm text-gray-400`}>Upgrades Available</div>
           </div>
           <div className="text-green-500 text-2xl">⭐</div>
         </div>
       </div>
 
       {/* Your Squad Size */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-purple-600">{myPlayers.length}</div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Squad Size</div>
+            <div className={`text-sm text-gray-400`}>Your Squad Size</div>
           </div>
           <div className="text-purple-500 text-2xl">👤</div>
         </div>
       </div>
 
       {/* Best Potential Gain */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className={`text-2xl font-bold ${potentialGain > 0 ? 'text-green-600' : 'text-gray-500'}`}>
               {potentialGain > 0 ? `+${potentialGain.toFixed(1)}` : '0.0'}
             </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Best Potential Gain</div>
+            <div className={`text-sm text-gray-400`}>Best Potential Gain</div>
           </div>
           <div className={`text-2xl ${potentialGain > 0 ? 'text-green-500' : 'text-gray-400'}`}>📈</div>
         </div>
@@ -710,7 +710,7 @@ const TransferStats = ({ players, isDarkMode }) => {
 // ----------------- NEW: UNMATCHED PLAYERS TABLE COMPONENT -----------------
 // Enhanced UnmatchedPlayersTable with search and pagination
 
-const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
+const UnmatchedPlayersTable = ({ optaAnalysis }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -722,12 +722,12 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
 
   if (unmatchedPlayers.length === 0) {
     return (
-      <div className={`rounded-lg shadow-sm border p-6 text-center ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <div className={`rounded-lg shadow-sm border p-6 text-center bg-gray-800 border-gray-700`}>
         <div className="text-green-600 text-4xl mb-2">🎉</div>
-        <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-medium mb-2 text-white`}>
           Perfect Match Rate!
         </h3>
-        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+        <p className={'text-gray-400'}>
           All Sleeper players with Opta IDs have been successfully matched to FFH players.
         </p>
       </div>
@@ -835,15 +835,15 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
   };
 
   return (
-    <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+    <div className={`rounded-lg shadow-sm border overflow-hidden bg-gray-800 border-gray-700`}>
       {/* Header with Search and Controls */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className={`text-lg font-medium text-white`}>
               Unmatched Sleeper Players ({filteredPlayers.length}{searchTerm && ` of ${unmatchedPlayers.length}`})
             </h3>
-            <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm mt-1 text-gray-400`}>
               These Sleeper players have Opta IDs but no corresponding FFH player was found.
             </p>
           </div>
@@ -860,11 +860,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1); // Reset to first page when searching
                 }}
-                className={`w-full sm:w-64 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  isDarkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
+                className="w-full sm:w-64 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white placeholder-gray-400"
               />
               {searchTerm && (
                 <button
@@ -883,11 +879,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
             <select
               value={itemsPerPage}
               onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-              className={`px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isDarkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className="px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white"
             >
               <option value={10}>10 per page</option>
               <option value={25}>25 per page</option>
@@ -902,11 +894,11 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className={isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}>
+          <thead className={'bg-gray-700'}>
             <tr>
               <th 
                 className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                  'text-gray-300 hover:bg-gray-600'
                 }`}
                 onClick={() => handleSort('name')}
               >
@@ -916,7 +908,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
               </th>
               <th 
                 className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                  'text-gray-300 hover:bg-gray-600'
                 }`}
                 onClick={() => handleSort('position')}
               >
@@ -926,7 +918,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
               </th>
               <th 
                 className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                  'text-gray-300 hover:bg-gray-600'
                 }`}
                 onClick={() => handleSort('team')}
               >
@@ -936,7 +928,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
               </th>
               <th 
                 className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                  'text-gray-300 hover:bg-gray-600'
                 }`}
                 onClick={() => handleSort('opta_id')}
               >
@@ -946,12 +938,12 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
               </th>
             </tr>
           </thead>
-          <tbody className={`divide-y ${isDarkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+          <tbody className={`divide-y ${'bg-gray-800 divide-gray-700'}`}>
 {currentPlayers.length > 0 ? (
   currentPlayers.map((player, index) => (
-    <tr key={`unmatched-${startIndex + index}`} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+    <tr key={`unmatched-${startIndex + index}`} className={`${'hover:bg-gray-700'}`}>
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <div className={`text-sm font-medium text-white`}>
           {player.full_name || player.name || 'Unknown'}
         </div>
       </td>
@@ -962,17 +954,17 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
           {player.position || 'N/A'}
         </span>
       </td>
-      <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+      <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
         {player.team_abbr || player.team || 'Free Agent'}
       </td>
-      <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+      <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-400`}>
         {player.opta_id || 'N/A'}
       </td>
     </tr>
   ))
             ) : (
               <tr>
-                <td colSpan={4} className={`px-6 py-4 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <td colSpan={4} className={`px-6 py-4 text-center text-gray-400`}>
                   {searchTerm ? `No players found matching "${searchTerm}"` : 'No unmatched players'}
                 </td>
               </tr>
@@ -983,9 +975,9 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
       
       {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className={`px-6 py-3 border-t flex items-center justify-between ${isDarkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
+        <div className={`px-6 py-3 border-t flex items-center justify-between border-gray-700 bg-gray-750`}>
           {/* Results Info */}
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`text-sm text-gray-400`}>
             Showing {startIndex + 1} to {Math.min(endIndex, sortedPlayers.length)} of {sortedPlayers.length} results
             {searchTerm && ` (filtered from ${unmatchedPlayers.length} total)`}
           </div>
@@ -999,9 +991,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 currentPage === 1
                   ? 'opacity-50 cursor-not-allowed'
-                  : isDarkMode
-                    ? 'text-gray-300 hover:text-white hover:bg-gray-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-600'
               }`}
             >
               Previous
@@ -1019,9 +1009,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
                       ? 'bg-blue-500 text-white'
                       : page === '...'
                       ? 'opacity-50 cursor-not-allowed'
-                      : isDarkMode
-                        ? 'text-gray-300 hover:text-white hover:bg-gray-600'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-600'
                   }`}
                 >
                   {page}
@@ -1036,9 +1024,7 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 currentPage === totalPages
                   ? 'opacity-50 cursor-not-allowed'
-                  : isDarkMode
-                    ? 'text-gray-300 hover:text-white hover:bg-gray-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-600'
               }`}
             >
               Next
@@ -1051,22 +1037,22 @@ const UnmatchedPlayersTable = ({ optaAnalysis, isDarkMode }) => {
 };
 
 // ----------------- NEW: MATCHING TAB CONTENT COMPONENT -----------------
-const MatchingTabContent = ({ players, integration, isDarkMode }) => {
+const MatchingTabContent = ({ players, integration }) => {
   const optaAnalysis = integration?.optaAnalysis;
   
   return (
     <div className="space-y-6">
       {/* Summary Section */}
-      <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+      <div className={`rounded-lg shadow-sm border p-6 bg-gray-800 border-gray-700`}>
+        <h3 className={`text-lg font-medium mb-4 text-white`}>
           🎯 Opta-Only Matching Summary
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h4 className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <h4 className={`text-sm font-medium mb-2 text-gray-300`}>
               Coverage Analysis
             </h4>
-            <ul className={`text-sm space-y-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <ul className={`text-sm space-y-1 text-gray-400`}>
               <li>• {optaAnalysis?.sleeperOptaRate || 0}% of Sleeper players have Opta IDs</li>
               <li>• {optaAnalysis?.ffhOptaRate || 0}% of FFH players have Opta IDs</li>
               <li>• {optaAnalysis?.optaMatchRate || 0}% match rate (matched/FFH players)</li>
@@ -1074,10 +1060,10 @@ const MatchingTabContent = ({ players, integration, isDarkMode }) => {
             </ul>
           </div>
           <div>
-            <h4 className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <h4 className={`text-sm font-medium mb-2 text-gray-300`}>
               Matching Method
             </h4>
-            <ul className={`text-sm space-y-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <ul className={`text-sm space-y-1 text-gray-400`}>
               <li>• <strong>Opta ID Only:</strong> No complex name matching</li>
               <li>• <strong>Zero False Positives:</strong> Exact ID matches only</li>
               <li>• <strong>High Performance:</strong> ~90% faster than multi-tier</li>
@@ -1088,24 +1074,24 @@ const MatchingTabContent = ({ players, integration, isDarkMode }) => {
       </div>
 
       {/* Unmatched Players Table */}
-      <UnmatchedPlayersTable optaAnalysis={optaAnalysis} isDarkMode={isDarkMode} />
+      <UnmatchedPlayersTable optaAnalysis={optaAnalysis} />
       
       {/* Debug Information (Optional) */}
       {optaAnalysis?.duplicateOptas && optaAnalysis.duplicateOptas.size > 0 && (
-        <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <div className={`rounded-lg shadow-sm border p-6 bg-gray-800 border-gray-700`}>
+          <h3 className={`text-lg font-medium mb-4 text-white`}>
             ⚠️ Duplicate Opta IDs Detected
           </h3>
-          <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm mb-4 text-gray-400`}>
             These Sleeper players share the same Opta ID (only first match is used):
           </p>
           <div className="space-y-2">
             {Array.from(optaAnalysis.duplicateOptas.entries()).map(([optaId, players]) => (
-              <div key={optaId} className={`p-3 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
-                <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              <div key={optaId} className={`p-3 rounded border bg-gray-700 border-gray-600`}>
+                <div className={`text-sm font-medium text-white`}>
                   Opta ID: {optaId}
                 </div>
-                <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className={`text-xs mt-1 text-gray-400`}>
                   Players: {players.map(p => `${p.name} (${p.team})`).join(', ')}
                 </div>
               </div>
@@ -1118,7 +1104,7 @@ const MatchingTabContent = ({ players, integration, isDarkMode }) => {
 };
 
 // ----------------- ENHANCED GAMEWEEK DISPLAY COMPONENT -----------------
-const GameweekDisplay = ({ gameweek, isDarkMode }) => {
+const GameweekDisplay = ({ gameweek }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'upcoming': return '🏁';
@@ -1130,37 +1116,37 @@ const GameweekDisplay = ({ gameweek, isDarkMode }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'upcoming': return isDarkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200';
-      case 'live': return isDarkMode ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200';
-      case 'completed': return isDarkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-200';
-      default: return isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200';
+      case 'upcoming': return 'bg-blue-900 border-blue-700';
+      case 'live': return 'bg-red-900 border-red-700';
+      case 'completed': return 'bg-green-900 border-green-700';
+      default: return 'bg-gray-900 border-gray-700';
     }
   };
 
   const getTextColor = (status) => {
     switch (status) {
-      case 'upcoming': return isDarkMode ? 'text-blue-100' : 'text-blue-900';
-      case 'live': return isDarkMode ? 'text-red-100' : 'text-red-900';
-      case 'completed': return isDarkMode ? 'text-green-100' : 'text-green-900';
-      default: return isDarkMode ? 'text-gray-100' : 'text-gray-900';
+      case 'upcoming': return 'text-blue-100';
+      case 'live': return 'text-red-100';
+      case 'completed': return 'text-green-100';
+      default: return 'text-gray-100';
     }
   };
 
   const getSubTextColor = (status) => {
     switch (status) {
-      case 'upcoming': return isDarkMode ? 'text-blue-200' : 'text-blue-600';
-      case 'live': return isDarkMode ? 'text-red-200' : 'text-red-600';
-      case 'completed': return isDarkMode ? 'text-green-200' : 'text-green-600';
-      default: return isDarkMode ? 'text-gray-200' : 'text-gray-600';
+      case 'upcoming': return 'text-blue-200';
+      case 'live': return 'text-red-200';
+      case 'completed': return 'text-green-200';
+      default: return 'text-gray-200';
     }
   };
 
   const getHoverColor = (status) => {
     switch (status) {
-      case 'upcoming': return isDarkMode ? 'hover:bg-blue-800 hover:border-blue-600' : 'hover:bg-blue-100 hover:border-blue-300';
-      case 'live': return isDarkMode ? 'hover:bg-red-800 hover:border-red-600' : 'hover:bg-red-100 hover:border-red-300';
-      case 'completed': return isDarkMode ? 'hover:bg-green-800 hover:border-green-600' : 'hover:bg-green-100 hover:border-green-300';
-      default: return isDarkMode ? 'hover:bg-gray-800 hover:border-gray-600' : 'hover:bg-gray-100 hover:border-gray-300';
+      case 'upcoming': return 'hover:bg-blue-800 hover:border-blue-600';
+      case 'live': return 'hover:bg-red-800 hover:border-red-600';
+      case 'completed': return 'hover:bg-green-800 hover:border-green-600';
+      default: return 'hover:bg-gray-800 hover:border-gray-600';
     }
   };
 
@@ -1191,9 +1177,6 @@ const GameweekDisplay = ({ gameweek, isDarkMode }) => {
         {gameweek.deadlineFormatted && gameweek.status === 'upcoming' && (
           <div className="mt-1">Deadline: {gameweek.deadlineFormatted}</div>
         )}
-        {gameweek.fixtures && gameweek.status === 'live' && (
-          <div className="mt-1">{gameweek.fixtures.finished}/{gameweek.fixtures.count} matches finished</div>
-        )}
         {gameweek.source && gameweek.source !== 'fpl_api' && (
           <div className="mt-1 opacity-75">⚠️ {gameweek.source}</div>
         )}
@@ -1204,17 +1187,17 @@ const GameweekDisplay = ({ gameweek, isDarkMode }) => {
 };
 
 // ----------------- DASHBOARD HEADER COMPONENT -----------------
-const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode }) => {
+const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
   const cacheAge = CacheManager.getAge();
 
   return (
-    <header className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-50`}>
+    <header className={`bg-gray-800 border-gray-700 border-b sticky top-0 z-50`}>
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Top Row: Title, Gameweek, Update Button */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>⚽ Fantasy FC Playbook</h1>
+            <h1 className={`text-2xl font-bold text-white`}>⚽ Fantasy FC Playbook</h1>
            
             {/* Data Freshness Indicator */}
             <div className="flex items-center gap-2 text-sm">
@@ -1226,11 +1209,11 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
 
           <div className="flex items-center gap-4">
             {/* Current Gameweek with Enhanced Display */}
-            <GameweekDisplay gameweek={currentGameweek} isDarkMode={isDarkMode} />
+            <GameweekDisplay gameweek={currentGameweek} />
 
             {/* Scoring Mode Toggle */}
             <div className="flex items-center gap-2">
-              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <span className="text-sm text-gray-300">
                 Scoring:
               </span>
               <button
@@ -1238,24 +1221,13 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                   scoringMode === 'v3'
                     ? 'bg-green-500 text-white hover:bg-green-600'
-                    : isDarkMode 
-                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
                 {scoringMode === 'v3' ? '🚀 v3' : '📊 Standard'}
               </button>
             </div>
 
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-lg transition-colors ${
-                isDarkMode ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {isDarkMode ? '☀️' : '🌙'}
-            </button>
 
             {/* Update Data Button */}
             <button
@@ -1281,9 +1253,7 @@ const DashboardHeader = ({ isDarkMode, setIsDarkMode, lastUpdated, players, upda
               className={`px-4 py-2 font-medium rounded-lg transition-colors ${
                 activeTab === tab.id
                   ? 'bg-blue-500 text-white'
-                  : isDarkMode 
-                    ? 'text-gray-300 hover:text-white hover:bg-gray-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700'
               }`}
             >
               {tab.label}
@@ -1305,7 +1275,6 @@ export default function FPLDashboard() {
     minPoints: 0.1,
     search: ''
   });
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' });
   const [scoringMode, setScoringMode] = useState('v3'); // 'existing' or 'v3'
   
@@ -1631,7 +1600,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
   // Loading state
   if (loading) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
+      <div className="min-h-screen bg-gray-900 text-white">
         <div className="flex items-center justify-center min-h-screen">
           <LoadingSpinner 
             message="Loading player data..." 
@@ -1644,11 +1613,11 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
   // Error state
   if (error) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
+      <div className="min-h-screen bg-gray-900 text-white">
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center p-8">
             <h2 className="text-2xl font-bold text-red-600 mb-4">❌ Error Loading Data</h2>
-            <p className={`mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
+            <p className={`mb-4 text-gray-400`}>{error}</p>
             <button
               onClick={updateData}
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
@@ -1667,11 +1636,11 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
       case 'players': 
         return null; // No stats cards for players tab
       case 'matching': 
-        return <MatchingStats players={processedPlayers} integration={integration} isDarkMode={isDarkMode} />;
+        return <MatchingStats players={processedPlayers} integration={integration} />;
       case 'optimizer': 
-        return <OptimizerStats isDarkMode={isDarkMode} scoringMode={scoringMode} currentGameweek={currentGameweek} />;
+        return <OptimizerStats scoringMode={scoringMode} currentGameweek={currentGameweek} />;
       case 'transfers': 
-        return <TransferStats players={processedPlayers} isDarkMode={isDarkMode} />;
+        return <TransferStats players={processedPlayers} />;
       default: 
         return null;
     }
@@ -1680,11 +1649,9 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
   // Main render
   return (
     <ErrorBoundary>
-      <div className={`min-h-screen transition-colors ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
+      <div className="min-h-screen bg-gray-900 text-white">
         
         <DashboardHeader
-          isDarkMode={isDarkMode}
-          setIsDarkMode={setIsDarkMode}
           lastUpdated={lastUpdated}
           players={processedPlayers}
           updateData={updateData}
@@ -1705,11 +1672,11 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
           {activeTab === 'players' && (
             <>
               {/* Filters */}
-              <div className={`p-4 rounded-lg mb-6 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className={`p-4 rounded-lg mb-6 shadow-sm bg-gray-800`}>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* Position Filter - Multi-select */}
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 text-gray-300`}>
                       Positions ({filters.position.length > 0 ? filters.position.length : 'All'})
                     </label>
                     <div className="flex gap-2">
@@ -1735,7 +1702,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                             className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${
                               isSelected 
                                 ? `${colors.pill} text-white shadow-lg`
-                                : `${isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'} border-2 border-transparent hover:border-gray-300`
+                                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-transparent hover:border-gray-300'
                             }`}
                           >
                             {pos}
@@ -1747,17 +1714,13 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
 
                   {/* Owner Filter */}
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 text-gray-300`}>
                       Owner
                     </label>
                     <select
                       value={filters.owner}
                       onChange={(e) => setFilters(prev => ({ ...prev, owner: e.target.value }))}
-                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white"
                     >
                       <option value="all">All Owners</option>
                       <option value="my_players_and_free_agents">My Players + FAs</option>
@@ -1771,7 +1734,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
 
                   {/* Min Points Filter */}
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 text-gray-300`}>
                       Min ROS Points
                     </label>
                     <input
@@ -1779,18 +1742,14 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                       step="0.1"
                       value={filters.minPoints}
                       onChange={(e) => setFilters(prev => ({ ...prev, minPoints: parseFloat(e.target.value) || 0 }))}
-                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white"
                       placeholder="0"
                     />
                   </div>
 
                   {/* Search Filter */}
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 text-gray-300`}>
                       Search
                     </label>
                     <input
@@ -1798,11 +1757,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                       value={filters.search}
                       onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                       placeholder="Player name, team..."
-                      className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                      }`}
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white placeholder-gray-400"
                     />
                   </div>
                 </div>
@@ -1810,27 +1765,27 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
 
               {/* Results Summary */}
               <div className="mb-4 flex items-center justify-between">
-                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className={`text-sm text-gray-400`}>
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
                   <span className="ml-2 text-xs">
                     (Free Agents: {processedPlayers.filter(p => !p.owned_by || p.owned_by === 'Free Agent').length}, 
                      Owned: {processedPlayers.filter(p => p.owned_by && p.owned_by !== 'Free Agent').length})
                   </span>
                 </div>
-                <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                <div className="text-sm text-gray-500">
                   Click column headers to sort
                 </div>
               </div>
               {/* Players Table */}
-              <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <div className={`rounded-lg shadow-sm border overflow-hidden bg-gray-800 border-gray-700`}>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
-                    <thead className={isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}>
+                    <thead className={'bg-gray-700'}>
                       <tr>
                         {/* Sortable headers */}
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('name')}
                         >
@@ -1840,7 +1795,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('position')}
                         >
@@ -1850,7 +1805,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('team')}
                         >
@@ -1860,7 +1815,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('owned_by')}
                         >
@@ -1870,7 +1825,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('sleeper_points_ros')}
                         >
@@ -1880,7 +1835,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('sleeper_points_next5')}
                         >
@@ -1890,7 +1845,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('avg_minutes_next5')}
                         >
@@ -1900,7 +1855,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('current_ppg')}
                         >
@@ -1910,7 +1865,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                         <th 
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
+                            'text-gray-300 hover:bg-gray-600'
                           }`}
                           onClick={() => handleSort('predicted_ppg')}
                         >
@@ -1920,13 +1875,13 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className={`divide-y ${isDarkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+                    <tbody className={`divide-y ${'bg-gray-800 divide-gray-700'}`}>
                       {sortedPlayers.map((player, index) => (
-                        <tr key={`${player.sleeper_id || player.id || index}`} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                        <tr key={`${player.sleeper_id || player.id || index}`} className={`${'hover:bg-gray-700'}`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div>
-                                <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                <div className={`text-sm font-medium text-white`}>
                                   {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
                                 </div>
                                 {player.injury_status && (
@@ -1942,7 +1897,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                               {player.position || 'N/A'}
                             </span>
                           </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || 'N/A'}
                           </td>
 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -1960,13 +1915,13 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
     </span>
   )}
 </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-white`}>
                             {(() => {
                               const seasonTotal = v3ScoringService.getScoringValue(player, 'season_total', scoringMode);
                               return seasonTotal > 0 ? seasonTotal.toFixed(1) : 'N/A';
                             })()}
                           </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {(() => {
                               // Use specific gameweek predictions from the predictions array (better logic)
                               if (player.predictions && Array.isArray(player.predictions)) {
@@ -2025,7 +1980,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                               return seasonPoints > 0 ? ((seasonPoints / 38) * 5).toFixed(1) : 'N/A';
                             })()}
                           </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {(() => {
                               // Try pre-calculated average first
                               if (player.avg_minutes_next5 && player.avg_minutes_next5 > 0) {
@@ -2090,13 +2045,13 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                               return player.ffh_matched ? '0' : 'N/A';
                             })()}
                           </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {(() => {
                               const currentPpg = player.ffh_season_avg || (player.sleeper_season_total ? player.sleeper_season_total / 38 : 0);
                               return currentPpg > 0 ? currentPpg.toFixed(1) : 'N/A';
                             })()}
                           </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {(() => {
                               const predictedPpg = v3ScoringService.getScoringValue(player, 'season_avg', scoringMode);
                               return predictedPpg > 0 ? predictedPpg.toFixed(1) : 'N/A';
@@ -2112,7 +2067,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
               {/* No Results Message */}
               {sortedPlayers.length === 0 && (
                 <div className="text-center py-8">
-                  <div className={`mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No players match your current filters</div>
+                  <div className={`mb-2 text-gray-400`}>No players match your current filters</div>
                   <button
                     onClick={() => {
                       setFilters({
@@ -2134,13 +2089,13 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
 
           {/* Matching statistics and information */}
           {activeTab === 'matching' && (
-            <MatchingTabContent players={processedPlayers} integration={integration} isDarkMode={isDarkMode} />
+            <MatchingTabContent players={processedPlayers} integration={integration} />
           )}
 
           {/* Optimizing lineup for the current GW */}
           {activeTab === 'optimizer' && (
             <OptimizerTabContent 
-              isDarkMode={isDarkMode} 
+ 
               players={processedPlayers}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
@@ -2152,8 +2107,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
             <TransferTabContent 
               players={processedPlayers}
               currentGameweek={currentGameweek} 
-              isDarkMode={isDarkMode}
-              scoringMode={scoringMode}
+                           scoringMode={scoringMode}
             />
           )}
 

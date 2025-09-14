@@ -100,40 +100,31 @@ export function getPositionDisplayInfo(position) {
  * Get Sleeper position badge classes with BETTER CONTRAST
  * Uses more vibrant colors that match the optimizer tab
  */
-export function getSleeperPositionBadgeClasses(position, isDarkMode = false) {
+export function getSleeperPositionBadgeClasses(position) {
   switch (position) {
     case 'GKP':
     case 'GK':
     case 'G':
-      return isDarkMode 
-        ? 'bg-yellow-500 text-black border border-yellow-400' 
-        : 'bg-yellow-600 text-white border border-yellow-500';
+      return 'bg-yellow-500 text-black border border-yellow-400';
     case 'DEF':
     case 'D':
-      return isDarkMode 
-        ? 'bg-cyan-500 text-black border border-cyan-400' 
-        : 'bg-cyan-600 text-white border border-cyan-500';
+      return 'bg-cyan-500 text-black border border-cyan-400';
     case 'MID':
     case 'M':
-      return isDarkMode 
-        ? 'bg-pink-500 text-white border border-pink-400' 
-        : 'bg-pink-600 text-white border border-pink-500';
+      return 'bg-pink-500 text-white border border-pink-400';
     case 'FWD':
     case 'F':
-      return isDarkMode 
-        ? 'bg-purple-500 text-white border border-purple-400' 
-        : 'bg-purple-600 text-white border border-purple-500';
+      return 'bg-purple-500 text-white border border-purple-400';
     default:
-      return isDarkMode 
-        ? 'bg-gray-500 text-white border border-gray-400' 
-        : 'bg-gray-600 text-white border border-gray-500';
+      return 'bg-gray-500 text-white border border-gray-400';
   }
 }
 
 /**
  * Get Sleeper position style with better contrast colors
+ * Enhanced contrast styling
  */
-export function getSleeperPositionStyle(position, isDarkMode = false) {
+export function getSleeperPositionStyle(position) {
   const styles = {
     backgroundColor: '',
     color: '',
@@ -144,62 +135,32 @@ export function getSleeperPositionStyle(position, isDarkMode = false) {
     case 'GKP':
     case 'GK':
     case 'G':
-      if (isDarkMode) {
-        styles.backgroundColor = '#eab308'; // yellow-500
-        styles.color = '#000000';
-        styles.borderColor = '#facc15'; // yellow-400
-      } else {
-        styles.backgroundColor = '#ca8a04'; // yellow-600
-        styles.color = '#ffffff';
-        styles.borderColor = '#eab308'; // yellow-500
-      }
+      styles.backgroundColor = '#eab308'; // yellow-500
+      styles.color = '#000000';
+      styles.borderColor = '#facc15'; // yellow-400
       break;
     case 'DEF':
     case 'D':
-      if (isDarkMode) {
-        styles.backgroundColor = '#06b6d4'; // cyan-500
-        styles.color = '#000000';
-        styles.borderColor = '#22d3ee'; // cyan-400
-      } else {
-        styles.backgroundColor = '#0891b2'; // cyan-600
-        styles.color = '#ffffff';
-        styles.borderColor = '#06b6d4'; // cyan-500
-      }
+      styles.backgroundColor = '#06b6d4'; // cyan-500
+      styles.color = '#000000';
+      styles.borderColor = '#22d3ee'; // cyan-400
       break;
     case 'MID':
     case 'M':
-      if (isDarkMode) {
-        styles.backgroundColor = '#ec4899'; // pink-500
-        styles.color = '#ffffff';
-        styles.borderColor = '#f472b6'; // pink-400
-      } else {
-        styles.backgroundColor = '#db2777'; // pink-600
-        styles.color = '#ffffff';
-        styles.borderColor = '#ec4899'; // pink-500
-      }
+      styles.backgroundColor = '#ec4899'; // pink-500
+      styles.color = '#ffffff';
+      styles.borderColor = '#f472b6'; // pink-400
       break;
     case 'FWD':
     case 'F':
-      if (isDarkMode) {
-        styles.backgroundColor = '#a855f7'; // purple-500
-        styles.color = '#ffffff';
-        styles.borderColor = '#c084fc'; // purple-400
-      } else {
-        styles.backgroundColor = '#9333ea'; // purple-600
-        styles.color = '#ffffff';
-        styles.borderColor = '#a855f7'; // purple-500
-      }
+      styles.backgroundColor = '#a855f7'; // purple-500
+      styles.color = '#ffffff';
+      styles.borderColor = '#c084fc'; // purple-400
       break;
     default:
-      if (isDarkMode) {
-        styles.backgroundColor = '#6b7280'; // gray-500
-        styles.color = '#ffffff';
-        styles.borderColor = '#9ca3af'; // gray-400
-      } else {
-        styles.backgroundColor = '#4b5563'; // gray-600
-        styles.color = '#ffffff';
-        styles.borderColor = '#6b7280'; // gray-500
-      }
+      styles.backgroundColor = '#6b7280'; // gray-500
+      styles.color = '#ffffff';
+      styles.borderColor = '#9ca3af'; // gray-400
   }
 
   return styles;

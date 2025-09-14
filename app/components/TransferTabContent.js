@@ -21,7 +21,7 @@ const TEAM_DIFFICULTY = {
   'LUT': 1, 'BUR': 1, 'MUN': 4, 'WHU': 3, 'NFO': 2
 };
 
-const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode = 'existing' }) => {
+const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing' }) => {
   // Calculate default gameweek range: current GW + next 4 (total of 5)
   const currentGW = currentGameweek?.number;
   const defaultStartGW = currentGW;
@@ -31,6 +31,7 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
   const [endGameweek, setEndGameweek] = useState(defaultEndGW);
   const [selectedPositions, setSelectedPositions] = useState([]);
   const [selectedComparison, setSelectedComparison] = useState(null);
+
 
   // Calculate transfer recommendations with efficient approach
   const transferRecommendations = useMemo(() => {
@@ -353,12 +354,12 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
     <div className="space-y-6">
       
       {/* Controls Section */}
-      <div className={`p-4 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex flex-wrap gap-4 items-center justify-between">
           
           {/* Position Multi-Select Filter - Left Side */}
           <div className="flex items-center gap-3">
-            <label className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label className={`text-sm font-medium text-gray-300`}>
               Positions:
             </label>
             <div className="flex gap-2">
@@ -370,11 +371,9 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
                     key={position}
                     onClick={() => handlePositionToggle(position)}
                     className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${
-                      isSelected 
+                      isSelected
                         ? `${colors.pill} text-white shadow-lg`
-                        : isDarkMode 
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
                     {position}
@@ -384,9 +383,58 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              GW {startGameweek} to {endGameweek} ({endGameweek - startGameweek + 1} weeks)
+          {/* Gameweek Range Controls - Right Side */}
+          <div className="flex items-center gap-4">
+            <span className={`text-sm font-medium text-gray-300`}>
+              Gameweek Range:
+            </span>
+
+            {/* Start Gameweek Controls */}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={startGameweek}
+                onChange={(e) => {
+                  const newValue = Math.max(currentGW, Math.min(38, parseInt(e.target.value) || currentGW));
+                  if (newValue <= endGameweek) {
+                    setStartGameweek(newValue);
+                  }
+                }}
+                className="w-16 text-center text-sm font-medium border rounded px-2 py-1 bg-gray-700 border-gray-600 text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                min={currentGW}
+                max={38}
+                style={{
+                  WebkitAppearance: 'textfield',
+                  MozAppearance: 'textfield'
+                }}
+              />
+            </div>
+
+            <span className={`text-sm text-gray-400`}>
+              to
+            </span>
+
+            {/* End Gameweek Controls */}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={endGameweek}
+                onChange={(e) => {
+                  const newValue = Math.max(startGameweek, Math.min(38, parseInt(e.target.value) || endGameweek));
+                  setEndGameweek(newValue);
+                }}
+                className="w-16 text-center text-sm font-medium border rounded px-2 py-1 bg-gray-700 border-gray-600 text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                min={startGameweek}
+                max={38}
+                style={{
+                  WebkitAppearance: 'textfield',
+                  MozAppearance: 'textfield'
+                }}
+              />
+            </div>
+
+            <span className={`text-xs text-gray-400`}>
+              ({endGameweek - startGameweek + 1} weeks)
             </span>
           </div>
         </div>
@@ -400,14 +448,14 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
           const colors = getPositionColor(position);
           
           return (
-            <div key={position} className={`rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+            <div key={position} className={`rounded-lg bg-gray-800`}>
               {/* Position Header with pill style */}
-              <div className={`px-6 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className={`px-6 py-4 border-b border-gray-700`}>
                 <div className="flex items-center gap-4">
                   <div className={`px-4 py-2 rounded-full ${colors.pill} text-white font-semibold text-sm shadow-lg`}>
                     {position}
                   </div>
-                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <h3 className={`text-lg font-semibold text-white`}>
                     {position === 'FWD' ? 'Forwards' : 
                      position === 'MID' ? 'Midfielders' : 
                      position === 'DEF' ? 'Defenders' : 'Goalkeepers'}
@@ -419,9 +467,9 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
               <div className="grid grid-cols-2 gap-0">
                 
                 {/* Left Column - Available Players */}
-                <div className={`border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <div className={`px-4 py-3 bg-opacity-50 ${isDarkMode ? 'bg-green-900' : 'bg-green-50'}`}>
-                    <h4 className={`text-sm font-medium ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
+                <div className={`border-r border-gray-700`}>
+                  <div className="px-4 py-3 bg-opacity-50 bg-green-900">
+                    <h4 className="text-sm font-medium text-green-300">
                       Top 5 Available
                     </h4>
                   </div>
@@ -430,7 +478,7 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
                       <div
                         key={`avail-${rec.recommendedPlayer.player_id}`}
                         className={`p-3 cursor-pointer transition-colors hover:bg-opacity-50 ${
-                          isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+                          'hover:bg-gray-700'
                         }`}
                         onClick={() => setSelectedComparison(rec)}
                       >
@@ -441,10 +489,10 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
                               {index + 1}
                             </div>
                             <div>
-                              <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <div className={`text-sm font-medium text-white`}>
                                 {rec.recommendedPlayer.web_name || rec.recommendedPlayer.name}
                               </div>
-                              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              <div className={`text-xs text-gray-400`}>
                                 {rec.recommendedPlayer.team_abbr}
                                 {rec.recommendedPlayer.injury_status && (
                                   <span className="ml-1 text-xs">
@@ -458,14 +506,14 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
                           
                           {/* Points */}
                           <div className="text-right">
-                            <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            <div className={`text-sm font-bold text-white`}>
                               {rec.recommendedPlayer.calculatedPoints.toFixed(1)}
                             </div>
                           </div>
                         </div>
                       </div>
                     )) : (
-                      <div className={`p-3 text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <div className={`p-3 text-center text-sm text-gray-400`}>
                         No available players
                       </div>
                     )}
@@ -474,8 +522,8 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
                 
                 {/* Right Column - My Roster */}
                 <div>
-                  <div className={`px-4 py-3 bg-opacity-50 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-50'}`}>
-                    <h4 className={`text-sm font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                  <div className="px-4 py-3 bg-opacity-50 bg-blue-900">
+                    <h4 className="text-sm font-medium text-blue-300">
                       My Roster
                     </h4>
                   </div>
@@ -492,10 +540,10 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
                               {index + 1}
                             </div>
                             <div>
-                              <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <div className={`text-sm font-medium text-white`}>
                                 {player.web_name || player.name}
                               </div>
-                              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              <div className={`text-xs text-gray-400`}>
                                 {player.team_abbr}
                                 {player.injury_status && (
                                   <span className="ml-1 text-xs">
@@ -509,14 +557,14 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
                           
                           {/* Points */}
                           <div className="text-right">
-                            <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            <div className={`text-sm font-bold text-white`}>
                               {getGameweekRangePoints(player, startGameweek, endGameweek).toFixed(1)}
                             </div>
                           </div>
                         </div>
                       </div>
                     )) : (
-                      <div className={`p-3 text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <div className={`p-3 text-center text-sm text-gray-400`}>
                         No players in roster
                       </div>
                     )}
@@ -530,14 +578,14 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
 
       {/* No results message */}
       {transferRecommendations.length === 0 && (
-        <div className={`text-center py-8 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
-          <div className={`text-2xl mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        <div className={`text-center py-8 rounded-lg bg-gray-800`}>
+          <div className={`text-2xl mb-2 text-gray-400`}>
             🎉
           </div>
-          <div className={`mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} font-medium`}>
+          <div className={`mb-2 text-gray-300 font-medium`}>
             Your team is well optimized!
           </div>
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div className={`text-sm text-gray-400`}>
             No significant upgrades found in the available free agents.
           </div>
         </div>
@@ -550,7 +598,6 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
           startGameweek={startGameweek}
           endGameweek={endGameweek}
           currentGameweek={currentGameweek}
-          isDarkMode={isDarkMode}
           onClose={() => setSelectedComparison(null)}
         />
       )}
@@ -559,7 +606,7 @@ const TransferTabContent = ({ players, currentGameweek, isDarkMode, scoringMode 
 };
 
 // Comparison Modal Component
-const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGameweek, isDarkMode, onClose }) => {
+const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGameweek, onClose }) => {
   const gameweekCount = endGameweek - startGameweek + 1;
   
   // Get gameweek predictions for both players
@@ -583,18 +630,18 @@ const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGamewe
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className={`max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-lg ${
-        isDarkMode ? 'bg-gray-800' : 'bg-white'
+        'bg-gray-800'
       }`}>
         
         {/* Header */}
-        <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`p-6 border-b border-gray-700`}>
           <div className="flex items-center justify-between">
-            <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-xl font-bold text-white`}>
               Player Comparison
             </h2>
             <button
               onClick={onClose}
-              className={`p-2 rounded-full hover:bg-gray-100 ${isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-500'}`}
+              className="p-2 rounded-full hover:bg-gray-100 hover:bg-gray-700 text-gray-400"
             >
               ✕
             </button>
@@ -609,26 +656,26 @@ const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGamewe
             
             {/* Current Player */}
             <div className={`p-4 rounded-lg border ${
-              isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-red-50 border-red-200'
+              'bg-gray-700 border-gray-600'
             }`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className={`font-medium text-red-600`}>
                   OUT: {comparison.currentPlayer.web_name}
                 </h3>
                 <span className={`text-xs px-2 py-1 rounded ${
-                  isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-700'
+                  'bg-gray-600 text-gray-300'
                 }`}>
                   {comparison.currentPlayer.position}
                 </span>
               </div>
               <div className="space-y-1">
-                <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`text-sm text-gray-300`}>
                   Team: {comparison.currentPlayer.team_abbr}
                 </div>
-                <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`text-sm text-gray-300`}>
                   GW{startGameweek}-{endGameweek}: {getGameweekPredictions(comparison.currentPlayer).reduce((sum, p) => sum + p.points, 0).toFixed(1)} pts
                 </div>
-                <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`text-sm text-gray-300`}>
                   Owner: {comparison.currentPlayer.owned_by}
                 </div>
               </div>
@@ -636,23 +683,23 @@ const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGamewe
 
             {/* Recommended Player */}
             <div className={`p-4 rounded-lg border ${
-              isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-green-50 border-green-200'
+              'bg-gray-700 border-gray-600'
             }`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className={`font-medium text-green-600`}>
                   IN: {comparison.recommendedPlayer.web_name}
                 </h3>
                 <span className={`text-xs px-2 py-1 rounded ${
-                  isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-700'
+                  'bg-gray-600 text-gray-300'
                 }`}>
                   {comparison.recommendedPlayer.position}
                 </span>
               </div>
               <div className="space-y-1">
-                <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`text-sm text-gray-300`}>
                   Team: {comparison.recommendedPlayer.team_abbr}
                 </div>
-                <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`text-sm text-gray-300`}>
                   GW{startGameweek}-{endGameweek}: {getGameweekPredictions(comparison.recommendedPlayer).reduce((sum, p) => sum + p.points, 0).toFixed(1)} pts
                 </div>
                 <div className={`text-lg font-bold text-green-600`}>
@@ -664,47 +711,47 @@ const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGamewe
 
           {/* Gameweek Breakdown */}
           <div className="mb-6">
-            <h4 className={`text-lg font-medium mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h4 className={`text-lg font-medium mb-3 text-white`}>
               Gameweeks {startGameweek}-{endGameweek} ({gameweekCount} GWs)
             </h4>
             
-            <div className={`overflow-x-auto border rounded-lg ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <div className={`overflow-x-auto border rounded-lg border-gray-700`}>
               <table className="min-w-full">
-                <thead className={isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}>
+                <thead className="bg-gray-700">
                   <tr>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Gameweek
                     </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Current Player
                     </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Recommended
                     </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Difference
                     </th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                <tbody className="divide-y divide-gray-700">
                   {Array.from({length: gameweekCount}, (_, i) => {
                     const current = currentPredictions[i] || { gameweek: startGameweek + i, points: 0, minutes: 0 };
                     const recommended = recommendedPredictions[i] || { gameweek: startGameweek + i, points: 0, minutes: 0 };
                     const diff = recommended.points - current.points;
                     
                     return (
-                      <tr key={current.gameweek} className={isDarkMode ? 'bg-gray-800' : 'bg-white'}>
-                        <td className={`px-4 py-3 text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <tr key={current.gameweek} className="bg-gray-800">
+                        <td className={`px-4 py-3 text-sm font-medium text-white`}>
                           GW {current.gameweek}
                         </td>
-                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <td className={`px-4 py-3 text-sm text-gray-300`}>
                           {current.points.toFixed(1)} pts ({current.minutes}min)
                         </td>
-                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <td className={`px-4 py-3 text-sm text-gray-300`}>
                           {recommended.points.toFixed(1)} pts ({recommended.minutes}min)
                         </td>
                         <td className={`px-4 py-3 text-sm font-medium ${
-                          diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                          diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-400'
                         }`}>
                           {diff > 0 ? '+' : ''}{diff.toFixed(1)}
                         </td>
@@ -720,11 +767,7 @@ const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGamewe
           <div className="flex gap-3 justify-end">
             <button
               onClick={onClose}
-              className={`px-4 py-2 border rounded-md font-medium transition-colors ${
-                isDarkMode 
-                  ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+              className="px-4 py-2 border rounded-md font-medium transition-colors border-gray-600 text-gray-300 hover:bg-gray-700"
             >
               Close
             </button>

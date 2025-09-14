@@ -43,9 +43,9 @@
 
 ### Frontend
 - **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS with custom Sleeper-inspired design system
+- **Styling**: Tailwind CSS with custom Sleeper-inspired dark theme design system
 - **State Management**: React hooks and context with local storage persistence
-- **UI/UX**: Dark/light mode support, responsive design, accessibility features
+- **UI/UX**: Dark theme interface, responsive design, accessibility features
 
 ### Backend
 - **API Layer**: Next.js API routes with intelligent caching and error handling
@@ -118,8 +118,8 @@ app/components/
 
 ### Key UI Features
 - **Responsive Design**: Mobile-optimized interface
-- **Dark/Light Mode**: Persistent theme preferences
-- **Interactive Controls**: Gameweek sliders, position filters, search functionality
+- **Dark Theme**: Consistent dark mode styling for optimal contrast
+- **Interactive Controls**: Gameweek range inputs, position filters, search functionality
 - **Visual Feedback**: Color-coded performance indicators and optimization status
 - **Accessibility**: Screen reader support and keyboard navigation
 
@@ -188,10 +188,11 @@ npm run lint
 ## 📈 Recent Updates
 
 ### v3.0 - Enhanced UI & Intelligent Predictive Scoring
-- Streamlined gameweek range controls with intuitive arrow navigation
+- Streamlined gameweek range controls with intuitive number input navigation
 - Improved transfer tab user experience with position-consistent filtering
 - **Revolutionary V3 Scoring**: Minutes-weighted predictions eliminate rotation risk overvaluation
 - **Gameweek Summation**: Individual gameweek predictions summed for realistic season totals
+- **Dark Theme Exclusive**: Comprehensive light mode removal for better contrast and simplified codebase
 - Enhanced console logging with smart deduplication
 - Robust error handling and compilation fixes
 

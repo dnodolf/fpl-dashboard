@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
 
-const MyPlayersTable = ({ players, isDarkMode, currentGameweek, optimalPlayerIds = [], scoringMode = 'existing' }) => {
+const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'existing' }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -177,42 +177,42 @@ const getFixtureDifficulty = (player) => {
 // Add both color functions
 const getFixtureDifficultyColor = (difficulty) => {
   if (difficulty === 'N/A' || difficulty === null || difficulty === undefined) {
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-gray-700 text-gray-300';
   }
-  
+
   const numDifficulty = parseFloat(difficulty);
-  
+
   if (isNaN(numDifficulty)) {
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-gray-700 text-gray-300';
   }
-  
-  // Green to Red scale: 1 = easiest (green), 5 = hardest (red)
+
+  // Green to Red scale with better contrast
   if (numDifficulty <= 1.5) {
-    return 'bg-green-500 text-white'; // Easiest - Dark Green
+    return 'bg-green-600 text-white'; // Easiest - Dark Green
   } else if (numDifficulty <= 2.5) {
-    return 'bg-green-300 text-green-900';  // Easy - Light Green
+    return 'bg-green-400 text-green-900';  // Easy - Light Green
   } else if (numDifficulty <= 3.5) {
-    return 'bg-yellow-400 text-yellow-900'; // Medium - Yellow
+    return 'bg-yellow-500 text-yellow-900'; // Medium - Yellow
   } else if (numDifficulty <= 4.5) {
-    return 'bg-orange-500 text-white'; // Hard - Orange
+    return 'bg-orange-600 text-white'; // Hard - Orange
   } else {
-    return 'bg-red-500 text-white';      // Hardest - Red
+    return 'bg-red-600 text-white';      // Hardest - Red
   }
 };
 
-// For dark mode, we need a separate function that shows up better
+// Fixture difficulty color function with better contrast
 const getFixtureDifficultyColorDark = (difficulty) => {
   if (difficulty === 'N/A' || difficulty === null || difficulty === undefined) {
     return 'bg-gray-700 text-gray-300';
   }
-  
+
   const numDifficulty = parseFloat(difficulty);
-  
+
   if (isNaN(numDifficulty)) {
     return 'bg-gray-700 text-gray-300';
   }
-  
-  // Green to Red scale for dark mode with better contrast
+
+  // Green to Red scale with better contrast
   if (numDifficulty <= 1.5) {
     return 'bg-green-600 text-white'; // Easiest - Dark Green
   } else if (numDifficulty <= 2.5) {
@@ -278,32 +278,11 @@ const getFixtureDifficultyColorDark = (difficulty) => {
       <span className="text-blue-500 ml-1">↓</span>;
   };
 
-  // Get SLEEPER position badge color - LIGHT MODE
-// Light mode - better contrast
+  // Get SLEEPER position badge color with enhanced contrast
 const getSleeperPositionBadgeColor = (position) => {
   switch(position) {
     case 'GKP':
-    case 'GK': 
-    case 'G':
-      return 'bg-yellow-600 text-white border-yellow-500';
-    case 'DEF':
-    case 'D':
-      return 'bg-cyan-600 text-white border-cyan-500';
-    case 'MID':
-    case 'M':
-      return 'bg-pink-600 text-white border-pink-500';
-    case 'FWD':
-    case 'F':
-      return 'bg-purple-600 text-white border-purple-500';
-    default: 
-      return 'bg-gray-600 text-white border-gray-500';
-  }
-};
-// Dark mode - even better contrast
-const getSleeperPositionBadgeDarkMode = (position) => {
-  switch(position) {
-    case 'GKP':
-    case 'GK': 
+    case 'GK':
     case 'G':
       return 'bg-yellow-500 text-black border-yellow-400';
     case 'DEF':
@@ -315,7 +294,7 @@ const getSleeperPositionBadgeDarkMode = (position) => {
     case 'FWD':
     case 'F':
       return 'bg-purple-500 text-white border-purple-400';
-    default: 
+    default:
       return 'bg-gray-500 text-white border-gray-400';
   }
 };
@@ -334,14 +313,12 @@ const getSleeperPositionBadgeDarkMode = (position) => {
 
   if (myPlayers.length === 0) {
     return (
-      <div className={`rounded-lg border p-8 text-center ${
-        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-      }`}>
+      <div className="rounded-lg border p-8 text-center bg-gray-800 border-gray-700">
         <div className="text-4xl mb-2">👤</div>
-        <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className="text-lg font-medium mb-2 text-white">
           No Players Found
         </h3>
-        <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className="text-gray-400">
           No players found for user "ThatDerekGuy". Check ownership data.
         </p>
       </div>
@@ -353,10 +330,10 @@ const getSleeperPositionBadgeDarkMode = (position) => {
       {/* Header and Search */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className="text-lg font-medium text-white">
             My Players ({sortedPlayers.length})
           </h3>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className="text-sm text-gray-400">
             Gameweek {currentGameweek?.number || 'N/A'} predictions
           </p>
         </div>
@@ -368,89 +345,65 @@ const getSleeperPositionBadgeDarkMode = (position) => {
             placeholder="Search players..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              isDarkMode 
-                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-            }`}
+            className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white placeholder-gray-400"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className={`rounded-lg border overflow-hidden ${
-        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-      }`}>
+      <div className="rounded-lg border overflow-hidden bg-gray-800 border-gray-700">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className={`${isDarkMode ? 'bg-gray-750' : 'bg-gray-50'} border-b ${
-              isDarkMode ? 'border-gray-600' : 'border-gray-200'
-            }`}>
+            <thead className="bg-gray-750 border-b border-gray-600">
               <tr>
-                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                  isDarkMode ? 'text-gray-300' : 'text-gray-500'
-                }`}>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">
                   Status
                 </th>
                 <th 
                   onClick={() => handleSort('name')}
-                  className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                    isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Player {renderSortIcon('name')}
                 </th>
                 <th 
                   onClick={() => handleSort('position')}
-                  className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                    isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Position {renderSortIcon('position')}
                 </th>
                 <th 
                   onClick={() => handleSort('team')}
-                  className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                    isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Team {renderSortIcon('team')}
                 </th>
                 <th 
                   onClick={() => handleSort('predicted_points')}
-                  className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                    isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Predicted Points {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_points')}
                 </th>
                 <th 
                   onClick={() => handleSort('predicted_minutes')}
-                  className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                    isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Predicted Minutes {renderSortIcon('predicted_minutes')}
                 </th>
                 <th 
                   onClick={() => handleSort('ppg_value')}
-                  className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                    isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   PPG {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
                 </th>
                 <th 
                   onClick={() => handleSort('fixture_difficulty_value')}
-                  className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                    isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Fixture Difficulty {renderSortIcon('fixture_difficulty_value')}
                 </th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
+            <tbody className="divide-y divide-gray-600">
               {sortedPlayers.map((player, index) => {
                 const playerId = player.player_id || player.sleeper_id || player.id;
                 const isOptimal = Array.isArray(optimalPlayerIds) ? optimalPlayerIds.includes(playerId) : false;
@@ -458,9 +411,7 @@ const getSleeperPositionBadgeDarkMode = (position) => {
                 return (
                   <tr 
                     key={playerId || index}
-                    className={`hover:bg-opacity-50 ${
-                      isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
-                    }`}
+                    className="hover:bg-opacity-50 hover:bg-gray-700"
                   >
                     {/* Optimization Status */}
                     <td className="px-4 py-3">
@@ -475,25 +426,21 @@ const getSleeperPositionBadgeDarkMode = (position) => {
 
                     {/* Player Name */}
                     <td className="px-4 py-3">
-                      <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <div className="text-sm font-medium text-white">
                         {player.full_name || player.web_name || player.name || 'Unknown Player'}
                       </div>
                     </td>
 
                     {/* Position - UPDATED WITH SLEEPER COLORS */}
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        isDarkMode ? 
-                          getSleeperPositionBadgeDarkMode(player.position) :
-                          getSleeperPositionBadgeColor(player.position)
-                      }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getSleeperPositionBadgeColor(player.position)}`}>
                         {player.position || 'N/A'}
                       </span>
                     </td>
 
                     {/* Team */}
                     <td className="px-4 py-3">
-                      <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                      <span className="text-sm font-medium text-gray-200">
                         {player.team_abbr || player.team || 'N/A'}
                       </span>
                     </td>
@@ -501,9 +448,9 @@ const getSleeperPositionBadgeDarkMode = (position) => {
                     {/* Predicted Points */}
                     <td className="px-4 py-3">
                       <span className={`text-sm font-semibold ${
-                        player.predicted_points > 0 
-                          ? (isDarkMode ? 'text-green-400' : 'text-green-600')
-                          : (isDarkMode ? 'text-gray-400' : 'text-gray-500')
+                        player.predicted_points > 0
+                          ? 'text-green-400'
+                          : 'text-gray-400'
                       }`}>
                         {formatPoints(player.predicted_points)}
                       </span>
@@ -511,25 +458,21 @@ const getSleeperPositionBadgeDarkMode = (position) => {
 
                     {/* Predicted Minutes */}
                     <td className="px-4 py-3">
-                      <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <span className="text-sm text-gray-300">
                         {formatMinutes(player.predicted_minutes)}
                       </span>
                     </td>
 
                     {/* PPG */}
                     <td className="px-4 py-3">
-                      <span className={`text-sm font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                      <span className="text-sm font-medium text-blue-400">
                         {formatPoints(player.ppg_value)}
                       </span>
                     </td>
 
                     {/* Fixture Difficulty - ENHANCED WITH PROPER COLOR CODING */}
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        isDarkMode ? 
-                          getFixtureDifficultyColorDark(player.fixture_difficulty_value) :
-                          getFixtureDifficultyColor(player.fixture_difficulty_value)
-                      }`}>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getFixtureDifficultyColor(player.fixture_difficulty_value)}`}>
                         {player.fixture_difficulty_value !== 'N/A' && !isNaN(parseFloat(player.fixture_difficulty_value)) 
                           ? parseFloat(player.fixture_difficulty_value).toFixed(1)
                           : player.fixture_difficulty_value || 'N/A'}
@@ -545,7 +488,7 @@ const getSleeperPositionBadgeDarkMode = (position) => {
         {/* No results message */}
         {sortedPlayers.length === 0 && searchTerm && (
           <div className="text-center py-8">
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className="text-sm text-gray-400">
               No players found matching "{searchTerm}"
             </p>
           </div>

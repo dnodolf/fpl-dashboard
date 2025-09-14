@@ -7,35 +7,25 @@ import v3ScoringService from '../services/v3ScoringService.js';
 
 // ----------------- SLEEPER POSITION COLORS FUNCTIONS -----------------
 // Get Sleeper position badge classes for player cards
-const getSleeperPositionCardStyle = (position, isDarkMode = false) => {
+const getSleeperPositionCardStyle = (position) => {
   const baseClasses = 'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border';
   
   switch (position) {
     case 'GKP':
     case 'GK':
     case 'G':
-      return `${baseClasses} ${isDarkMode 
-        ? 'bg-yellow-500 text-black border-yellow-400' 
-        : 'bg-yellow-600 text-white border-yellow-500'}`;
+      return `${baseClasses} bg-yellow-500 text-black border-yellow-400`;
     case 'DEF':
     case 'D':
-      return `${baseClasses} ${isDarkMode 
-        ? 'bg-cyan-500 text-black border-cyan-400' 
-        : 'bg-cyan-600 text-white border-cyan-500'}`;
+      return `${baseClasses} bg-cyan-500 text-black border-cyan-400`;
     case 'MID':
     case 'M':
-      return `${baseClasses} ${isDarkMode 
-        ? 'bg-pink-500 text-white border-pink-400' 
-        : 'bg-pink-600 text-white border-pink-500'}`;
+      return `${baseClasses} bg-pink-500 text-white border-pink-400`;
     case 'FWD':
     case 'F':
-      return `${baseClasses} ${isDarkMode 
-        ? 'bg-purple-500 text-white border-purple-400' 
-        : 'bg-purple-600 text-white border-purple-500'}`;
+      return `${baseClasses} bg-purple-500 text-white border-purple-400`;
     default:
-      return `${baseClasses} ${isDarkMode 
-        ? 'bg-gray-500 text-white border-gray-400' 
-        : 'bg-gray-600 text-white border-gray-500'}`;
+      return `${baseClasses} bg-gray-500 text-white border-gray-400`;
   }
 };
 
@@ -114,11 +104,11 @@ function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', cur
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimalPlayerIds = [], scoringMode = 'existing', currentLineup = null }) => {
+const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'existing', currentLineup = null }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
-        isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-400' : 'bg-gray-50 border-gray-300 text-gray-500'
+        'bg-gray-800 border-gray-600 text-gray-400'
       }`}>
         <div className="text-4xl mb-2">⚽</div>
         <p>No lineup data available</p>
@@ -207,11 +197,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
     const predictedMinutes = getPredictedMinutes(player);
 
     return (
-      <div className={`relative flex flex-col items-center p-2 m-1 rounded-lg border text-xs ${
-        isDarkMode 
-          ? 'bg-gray-700 border-gray-600 text-white' 
-          : 'bg-white border-gray-300 text-gray-900'
-      }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
+      <div className="relative flex flex-col items-center p-2 m-1 rounded-lg border text-xs bg-gray-700 border-gray-600 text-white" style={{ minWidth: '72px', maxWidth: '88px' }}>
         
         {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
         {isOptimal && (
@@ -230,7 +216,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         
         {/* Position badge with Sleeper colors */}
         <div className="mt-1">
-          <span className={getSleeperPositionCardStyle(player.position, isDarkMode)}>
+          <span className={getSleeperPositionCardStyle(player.position)}>
             {player.position || 'N/A'}
           </span>
         </div>
@@ -253,7 +239,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
         
         {/* Predicted Minutes */}
         {predictedMinutes && (
-          <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`text-xs mt-1 text-gray-400`}>
             {predictedMinutes}min
           </div>
         )}
@@ -276,7 +262,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
   
   return (
     <div className={`relative border-2 rounded-lg overflow-hidden ${
-      isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'
+      'bg-gray-800 border-gray-600'
       } ${isOptimal ? 'ring-2 ring-green-500' : ''}`} style={{ height: '480px' }}>
       
       {/* Field Background */}
@@ -284,13 +270,13 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
       
       {/* Formation and Points Header */}
       <div className="absolute top-3 left-4 right-4 flex justify-between items-center z-20">
-        <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+        <span className={`text-sm font-medium text-gray-300`}>
           {currentFormation}
         </span>
         <span className={`text-sm font-semibold ${
           isOptimal 
-            ? (isDarkMode ? 'text-green-400' : 'text-green-600')
-            : (isDarkMode ? 'text-blue-400' : 'text-blue-600')
+            ? 'text-green-400'
+            : 'text-blue-400'
         }`}>
           {totalPoints.toFixed(1)} pts
         </span>
@@ -308,7 +294,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
             {/* Fill missing FWD slots if needed */}
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
               <div key={`empty-fwd-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-                isDarkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400'
+                'border-gray-600 text-gray-500'
               }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">FWD</div>
@@ -326,7 +312,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
             {/* Fill missing MID slots if needed */}
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
               <div key={`empty-mid-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-                isDarkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400'
+                'border-gray-600 text-gray-500'
               }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">MID</div>
@@ -344,7 +330,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
             {/* Fill missing DEF slots if needed */}
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
               <div key={`empty-def-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-                isDarkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400'
+                'border-gray-600 text-gray-500'
               }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">DEF</div>
@@ -361,7 +347,7 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
           {/* Show empty GKP slot if needed */}
           {playersByPosition.GKP.length === 0 && (
             <div className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-              isDarkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400'
+              'border-gray-600 text-gray-500'
             }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
               <div>Empty</div>
               <div className="text-xs opacity-50">GKP</div>
@@ -374,17 +360,17 @@ const FormationVisualization = ({ lineup, isDarkMode, isOptimal = false, optimal
 };
 
 // ----------------- ACTIONABLE RECOMMENDATIONS COMPONENT -----------------
-const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMode, recalculatedStats, scoringMode = 'existing' }) => {
+const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'existing' }) => {
   if (!recommendations || recommendations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
-        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        'bg-gray-800 border-gray-700'
       }`}>
         <div className="text-green-600 text-4xl mb-2">✅</div>
-        <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-medium mb-2 text-white`}>
           Perfect Lineup!
         </h3>
-        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+        <p className={'text-gray-400'}>
           Your current lineup is already optimized.
         </p>
       </div>
@@ -420,12 +406,12 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
   const actionableChanges = getActionableChanges();
 
   return (
-    <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+    <div className={`rounded-lg border ${'bg-gray-800 border-gray-700'}`}>
       <div className="p-4 border-b border-gray-200">
-        <h3 className={`text-lg font-medium flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-medium flex items-center gap-2 text-white`}>
           🎯 Quick Actions
         </h3>
-        <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm mt-1 text-gray-400`}>
           Make these changes to optimize your lineup
         </p>
       </div>
@@ -433,16 +419,16 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
         {actionableChanges.map((change, index) => (
           <div key={index} className={`p-3 rounded-lg border-l-4 ${
             change.priority === 'high' 
-              ? `bg-red-50 border-red-400 ${isDarkMode ? 'bg-red-900/20 border-red-600' : ''}`
-              : `bg-blue-50 border-blue-400 ${isDarkMode ? 'bg-blue-900/20 border-blue-600' : ''}`
+              ? 'bg-red-900/20 border-red-600'
+              : 'bg-blue-900/20 border-blue-600'
           }`}>
-            <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-sm font-medium text-white`}>
               {change.action}
             </div>
             <div className={`text-xs mt-1 ${
               change.priority === 'high'
-                ? (isDarkMode ? 'text-red-400' : 'text-red-600')
-                : (isDarkMode ? 'text-blue-400' : 'text-blue-600')
+                ? 'text-red-400'
+                : 'text-blue-400'
             }`}>
               {change.reason}
             </div>
@@ -451,7 +437,7 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
         
         {actionableChanges.length === 0 && (
           <div className="text-center py-4">
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm text-gray-400`}>
               No specific recommendations available
             </p>
           </div>
@@ -462,17 +448,17 @@ const ActionableRecommendations = ({ recommendations, current, optimal, isDarkMo
 };
 
 // ----------------- FORMATION COMPARISON COMPONENT - FIXED LAYOUT -----------------
-const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scoringMode = 'existing' }) => {
+const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'existing' }) => {
   if (!allFormations || allFormations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
-        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        'bg-gray-800 border-gray-700'
       }`}>
         <div className="text-4xl mb-2">📊</div>
-        <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-medium mb-2 text-white`}>
           Formation Analysis
         </h3>
-        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+        <p className={'text-gray-400'}>
           No formation comparison data available.
         </p>
       </div>
@@ -515,9 +501,9 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scor
   const bestPoints = bestFormation?.recalculatedPoints || 0;
 
   return (
-    <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+    <div className={`rounded-lg border ${'bg-gray-800 border-gray-700'}`}>
       <div className="p-4 border-b border-gray-200">
-        <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-medium text-white`}>
           📊 Formation Comparison
         </h3>
       </div>
@@ -535,24 +521,24 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scor
               <div key={formationName || index} 
                 className={`flex items-center justify-between p-4 rounded-lg ${
                   isInvalid
-                    ? (isDarkMode ? 'bg-gray-900 border border-gray-600 opacity-60' : 'bg-gray-100 border border-gray-300 opacity-60')
-                    : isCurrent 
-                      ? (isDarkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-200')
+                    ? 'bg-gray-900 border border-gray-600 opacity-60'
+                    : isCurrent
+                      ? 'bg-blue-900 border border-blue-700'
                       : isBest
-                        ? (isDarkMode ? 'bg-green-900 border border-green-700' : 'bg-green-50 border border-green-200')
-                        : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
+                        ? 'bg-green-900 border border-green-700'
+                        : 'bg-gray-700'
                 }`}>
                 
                 {/* Left: Formation Name */}
                 <div className="flex items-center gap-3 flex-1">
                   <span className={`text-2xl font-bold ${
                     isInvalid
-                      ? (isDarkMode ? 'text-gray-500' : 'text-gray-400')
+                      ? 'text-gray-500'
                       : isCurrent 
-                        ? (isDarkMode ? 'text-blue-100' : 'text-blue-800') 
+                        ? 'text-blue-100' 
                         : isBest
-                          ? (isDarkMode ? 'text-green-100' : 'text-green-800')
-                          : (isDarkMode ? 'text-white' : 'text-gray-900')
+                          ? 'text-green-100'
+                          : 'text-white'
                   }`}>
                     {formationName}
                   </span>
@@ -574,12 +560,12 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scor
                 <div className="flex-1 text-center">
                   <span className={`text-xl font-bold ${
                     isInvalid
-                      ? (isDarkMode ? 'text-gray-500' : 'text-gray-400')
+                      ? 'text-gray-500'
                       : isCurrent 
-                        ? (isDarkMode ? 'text-blue-100' : 'text-blue-800') 
+                        ? 'text-blue-100' 
                         : isBest
-                          ? (isDarkMode ? 'text-green-100' : 'text-green-800')
-                          : (isDarkMode ? 'text-white' : 'text-gray-900')
+                          ? 'text-green-100'
+                          : 'text-white'
                   }`}>
                     {isInvalid ? 'N/A' : `${formationPoints.toFixed(1)} pts`}
                   </span>
@@ -588,7 +574,7 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scor
                 {/* Right: Status */}
                 <div className="flex-1 text-right">
                   {isInvalid ? (
-                    <span className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span className="text-sm text-gray-500">
                       Not enough players
                     </span>
                   ) : isBest ? (
@@ -596,7 +582,7 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scor
                       BEST
                     </span>
                   ) : (
-                    <span className={`text-lg font-medium ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                    <span className="text-lg font-medium text-red-400">
                       -{pointsDiff.toFixed(1)} pts
                     </span>
                   )}
@@ -611,11 +597,11 @@ const FormationComparison = ({ allFormations, currentFormation, isDarkMode, scor
 };
 
 // ----------------- MAIN OPTIMIZER TAB CONTENT - ENHANCED -----------------
-export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scoringMode = 'existing' }) => {
+export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'existing' }) => {
   // Don't render if gameweek data isn't loaded for v3 scoring
   if (scoringMode === 'v3' && !currentGameweek?.number) {
     return (
-      <div className={`p-8 text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+      <div className={`p-8 text-center text-gray-300`}>
         <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
         <p>Loading gameweek data for v3 scoring...</p>
       </div>
@@ -690,7 +676,7 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
-        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+        <span className="text-white">
           Analyzing your lineup...
         </span>
       </div>
@@ -700,13 +686,13 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
   if (error) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
-        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        'bg-gray-800 border-gray-700'
       }`}>
         <div className="text-red-500 text-4xl mb-2">❌</div>
-        <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-medium mb-2 text-white`}>
           Optimization Failed
         </h3>
-        <p className={`mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`mb-4 text-gray-400`}>
           {error}
         </p>
         <button
@@ -731,22 +717,21 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
         {/* Current Lineup */}
         <div className="space-y-4">
           <div className="text-center">
-            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className={`text-lg font-medium text-white`}>
               Current Lineup
             </h3>
             <div className="flex items-center justify-center gap-2 mt-1">
               <span className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white">
                 ACTIVE
               </span>
-              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className={`text-sm text-gray-400`}>
                 {current?.formation || 'N/A'} • {currentPoints.toFixed(1)} points
               </span>
             </div>
           </div>
           
-          <FormationVisualization 
-            lineup={current} 
-            isDarkMode={isDarkMode} 
+          <FormationVisualization
+            lineup={current}
             optimalPlayerIds={optimalPlayerIdsForDisplay}
             scoringMode={scoringMode}
           />
@@ -755,21 +740,20 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
         {/* Optimal Lineup */}
         <div className="space-y-4">
           <div className="text-center">
-            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className={`text-lg font-medium text-white`}>
               Optimal Lineup
             </h3>
             <div className="flex items-center justify-center gap-2 mt-1">
               <span className="px-2 py-1 text-xs font-medium rounded bg-green-600 text-white">
                 RECOMMENDED
               </span>
-              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className={`text-sm text-gray-400`}>
                 {optimal?.formation || 'N/A'} • {optimalPoints.toFixed(1)} points
               </span>
             </div>
           </div>
-          <FormationVisualization 
-            lineup={optimal} 
-            isDarkMode={isDarkMode} 
+          <FormationVisualization
+            lineup={optimal}
             isOptimal={true}
             optimalPlayerIds={optimalPlayerIdsForDisplay}
             scoringMode={scoringMode}
@@ -780,27 +764,24 @@ export const OptimizerTabContent = ({ isDarkMode, players, currentGameweek, scor
 
       {/* Actionable Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActionableRecommendations 
-          recommendations={recommendations} 
+        <ActionableRecommendations
+          recommendations={recommendations}
           current={current}
           optimal={optimal}
-          isDarkMode={isDarkMode}
           recalculatedStats={recalculatedStats}
           scoringMode={scoringMode}
         />
-        <FormationComparison 
-          allFormations={formations} 
-          currentFormation={current?.formation} 
-          isDarkMode={isDarkMode}
+        <FormationComparison
+          allFormations={formations}
+          currentFormation={current?.formation}
           scoringMode={scoringMode}
         />
       </div>
 
       {/* My Players Table */}
-      <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        <MyPlayersTable 
-          players={players || []} 
-          isDarkMode={isDarkMode}
+      <div className={`p-6 rounded-lg border ${'bg-gray-800 border-gray-700'}`}>
+        <MyPlayersTable
+          players={players || []}
           currentGameweek={currentGameweek}
           optimalPlayerIds={optimalPlayerIdsForDisplay}
           scoringMode={scoringMode}

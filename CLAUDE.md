@@ -23,7 +23,7 @@ Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy 
 
 ### Tech Stack
 - **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS with custom Sleeper-inspired design
+- **Styling**: Tailwind CSS with custom Sleeper-inspired dark theme design
 - **State Management**: React hooks and context
 - **API**: Next.js API routes with robust error handling
 
@@ -149,7 +149,7 @@ async function importServices() {
 - Follow Tailwind CSS patterns for styling consistency
 - Avoid styled-jsx in favor of global CSS classes
 - Use responsive design patterns for mobile optimization
-- Implement dark/light mode support with persistent preferences
+- Uses consistent dark theme styling for optimal contrast
 
 ## Performance Characteristics
 
@@ -200,6 +200,7 @@ async function importServices() {
 - **Revolutionary V3 Scoring**: Minutes-weighted predictions eliminate rotation risk overvaluation
 - **Smart Gameweek Summation**: Individual gameweek predictions summed for realistic season totals
 - **Rotation Risk Modeling**: Heavy penalties for low playing time (30 mins = 90% reduction)
+- **Dark Theme Only**: Comprehensive light mode removal for better contrast and simplified codebase
 - Enhanced console logging with smart deduplication
 - Robust error handling and compilation fixes
 - Replaced complex dual-handle sliders with reliable text-based controls
@@ -210,6 +211,7 @@ async function importServices() {
 - **V3 Scoring**: Minutes weighting is critical for realistic predictions - always consider playing time
 - **Prediction Methods**: Prefer gameweek summation over naive season extrapolation for accuracy
 - **Error Handling**: Always implement graceful fallbacks for external API dependencies
+- **Theme System**: Application uses dark theme exclusively - no light/dark mode toggles needed
 - **Port Management**: Clean development environment setup (kill processes: `taskkill /F /IM node.exe`)
 
 The system is optimized for the 2025-26 Premier League season and requires minimal maintenance.
