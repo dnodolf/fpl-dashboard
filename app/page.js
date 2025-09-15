@@ -628,81 +628,138 @@ const OptimizerStats = ({ scoringMode = 'existing', currentGameweek = { number: 
   );
 };
 
-const TransferStats = ({ players }) => {
+const TransferStats = ({ players, scoringMode = 'existing', gameweekRange }) => {
   // Calculate transfer analytics - FIX: Use correct ownership logic
   const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
   const myPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy'); // YOUR players specifically
-  
-  // Find outperforming free agents compared to YOUR players
-  const outperformingFAs = freeAgents.filter(fa => {
-    const faPoints = fa.sleeper_points_ros || fa.total_points || 0;
-    return myPlayers.some(myPlayer => (myPlayer.sleeper_points_ros || myPlayer.total_points || 0) < faPoints);
+
+  // Helper function to get player points (enhanced to match transfer tab logic with gameweek range support)
+  const getPlayerPoints = (player) => {
+    // If gameweek range is specified and valid, use gameweek range calculations
+    if (gameweekRange && gameweekRange.start && gameweekRange.end) {
+      return getGameweekRangePoints(player, gameweekRange.start, gameweekRange.end);
+    }
+
+    // Otherwise use season-based points
+    if (scoringMode === 'v3') {
+      return player.v3_season_avg || player.sleeper_season_avg || player.total_points || 0;
+    }
+    return player.sleeper_season_avg || player.sleeper_points_ros || player.total_points || 0;
+  };
+
+  // Gameweek range points calculation (same logic as TransferTabContent)
+  function getGameweekRangePoints(player, startGW, endGW) {
+    const gameweekCount = endGW - startGW + 1;
+
+    // Check if player has gameweek-specific predictions
+    if (!player.predictions || !Array.isArray(player.predictions) || player.predictions.length === 0) {
+      // For players without predictions, use the same data source as Players tab
+      let seasonTotal = 0;
+
+      if (scoringMode === 'v3') {
+        seasonTotal = player.v3_season_total || player.sleeper_season_total || player.predicted_points || 0;
+      } else {
+        seasonTotal = player.sleeper_season_total || player.predicted_points || 0;
+      }
+
+      if (seasonTotal > 0) {
+        // Adjust proportionally for the gameweek range
+        return (seasonTotal / 38) * gameweekCount;
+      }
+
+      // Final fallback to PPG if no season total available
+      let fallbackPpg = 0;
+
+      if (scoringMode === 'v3') {
+        fallbackPpg = player.v3_season_avg || player.v3_current_gw || player.sleeper_season_avg || 0;
+      } else {
+        fallbackPpg = player.sleeper_season_avg || player.sleeper_points_ros / 38 || player.current_gw_prediction || 0;
+      }
+
+      return fallbackPpg * gameweekCount;
+    }
+
+    let totalPoints = 0;
+    let predictionsFound = 0;
+
+    for (let gw = startGW; gw <= endGW; gw++) {
+      const prediction = player.predictions.find(p => p.gw === gw);
+      if (prediction) {
+        const gwPoints = scoringMode === 'v3'
+          ? (prediction.v3_predicted_pts || prediction.predicted_pts || 0)
+          : (prediction.predicted_pts || 0);
+        totalPoints += gwPoints;
+        predictionsFound++;
+      }
+    }
+
+    // If we have some predictions but not all, extrapolate
+    if (predictionsFound > 0 && predictionsFound < gameweekCount) {
+      const avgPointsPerGW = totalPoints / predictionsFound;
+      const missingGWs = gameweekCount - predictionsFound;
+      totalPoints += avgPointsPerGW * missingGWs;
+    }
+
+    return totalPoints;
+  }
+
+  // Calculate position-specific upgrade counts
+  const positions = ['FWD', 'MID', 'DEF', 'GKP'];
+  const positionUpgrades = {};
+
+  positions.forEach(position => {
+    const myPositionPlayers = myPlayers.filter(p => p.position === position);
+    const freeAgentsInPosition = freeAgents.filter(p => p.position === position);
+
+    if (myPositionPlayers.length === 0) {
+      positionUpgrades[position] = 0;
+      return;
+    }
+
+    // Find worst player in my team for this position
+    const worstMyPlayer = myPositionPlayers.reduce((worst, current) => {
+      const worstPoints = getPlayerPoints(worst);
+      const currentPoints = getPlayerPoints(current);
+      return currentPoints < worstPoints ? current : worst;
+    });
+
+    const worstMyPlayerPoints = getPlayerPoints(worstMyPlayer);
+
+    // Count how many free agents would outperform my worst player in this position
+    const upgradeCount = freeAgentsInPosition.filter(fa => {
+      const faPoints = getPlayerPoints(fa);
+      return faPoints > worstMyPlayerPoints;
+    }).length;
+
+    positionUpgrades[position] = upgradeCount;
   });
 
-  // Calculate recommended moves (best FA vs worst of YOUR players)
-  const worstMyPlayer = myPlayers.sort((a, b) => 
-    (a.sleeper_points_ros || a.total_points || 0) - (b.sleeper_points_ros || b.total_points || 0)
-  )[0];
-  const bestFA = freeAgents.sort((a, b) => 
-    (b.sleeper_points_ros || b.total_points || 0) - (a.sleeper_points_ros || a.total_points || 0)
-  )[0];
-
-  const hasUpgrades = outperformingFAs.length > 0;
-  const statusMessage = hasUpgrades ? "Upgrades Available" : "Team Optimized";
-  const statusColor = hasUpgrades ? "orange" : "green";
-
-  // Calculate potential point gain
-  const potentialGain = (bestFA && worstMyPlayer) ? 
-    ((bestFA.sleeper_points_ros || bestFA.total_points || 0) - 
-     (worstMyPlayer.sleeper_points_ros || worstMyPlayer.total_points || 0)) : 0;
+  // Position configurations with emojis and colors
+  const positionConfigs = {
+    FWD: { emoji: '🎯', color: 'text-purple-600', bg: 'bg-purple-100', name: 'FWD' },
+    MID: { emoji: '⚽', color: 'text-blue-600', bg: 'bg-blue-100', name: 'MID' },
+    DEF: { emoji: '🛡️', color: 'text-green-600', bg: 'bg-green-100', name: 'DEF' },
+    GKP: { emoji: '🥅', color: 'text-orange-600', bg: 'bg-orange-100', name: 'GKP' }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      {/* Available Free Agents */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-blue-600">{freeAgents.length}</div>
-            <div className={`text-sm text-gray-400`}>Available Free Agents</div>
-          </div>
-          <div className="text-blue-500 text-2xl">🆓</div>
-        </div>
-      </div>
+      {positions.map(position => {
+        const config = positionConfigs[position];
+        const upgradeCount = positionUpgrades[position];
 
-      {/* Outperforming Free Agents */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-green-600">{outperformingFAs.length}</div>
-            <div className={`text-sm text-gray-400`}>Upgrades Available</div>
-          </div>
-          <div className="text-green-500 text-2xl">⭐</div>
-        </div>
-      </div>
-
-      {/* Your Squad Size */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-purple-600">{myPlayers.length}</div>
-            <div className={`text-sm text-gray-400`}>Your Squad Size</div>
-          </div>
-          <div className="text-purple-500 text-2xl">👤</div>
-        </div>
-      </div>
-
-      {/* Best Potential Gain */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className={`text-2xl font-bold ${potentialGain > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-              {potentialGain > 0 ? `+${potentialGain.toFixed(1)}` : '0.0'}
+        return (
+          <div key={position} className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className={`text-2xl font-bold ${config.color}`}>{upgradeCount}</div>
+                <div className={`text-sm text-gray-400`}>{config.name} Upgrades</div>
+              </div>
+              <div className="text-2xl">{config.emoji}</div>
             </div>
-            <div className={`text-sm text-gray-400`}>Best Potential Gain</div>
           </div>
-          <div className={`text-2xl ${potentialGain > 0 ? 'text-green-500' : 'text-gray-400'}`}>📈</div>
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 };
@@ -1277,7 +1334,10 @@ export default function FPLDashboard() {
   });
   const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' });
   const [scoringMode, setScoringMode] = useState('v3'); // 'existing' or 'v3'
-  
+
+  // Shared gameweek range state for transfers tab
+  const [transferGameweekRange, setTransferGameweekRange] = useState(null);
+
   // Current gameweek state - will be updated by loadGameweek()
   const [currentGameweek, setCurrentGameweek] = useState({
     number: 4, // Updated to current gameweek fallback
@@ -1639,8 +1699,12 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
         return <MatchingStats players={processedPlayers} integration={integration} />;
       case 'optimizer': 
         return <OptimizerStats scoringMode={scoringMode} currentGameweek={currentGameweek} />;
-      case 'transfers': 
-        return <TransferStats players={processedPlayers} />;
+      case 'transfers':
+        return <TransferStats
+          players={processedPlayers}
+          scoringMode={scoringMode}
+          gameweekRange={transferGameweekRange}
+        />;
       default: 
         return null;
     }
@@ -2104,10 +2168,12 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
           
           {/* Get recommendations and explore free agents to pick up */}
           {activeTab === 'transfers' && (
-            <TransferTabContent 
+            <TransferTabContent
               players={processedPlayers}
-              currentGameweek={currentGameweek} 
-                           scoringMode={scoringMode}
+              currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
+              gameweekRange={transferGameweekRange}
+              onGameweekRangeChange={setTransferGameweekRange}
             />
           )}
 

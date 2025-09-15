@@ -2,7 +2,7 @@
 // Transfer analysis component following existing dashboard patterns
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 // Fixture difficulty mapping (consistent with your existing system)
 const FIXTURE_DIFFICULTY = {
@@ -21,14 +21,31 @@ const TEAM_DIFFICULTY = {
   'LUT': 1, 'BUR': 1, 'MUN': 4, 'WHU': 3, 'NFO': 2
 };
 
-const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing' }) => {
+const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing', gameweekRange, onGameweekRangeChange }) => {
   // Calculate default gameweek range: current GW + next 4 (total of 5)
   const currentGW = currentGameweek?.number;
   const defaultStartGW = currentGW;
   const defaultEndGW = currentGW + 4;
-  
-  const [startGameweek, setStartGameweek] = useState(defaultStartGW);
-  const [endGameweek, setEndGameweek] = useState(defaultEndGW);
+
+  // Use shared state from parent, with initialization effect
+  const startGameweek = gameweekRange?.start || defaultStartGW;
+  const endGameweek = gameweekRange?.end || defaultEndGW;
+
+  // Initialize gameweek range if not set
+  useEffect(() => {
+    if (!gameweekRange || !gameweekRange.start || !gameweekRange.end) {
+      onGameweekRangeChange({ start: defaultStartGW, end: defaultEndGW });
+    }
+  }, [gameweekRange, onGameweekRangeChange, defaultStartGW, defaultEndGW]);
+
+  // Helper functions to update shared state
+  const setStartGameweek = (value) => {
+    onGameweekRangeChange({ start: value, end: endGameweek });
+  };
+
+  const setEndGameweek = (value) => {
+    onGameweekRangeChange({ start: startGameweek, end: value });
+  };
   const [selectedPositions, setSelectedPositions] = useState([]);
   const [selectedComparison, setSelectedComparison] = useState(null);
 
