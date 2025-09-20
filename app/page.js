@@ -1333,7 +1333,7 @@ export default function FPLDashboard() {
     search: ''
   });
   const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' });
-  const [scoringMode, setScoringMode] = useState('v3'); // 'existing' or 'v3'
+  const [scoringMode, setScoringMode] = useState('existing'); // 'existing' or 'v3'
 
   // Shared gameweek range state for transfers tab
   const [transferGameweekRange, setTransferGameweekRange] = useState(null);
@@ -1894,7 +1894,7 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                           onClick={() => handleSort('sleeper_points_ros')}
                         >
                           <div className="flex items-center">
-                            ROS Points {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('sleeper_points_ros')}
+                            ROS Points {renderSortIcon('sleeper_points_ros')}
                           </div>
                         </th>
                         <th 
@@ -1921,20 +1921,10 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
                             'text-gray-300 hover:bg-gray-600'
                           }`}
-                          onClick={() => handleSort('current_ppg')}
-                        >
-                          <div className="flex items-center">
-                            PPG (Current) {renderSortIcon('current_ppg')}
-                          </div>
-                        </th>
-                        <th 
-                          className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                            'text-gray-300 hover:bg-gray-600'
-                          }`}
                           onClick={() => handleSort('predicted_ppg')}
                         >
                           <div className="flex items-center">
-                            PPG (Predicted) {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_ppg')}
+                            PPG (Predicted) {renderSortIcon('predicted_ppg')}
                           </div>
                         </th>
                       </tr>
@@ -1945,8 +1935,16 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div>
-                                <div className={`text-sm font-medium text-white`}>
+                                <div className={`text-sm font-medium text-white flex items-center gap-2`}>
                                   {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
+                                  {player.news && player.news.trim() !== '' && (
+                                    <span
+                                      className="text-orange-400 hover:text-orange-300 cursor-pointer transition-colors"
+                                      title={player.news}
+                                    >
+                                      📰
+                                    </span>
+                                  )}
                                 </div>
                                 {player.injury_status && (
                                   <div className="text-xs text-red-600">
@@ -1987,138 +1985,37 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {(() => {
-                              // Use specific gameweek predictions from the predictions array (better logic)
+                              // Pure FFH data - sum first 5 predictions ONLY
                               if (player.predictions && Array.isArray(player.predictions)) {
-                                const currentGW = currentGameweek?.number;
-                                const targetGameweeks = Array.from({length: 5}, (_, i) => currentGW + i);
-                                let totalPoints = 0;
-                                const gameweekDetails = [];
-                                
-                                targetGameweeks.forEach(gw => {
-                                  const prediction = player.predictions.find(p => p.gw === gw);
-                                  if (prediction) {
-                                    const gwPoints = scoringMode === 'v3' 
-                                      ? (prediction.v3_predicted_pts || prediction.predicted_pts || 0)
-                                      : (prediction.predicted_pts || 0);
-                                    totalPoints += gwPoints;
-                                    gameweekDetails.push({ gw, points: gwPoints });
-                                  }
-                                });
-                                
-                                // Debug logging for Lammens display
-                                if (player.name?.includes('Lammens') || player.web_name?.includes('Lammens')) {
-                                  console.log(`🔍 Players table DISPLAY for ${player.name || player.web_name}:`, {
-                                    scoringMode,
-                                    currentGW,
-                                    targetGameweeks,
-                                    totalPoints,
-                                    gameweekDetails,
-                                    displayValue: totalPoints.toFixed(1)
-                                  });
-                                }
-                                
-                                return totalPoints > 0 ? totalPoints.toFixed(1) : 'N/A';
+                                const first5Predictions = player.predictions.slice(0, 5);
+                                const totalPoints = first5Predictions.reduce((sum, pred) => {
+                                  return sum + (pred.predicted_pts || 0);
+                                }, 0);
+                                return totalPoints.toFixed(1);
                               }
-                              
-                              // Fallback to old logic if predictions array not available
-                              if (player.sleeper_gw_predictions) {
-                                try {
-                                  const gwPreds = JSON.parse(player.sleeper_gw_predictions);
-                                  const next5 = Object.values(gwPreds).slice(0, 5);
-                                  return next5.length > 0 ? next5.reduce((a, b) => a + b, 0).toFixed(1) : 'N/A';
-                                } catch (e) {
-                                  // Fall through to next option
-                                }
-                              }
-                              if (player.ffh_gw_predictions) {
-                                try {
-                                  const gwPreds = JSON.parse(player.ffh_gw_predictions);
-                                  const next5 = Object.values(gwPreds).slice(0, 5);
-                                  return next5.length > 0 ? next5.reduce((a, b) => a + b, 0).toFixed(1) : 'N/A';
-                                } catch (e) {
-                                  // Fall through to estimation
-                                }
-                              }
-                              // Estimate: season points / 38 * 5
-                              const seasonPoints = player.sleeper_season_total || (player.sleeper_season_avg * 38) || player.ffh_season_prediction || player.predicted_pts || player.total_points || 0;
-                              return seasonPoints > 0 ? ((seasonPoints / 38) * 5).toFixed(1) : 'N/A';
+                              // No fallbacks - return 0 if no predictions
+                              return '0.0';
                             })()}
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {(() => {
-                              // Try pre-calculated average first
-                              if (player.avg_minutes_next5 && player.avg_minutes_next5 > 0) {
-                                return player.avg_minutes_next5.toFixed(0);
-                              }
-                              
-                              // Calculate from predictions array with xmins
+                              // Pure FFH data - average of first 5 predictions xmins ONLY
                               if (player.predictions && Array.isArray(player.predictions)) {
-                                const next5Predictions = player.predictions.slice(0, 5);
-                                if (next5Predictions.length > 0) {
-                                  const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
-                                  const avgMinutes = totalMinutes / next5Predictions.length;
-                                  return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
+                                const first5Predictions = player.predictions.slice(0, 5);
+                                if (first5Predictions.length > 0) {
+                                  const totalMinutes = first5Predictions.reduce((sum, pred) => sum + (pred.xmins || 0), 0);
+                                  const avgMinutes = totalMinutes / first5Predictions.length;
+                                  return avgMinutes.toFixed(0);
                                 }
                               }
-                              
-                              // Parse FFH gameweek minute predictions
-                              if (player.ffh_gw_minutes) {
-                                try {
-                                  const gwMinutes = JSON.parse(player.ffh_gw_minutes);
-                                  const next5Minutes = Object.values(gwMinutes).slice(0, 5);
-                                  if (next5Minutes.length > 0) {
-                                    const avgMinutes = next5Minutes.reduce((a, b) => a + b, 0) / next5Minutes.length;
-                                    return avgMinutes > 0 ? avgMinutes.toFixed(0) : '0';
-                                  }
-                                } catch (e) {
-                                  // Continue to next option
-                                }
-                              }
-                              
-                              // Estimate from points (rough approximation)
-                              if (player.sleeper_gw_predictions || player.ffh_gw_predictions) {
-                                try {
-                                  const predStr = player.sleeper_gw_predictions || player.ffh_gw_predictions;
-                                  const gwPreds = JSON.parse(predStr);
-                                  const next5Points = Object.values(gwPreds).slice(0, 5);
-                                  if (next5Points.length > 0) {
-                                    const avgPoints = next5Points.reduce((a, b) => a + b, 0) / next5Points.length;
-                                    const position = player.position || 'MID';
-                                    
-                                    // Rough estimation based on position and points
-                                    if (avgPoints > 3) { // Likely starter
-                                      if (position === 'GKP') return '90';
-                                      if (position === 'DEF') return '85';
-                                      if (position === 'MID') return '80';
-                                      if (position === 'FWD') return '75';
-                                    } else if (avgPoints > 1.5) { // Regular player
-                                      if (position === 'GKP') return '45';
-                                      if (position === 'DEF') return '70';
-                                      if (position === 'MID') return '65';
-                                      if (position === 'FWD') return '60';
-                                    } else if (avgPoints > 0.5) { // Substitute
-                                      return '25';
-                                    }
-                                  }
-                                } catch (e) {
-                                  // Continue to default
-                                }
-                              }
-                              
-                              // Final fallback: Show 0 or N/A for unmatched players
-                              return player.ffh_matched ? '0' : 'N/A';
-                            })()}
-                          </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
-                            {(() => {
-                              const currentPpg = player.ffh_season_avg || (player.sleeper_season_total ? player.sleeper_season_total / 38 : 0);
-                              return currentPpg > 0 ? currentPpg.toFixed(1) : 'N/A';
+                              // No fallbacks - return 0 if no predictions
+                              return '0';
                             })()}
                           </td>
                           <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
                             {(() => {
                               const predictedPpg = v3ScoringService.getScoringValue(player, 'season_avg', scoringMode);
-                              return predictedPpg > 0 ? predictedPpg.toFixed(1) : 'N/A';
+                              return predictedPpg.toFixed(1);
                             })()}
                           </td>
                         </tr>

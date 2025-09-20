@@ -171,6 +171,11 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       ffh_web_name: ffhName,
       ffh_team: ffhTeam,
       ffh_position_id: ffhData.position_id,
+
+      // PURE FFH DATA - Preserve original fields for direct mapping
+      predictions: ffhData.predictions || [],
+      season_prediction_avg: ffhData.season_prediction_avg || 0,
+      news: ffhData.player?.news || '',
       
       // Sleeper converted predictions (CRITICAL for all calculations)
       sleeper_season_total: sleeperSeasonTotal,

@@ -348,17 +348,26 @@ export function getScoringValue(player, field, scoringMode = 'existing') {
         return player[field] || 0;
     }
   }
-  
-  // Default to existing scoring
+
+  // Pure FFH data for standard mode - NO FALLBACKS
   switch (field) {
     case 'season_total':
-      return player.sleeper_season_total || player.predicted_points || 0;
+      // Sum all predictions[].predicted_pts for ROS Points
+      if (player.predictions && Array.isArray(player.predictions)) {
+        return player.predictions.reduce((sum, pred) => sum + (pred.predicted_pts || 0), 0);
+      }
+      return 0;
     case 'season_avg':
-      return player.sleeper_season_avg || 0;
+      // Direct FFH season_prediction_avg for PPG Predicted
+      return player.season_prediction_avg || 0;
     case 'current_gw':
       return player.current_gw_prediction || 0;
     case 'points_ros':
-      return player.sleeper_season_total || player.predicted_points || 0;
+      // Same as season_total - sum all predictions
+      if (player.predictions && Array.isArray(player.predictions)) {
+        return player.predictions.reduce((sum, pred) => sum + (pred.predicted_pts || 0), 0);
+      }
+      return 0;
     default:
       return player[field] || 0;
   }
