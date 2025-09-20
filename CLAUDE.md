@@ -16,7 +16,7 @@ npm run lint        # Run ESLint checks
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking.
 
-**Current Version**: v3.0 - Enhanced UI & Intelligent Predictive Scoring
+**Current Version**: v3.1 - Player Comparison & Performance Optimization
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -44,6 +44,7 @@ app/
 ├── components/                    # UI components
 │   ├── OptimizerTabContent.js        # Formation optimization interface
 │   ├── TransferTabContent.js         # Transfer recommendations
+│   ├── ComparisonTabContent.js       # Player comparison interface
 │   └── MyPlayersTable.js            # Player analytics table
 └── page.js                       # Main dashboard (25k+ lines)
 ```
@@ -63,11 +64,12 @@ app/
 
 ## Key Features
 
-### Gameweek System (v2.8)
+### Gameweek System (v3.1)
 - **Hardcoded Reliability**: Complete 38-gameweek schedule embedded in `gameweekService.js`
 - **Zero Dependencies**: Works offline, immune to external API failures
 - **Performance**: Sub-millisecond gameweek detection
 - **Maintenance**: Annual schedule update only
+- **Smart Logging**: Deduplicated console output for cleaner development
 
 ### Transfer Analysis
 - Position-based player recommendations with net gain calculations
@@ -90,6 +92,15 @@ app/
 - Color-coded optimization and ownership indicators
 - Dual scoring systems: Traditional FPL + V3 enhanced predictive scoring
 - Interactive player comparison modals with detailed statistics
+
+### Player Comparison (NEW in v3.1)
+- **Side-by-side comparison** of any two players with intelligent auto-suggestions
+- **Real-time search** with fuzzy matching by name, team, or position
+- **Smart suggestions dropdown** showing top 10 matches with player stats preview
+- **Comprehensive metrics** including ROS Points, Next 5 GW, PPG Predicted, V3 scoring
+- **Visual comparison** with color-coded better/worse indicators
+- **Clean interface** focused on prediction data without market noise
+- **News integration** with 📰 icons for player injury/status updates
 
 ## Environment Configuration
 
@@ -120,6 +131,8 @@ All services implement graceful fallback:
 - **Gameweek**: Instant response (hardcoded, no caching needed)
 - **Cache Hit Rate**: ~80% during normal usage patterns
 - **Multi-level Strategy**: Reduces API calls and improves response times
+- **Smart Compression**: Automatic data compression to prevent quota exceeded errors
+- **Intelligent Cleanup**: Auto-removes stale cache data when storage is full
 
 ## Code Conventions
 
@@ -174,16 +187,17 @@ async function importServices() {
 4. **Gameweek Issues**: Eliminated by hardcoded system
 
 ### Debugging Tools
-- Comprehensive console logging with execution details and smart deduplication
-- Enhanced error detection for malformed API responses and JSON corruption
-- Position assignment tracking and debugging with conflict resolution
-- Transfer analysis debug output for recommendation calculations
-- Formation detection debugging with constraint violation details
-- Cache performance metrics and hit rate monitoring
+- **Smart Console Logging**: Comprehensive logging with intelligent deduplication to prevent spam
+- **Enhanced Error Detection**: Malformed API responses and JSON corruption detection
+- **Position Assignment Tracking**: Debugging with conflict resolution
+- **Transfer Analysis Debug**: Output for recommendation calculations
+- **Formation Detection Debug**: Constraint violation details
+- **Cache Performance Metrics**: Hit rate monitoring and size tracking
+- **Storage Management**: Automatic cleanup and compression logging
 
 ## Current Status
 
-**Production Ready**: v3.0 represents enhanced UI maturity with:
+**Production Ready**: v3.1 represents enhanced comparison and performance optimization with:
 - ✅ 100% reliable gameweek system (hardcoded)
 - ✅ 98% player matching accuracy
 - ✅ 100% position accuracy (Sleeper authority)
@@ -191,8 +205,20 @@ async function importServices() {
 - ✅ Enhanced UI with intuitive gameweek controls
 - ✅ Streamlined transfer analysis with improved UX
 - ✅ Self-maintaining system (annual updates only)
+- ✅ Intelligent player comparison with auto-suggestions
+- ✅ Optimized caching with compression and smart cleanup
+- ✅ Clean console logging with duplicate prevention
 
 ## Recent Technical Updates
+
+### v3.1 - Player Comparison & Performance Optimization
+- **Player Comparison Tab**: Complete side-by-side player analysis with intelligent auto-suggestions
+- **Smart Search**: Real-time fuzzy matching with dropdown suggestions showing player stats
+- **Performance Optimization**: Intelligent cache compression reducing storage from 7MB to 3MB
+- **Storage Management**: Automatic cleanup when localStorage quota exceeded
+- **Console Deduplication**: Eliminated duplicate logging from React re-renders
+- **Hardcoded Gameweek Schedule**: Complete 2025-26 Premier League fixture integration
+- **Clean UI**: Removed unnecessary market data from comparison for focus on predictions
 
 ### v3.0 - Enhanced UI & Intelligent Predictive Scoring
 - Streamlined gameweek range controls with intuitive arrow navigation
@@ -213,5 +239,8 @@ async function importServices() {
 - **Error Handling**: Always implement graceful fallbacks for external API dependencies
 - **Theme System**: Application uses dark theme exclusively - no light/dark mode toggles needed
 - **Port Management**: Clean development environment setup (kill processes: `taskkill /F /IM node.exe`)
+- **Performance**: Cache compression and deduplication are essential for large datasets (1500+ players)
+- **Auto-suggestions**: Limit to 10 results and use fuzzy matching for best UX
+- **Logging**: Always implement deduplication for React development to prevent console spam
 
 The system is optimized for the 2025-26 Premier League season and requires minimal maintenance.

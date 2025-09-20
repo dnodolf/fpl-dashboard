@@ -4,9 +4,9 @@
 
 **Fantasy FC Playbook** is a production-ready Next.js 14 application that bridges Sleeper Fantasy Football league management with advanced predictive analytics. The system achieves 98% player matching accuracy through Opta ID matching and provides comprehensive fantasy football analytics with 100% reliable gameweek tracking.
 
-**Current Version:** 3.0 - Enhanced UI & Robust Analytics Platform
+**Current Version:** 3.1 - Player Comparison & Performance Optimization
 **Status:** Production Ready
-**Last Updated:** December 2024
+**Last Updated:** January 2025
 
 ---
 
@@ -31,6 +31,14 @@
 - **Interactive Comparison**: Detailed player vs. player analysis modals
 - **Intelligent Controls**: Intuitive gameweek range selection and position filtering
 
+### 🆚 Player Comparison (NEW in v3.1)
+- **Side-by-Side Analysis**: Complete player comparison with intelligent auto-suggestions
+- **Smart Search**: Real-time fuzzy matching with dropdown suggestions showing player stats
+- **Comprehensive Metrics**: ROS Points, Next 5 GW, PPG Predicted, V3 enhanced scoring
+- **Visual Indicators**: Color-coded better/worse performance comparisons
+- **Clean Interface**: Focused on prediction data without market noise
+- **News Integration**: 📰 icons for player injury/status updates
+
 ### 📅 Hardcoded Gameweek System
 - **100% Reliability**: Complete 2025-26 Premier League schedule embedded
 - **Zero Dependencies**: Works offline, immune to external API failures
@@ -50,8 +58,9 @@
 ### Backend
 - **API Layer**: Next.js API routes with intelligent caching and error handling
 - **Services**: 13 specialized service classes for different functionalities
-- **Caching**: Multi-level strategy (client: 30min, server: 15min)
+- **Caching**: Multi-level strategy (client: 30min, server: 15min) with smart compression
 - **Error Handling**: Comprehensive fallback mechanisms
+- **Performance**: Intelligent cache compression reducing storage from 7MB to 3MB
 
 ### Data Sources
 - **Sleeper API**: Primary source for league data, rosters, ownership (authoritative)
@@ -87,6 +96,7 @@ app/api/
 app/components/
 ├── OptimizerTabContent.js      # Formation optimization interface
 ├── TransferTabContent.js       # Transfer analysis with comparison modals
+├── ComparisonTabContent.js     # Player comparison with auto-suggestions
 ├── MyPlayersTable.js          # Advanced player analytics table
 └── [Additional components]     # Supporting UI elements
 ```
@@ -113,8 +123,10 @@ app/components/
 
 ### Dashboard Tabs
 1. **Players**: Comprehensive player analytics with advanced filtering and search
-2. **Optimizer**: Formation optimization with visual recommendations and efficiency tracking
-3. **Transfers**: Transfer analysis with gameweek range selection and comparison tools
+2. **Matching**: Player data integration status and debugging tools
+3. **Optimizer**: Formation optimization with visual recommendations and efficiency tracking
+4. **Transfers**: Transfer analysis with gameweek range selection and comparison tools
+5. **Comparison**: Side-by-side player comparison with intelligent auto-suggestions
 
 ### Key UI Features
 - **Responsive Design**: Mobile-optimized interface
@@ -179,13 +191,23 @@ npm run lint
 - **FWD**: Purple (#a8427f)
 
 ### Caching Strategy
-- **Client-side**: 30-minute cache for user data
+- **Client-side**: 30-minute cache for user data with smart compression
 - **Server-side**: 15-minute cache for API responses
 - **Gameweek**: Instant response (hardcoded, no caching needed)
+- **Performance**: Automatic cleanup when localStorage quota exceeded
 
 ---
 
 ## 📈 Recent Updates
+
+### v3.1 - Player Comparison & Performance Optimization
+- **Player Comparison Tab**: Complete side-by-side player analysis with intelligent auto-suggestions
+- **Smart Search**: Real-time fuzzy matching with dropdown suggestions showing player stats
+- **Performance Optimization**: Intelligent cache compression reducing storage from 7MB to 3MB
+- **Storage Management**: Automatic cleanup when localStorage quota exceeded
+- **Console Deduplication**: Eliminated duplicate logging from React re-renders
+- **Hardcoded Gameweek Schedule**: Complete 2025-26 Premier League fixture integration
+- **Clean UI**: Removed unnecessary market data from comparison for focus on predictions
 
 ### v3.0 - Enhanced UI & Intelligent Predictive Scoring
 - Streamlined gameweek range controls with intuitive number input navigation
@@ -233,11 +255,12 @@ npm run lint
 - **Performance Degradation**: Multi-level caching ensures responsiveness
 
 ### Monitoring & Debugging
-- Comprehensive console logging with execution details
-- Cache performance metrics
-- API response time monitoring
-- Formation detection debugging
-- Transfer analysis calculation logging
+- **Smart Console Logging**: Comprehensive logging with intelligent deduplication
+- **Cache Performance Metrics**: Hit rate monitoring and storage size tracking
+- **API Response Monitoring**: Response time and error detection
+- **Formation Detection Debug**: Constraint violation details
+- **Transfer Analysis Logging**: Calculation debugging with detailed output
+- **Storage Management**: Automatic cleanup and compression logging
 
 ---
 

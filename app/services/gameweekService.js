@@ -58,7 +58,12 @@ async getCurrentGameweek() {
     // Ensure source is set correctly to avoid warning
     gameweekData.source = 'fpl_api';
     
-    console.log(`✅ Gameweek service: GW${gameweekData.number} (${gameweekData.status})`);
+    // Only log gameweek detection once per session to avoid spam
+    if (!this._gameweekLogged || this._lastLoggedGW !== gameweekData.number) {
+      console.log(`✅ Gameweek service: GW${gameweekData.number} (${gameweekData.status})`);
+      this._gameweekLogged = true;
+      this._lastLoggedGW = gameweekData.number;
+    }
     return gameweekData;
     
   } catch (error) {
@@ -121,7 +126,11 @@ async getCurrentGameweek() {
       { gw: 38, start: '2026-05-24T23:00:00.000Z', end: '2026-05-24T23:00:00.000Z' }
     ];
 
-    console.log(`📅 Using hardcoded schedule: ${HARDCODED_GAMEWEEK_SCHEDULE.length} gameweeks`);
+    // Only log once per session to avoid spam
+    if (!this._scheduleLogged) {
+      console.log(`📅 Using hardcoded schedule: ${HARDCODED_GAMEWEEK_SCHEDULE.length} gameweeks`);
+      this._scheduleLogged = true;
+    }
     return HARDCODED_GAMEWEEK_SCHEDULE;
   }
 

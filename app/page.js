@@ -5,6 +5,7 @@ import GameweekService from './services/gameweekService';
 import v3ScoringService from './services/v3ScoringService';
 import { OptimizerTabContent } from './components/OptimizerTabContent';
 import TransferTabContent from './components/TransferTabContent';
+import ComparisonTabContent from './components/ComparisonTabContent';
 
 // ----------------- EPL TEAMS FILTER -----------------
 const EPL_TEAMS = [
@@ -94,15 +95,156 @@ const CACHE_KEY = 'fpl_dashboard_cache';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 const CacheManager = {
+  // Get size of data in bytes
+  getDataSize: (obj) => {
+    return new Blob([JSON.stringify(obj)]).size;
+  },
+
+  // Check if localStorage has enough space
+  checkStorageSpace: () => {
+    try {
+      // Try to get rough localStorage usage
+      let totalSize = 0;
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          totalSize += localStorage[key].length;
+        }
+      }
+      return totalSize;
+    } catch (error) {
+      return 0;
+    }
+  },
+
+  // Clean up old cache data and other stale items
+  cleanupStorage: () => {
+    try {
+      console.log('🧹 Cleaning up localStorage...');
+
+      // Remove old FPL cache
+      localStorage.removeItem(CACHE_KEY);
+
+      // Remove other potential cache items that might be stale
+      const keysToCheck = Object.keys(localStorage);
+      keysToCheck.forEach(key => {
+        if (key.includes('cache') || key.includes('temp') || key.includes('old')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            // Continue cleanup even if one item fails
+          }
+        }
+      });
+
+      console.log('✅ localStorage cleanup completed');
+    } catch (error) {
+      console.warn('⚠️ Storage cleanup failed:', error);
+    }
+  },
+
+  // Compress data by removing non-essential fields
+  compressData: (data) => {
+    if (!data || !data.players) return data;
+
+    const compressed = {
+      ...data,
+      players: data.players.map(player => {
+        // Keep only essential fields for caching
+        return {
+          // Core identity
+          player_id: player.player_id,
+          name: player.name,
+          full_name: player.full_name,
+          web_name: player.web_name,
+          position: player.position,
+          team: player.team,
+          team_abbr: player.team_abbr,
+
+          // Essential stats only
+          predictions: player.predictions,
+          season_prediction_avg: player.season_prediction_avg,
+          current_gw_prediction: player.current_gw_prediction,
+          news: player.news,
+
+          // Sleeper data (minimal)
+          owned_by: player.owned_by,
+          sleeper_season_total: player.sleeper_season_total,
+          sleeper_season_avg: player.sleeper_season_avg,
+
+          // V3 data (if exists)
+          v3_season_total: player.v3_season_total,
+          v3_season_avg: player.v3_season_avg,
+          v3_current_gw: player.v3_current_gw,
+
+          // Market data
+          now_cost: player.now_cost,
+          ownership_percentage: player.ownership_percentage,
+
+          // Remove large fields like:
+          // - sleeper_gw_predictions (JSON strings)
+          // - ffh_gw_predictions (JSON strings)
+          // - detailed match history
+          // - other verbose fields
+        };
+      })
+    };
+
+    return compressed;
+  },
+
   set: (data) => {
     try {
+      // First, try with compressed data
+      const compressedData = CacheManager.compressData(data);
       const cacheData = {
-        data,
-        timestamp: Date.now()
+        data: compressedData,
+        timestamp: Date.now(),
+        compressed: true
       };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+
+      const dataString = JSON.stringify(cacheData);
+      const dataSize = new Blob([dataString]).size;
+
+      // Log cache size for monitoring (deduplicated)
+      const sizeStr = `${(dataSize / 1024 / 1024).toFixed(2)}MB (compressed)`;
+      if (!window._lastCacheLog || window._lastCacheLog !== sizeStr) {
+        console.log(`💾 Cache size: ${sizeStr}`);
+        window._lastCacheLog = sizeStr;
+      }
+
+      // Check if still too large (>4MB threshold for safety)
+      if (dataSize > 4 * 1024 * 1024) {
+        console.warn('📦 Data still too large after compression, skipping cache');
+        return;
+      }
+
+      // Try to save
+      localStorage.setItem(CACHE_KEY, dataString);
+
     } catch (error) {
-      console.warn('Could not save to cache:', error);
+      if (error.name === 'QuotaExceededError') {
+        console.warn('📦 Storage quota exceeded, attempting cleanup...');
+
+        // Clean up storage and try again
+        CacheManager.cleanupStorage();
+
+        try {
+          // Try again with compressed data
+          const compressedData = CacheManager.compressData(data);
+          const cacheData = {
+            data: compressedData,
+            timestamp: Date.now(),
+            compressed: true
+          };
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+          console.log('✅ Compressed cache saved after cleanup');
+        } catch (retryError) {
+          console.warn('❌ Cache save failed even after compression and cleanup. Skipping cache.');
+          // Don't cache this time, but continue without failing
+        }
+      } else {
+        console.warn('Could not save to cache:', error);
+      }
     }
   },
 
@@ -1302,7 +1444,8 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             { id: 'players', label: 'Players' },
             { id: 'matching', label: 'Matching' },
             { id: 'optimizer', label: 'Optimizer' },
-            { id: 'transfers', label: 'Transfers' }
+            { id: 'transfers', label: 'Transfers' },
+            { id: 'comparison', label: 'Comparison' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1373,12 +1516,23 @@ export default function FPLDashboard() {
   // Process players when scoring mode or players change
   useEffect(() => {
     if (players && Array.isArray(players) && players.length > 0) {
+      // Create a unique key for this processing session
+      const logKey = `${scoringMode}-${players.length}-${currentGameweek.number}`;
+
       if (scoringMode === 'v3') {
-        console.log(`📊 Dashboard: Applying V3 scoring to ${players.length} players`);
+        // Only log if this combination hasn't been logged yet
+        if (!window._lastScoringLog || window._lastScoringLog !== logKey) {
+          console.log(`📊 Dashboard: Applying V3 scoring to ${players.length} players`);
+          window._lastScoringLog = logKey;
+        }
         const enhancedPlayers = v3ScoringService.applyV3Scoring(players, currentGameweek);
         setProcessedPlayers(enhancedPlayers);
       } else {
-        console.log(`📊 Dashboard: Using standard scoring for ${players.length} players`);
+        // Only log if this combination hasn't been logged yet
+        if (!window._lastScoringLog || window._lastScoringLog !== logKey) {
+          console.log(`📊 Dashboard: Using standard scoring for ${players.length} players`);
+          window._lastScoringLog = logKey;
+        }
         setProcessedPlayers(players);
       }
     }
@@ -2071,6 +2225,15 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
               scoringMode={scoringMode}
               gameweekRange={transferGameweekRange}
               onGameweekRangeChange={setTransferGameweekRange}
+            />
+          )}
+
+          {/* Compare 2 players side by side */}
+          {activeTab === 'comparison' && (
+            <ComparisonTabContent
+              players={processedPlayers}
+              currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
             />
           )}
 
