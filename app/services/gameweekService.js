@@ -79,48 +79,67 @@ async getCurrentGameweek() {
 
   // Get complete 38 gameweek schedule for 2025-26 Premier League season
   getCompleteGameweekSchedule() {
-  // Updated for 2025-26 Premier League season (current season)
-  return [
-      { gw: 1, start: '2025-08-16', end: '2025-08-18', deadline: '2025-08-16T17:30:00Z' },
-      { gw: 2, start: '2025-08-23', end: '2025-08-25', deadline: '2025-08-23T11:00:00Z' },
-      { gw: 3, start: '2025-08-30', end: '2025-09-01', deadline: '2025-08-30T17:30:00Z' },
-      { gw: 4, start: '2025-09-13T11:30:00Z', end: '2025-09-15', deadline: '2025-09-13T17:30:00Z' },
-      { gw: 5, start: '2025-09-20', end: '2025-09-22', deadline: '2025-09-20T17:30:00Z' },
-      { gw: 6, start: '2025-09-27', end: '2025-09-29', deadline: '2025-09-27T17:30:00Z' },
-      { gw: 7, start: '2025-10-04', end: '2025-10-06', deadline: '2025-10-04T17:30:00Z' },
-      { gw: 8, start: '2025-10-18', end: '2025-10-20', deadline: '2025-10-18T17:30:00Z' },
-      { gw: 9, start: '2025-10-25', end: '2025-10-27', deadline: '2025-10-25T17:30:00Z' },
-      { gw: 10, start: '2025-11-01', end: '2025-11-03', deadline: '2025-11-01T17:30:00Z' },
-      { gw: 11, start: '2025-11-08', end: '2025-11-10', deadline: '2025-11-08T17:30:00Z' },
-      { gw: 12, start: '2025-11-22', end: '2025-11-24', deadline: '2025-11-22T17:30:00Z' },
-      { gw: 13, start: '2025-11-29', end: '2025-12-01', deadline: '2025-11-29T17:30:00Z' },
-      { gw: 14, start: '2025-12-03', end: '2025-12-05', deadline: '2025-12-03T17:30:00Z' },
-      { gw: 15, start: '2025-12-06', end: '2025-12-08', deadline: '2025-12-06T17:30:00Z' },
-      { gw: 16, start: '2025-12-13', end: '2025-12-15', deadline: '2025-12-13T17:30:00Z' },
-      { gw: 17, start: '2025-12-20', end: '2025-12-22', deadline: '2025-12-20T17:30:00Z' },
-      { gw: 18, start: '2025-12-26', end: '2025-12-28', deadline: '2025-12-26T12:00:00Z' }, // Boxing Day
-      { gw: 19, start: '2025-12-29', end: '2025-12-31', deadline: '2025-12-29T12:00:00Z' },
-      { gw: 20, start: '2026-01-01', end: '2026-01-03', deadline: '2026-01-01T12:00:00Z' }, // New Year
-      { gw: 21, start: '2026-01-11', end: '2026-01-13', deadline: '2026-01-11T17:30:00Z' },
-      { gw: 22, start: '2026-01-18', end: '2026-01-20', deadline: '2026-01-18T17:30:00Z' },
-      { gw: 23, start: '2026-01-25', end: '2026-01-27', deadline: '2026-01-25T17:30:00Z' },
-      { gw: 24, start: '2026-02-01', end: '2026-02-03', deadline: '2026-02-01T17:30:00Z' },
-      { gw: 25, start: '2026-02-08', end: '2026-02-10', deadline: '2026-02-08T17:30:00Z' },
-      { gw: 26, start: '2026-02-22', end: '2026-02-24', deadline: '2026-02-22T17:30:00Z' },
-      { gw: 27, start: '2026-03-01', end: '2026-03-03', deadline: '2026-03-01T17:30:00Z' },
-      { gw: 28, start: '2026-03-08', end: '2026-03-10', deadline: '2026-03-08T17:30:00Z' },
-      { gw: 29, start: '2026-03-15', end: '2026-03-17', deadline: '2026-03-15T17:30:00Z' },
-      { gw: 30, start: '2026-03-29', end: '2026-03-31', deadline: '2026-03-29T18:30:00Z' }, // BST starts
-      { gw: 31, start: '2026-04-05', end: '2026-04-07', deadline: '2026-04-05T18:30:00Z' },
-      { gw: 32, start: '2026-04-12', end: '2026-04-14', deadline: '2026-04-12T18:30:00Z' },
-      { gw: 33, start: '2026-04-19', end: '2026-04-21', deadline: '2026-04-19T18:30:00Z' },
-      { gw: 34, start: '2026-04-26', end: '2026-04-28', deadline: '2026-04-26T18:30:00Z' },
-      { gw: 35, start: '2026-05-03', end: '2026-05-05', deadline: '2026-05-03T18:30:00Z' },
-      { gw: 36, start: '2026-05-10', end: '2026-05-12', deadline: '2026-05-10T18:30:00Z' },
-      { gw: 37, start: '2026-05-17', end: '2026-05-19', deadline: '2026-05-17T18:30:00Z' },
-      { gw: 38, start: '2026-05-24', end: '2026-05-24', deadline: '2026-05-24T15:00:00Z' } // Final day - all games simultaneous
-  ];
-}
+    // Load schedule from JSON file for 2025-26 season
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const scheduleData = JSON.parse(fs.readFileSync(
+        path.join(process.cwd(), 'app/api/fpl-gameweek/fpl_schedule_gw5-38.json'),
+        'utf8'
+      ));
+
+      // Convert JSON data to gameweek format
+      const gameweekMap = new Map();
+
+      scheduleData.data.forEach(match => {
+        const gw = match.matchWeek;
+        const kickoffDate = new Date(match.kickoff);
+
+        if (!gameweekMap.has(gw)) {
+          gameweekMap.set(gw, {
+            gw: gw,
+            start: kickoffDate.toISOString(),
+            end: kickoffDate.toISOString(),
+            deadline: new Date(kickoffDate.getTime() - (2 * 60 * 60 * 1000)).toISOString() // 2 hours before first match
+          });
+        } else {
+          const existing = gameweekMap.get(gw);
+          // Update start to earliest match
+          if (kickoffDate < new Date(existing.start)) {
+            existing.start = kickoffDate.toISOString();
+            existing.deadline = new Date(kickoffDate.getTime() - (2 * 60 * 60 * 1000)).toISOString();
+          }
+          // Update end to latest match
+          if (kickoffDate > new Date(existing.end)) {
+            existing.end = kickoffDate.toISOString();
+          }
+        }
+      });
+
+      // Convert map to sorted array and fill in missing GWs 1-4 for complete season
+      const gameweeks = [
+        { gw: 1, start: '2025-08-16T14:00:00Z', end: '2025-08-17T16:30:00Z', deadline: '2025-08-16T12:00:00Z' },
+        { gw: 2, start: '2025-08-23T14:00:00Z', end: '2025-08-24T16:30:00Z', deadline: '2025-08-23T12:00:00Z' },
+        { gw: 3, start: '2025-08-30T14:00:00Z', end: '2025-08-31T16:30:00Z', deadline: '2025-08-30T12:00:00Z' },
+        { gw: 4, start: '2025-09-13T14:00:00Z', end: '2025-09-14T16:30:00Z', deadline: '2025-09-13T12:00:00Z' },
+        ...Array.from(gameweekMap.values()).sort((a, b) => a.gw - b.gw)
+      ];
+
+      console.log(`📅 Loaded ${gameweeks.length} gameweeks from JSON schedule`);
+      return gameweeks;
+
+    } catch (error) {
+      console.error('Failed to load schedule JSON, using fallback:', error);
+      // Fallback to basic 2025-26 schedule
+      return [
+        { gw: 1, start: '2025-08-16T14:00:00Z', end: '2025-08-17T16:30:00Z', deadline: '2025-08-16T12:00:00Z' },
+        { gw: 2, start: '2025-08-23T14:00:00Z', end: '2025-08-24T16:30:00Z', deadline: '2025-08-23T12:00:00Z' },
+        { gw: 3, start: '2025-08-30T14:00:00Z', end: '2025-08-31T16:30:00Z', deadline: '2025-08-30T12:00:00Z' },
+        { gw: 4, start: '2025-09-13T14:00:00Z', end: '2025-09-14T16:30:00Z', deadline: '2025-09-13T12:00:00Z' },
+        { gw: 5, start: '2025-09-20T14:00:00Z', end: '2025-09-21T16:30:00Z', deadline: '2025-09-20T12:00:00Z' }
+      ];
+    }
+  }
 
 // Enhanced fallback with COMPLETE gameweek logic - Clean display (no deadline, no warnings)
 getEnhancedFallback() {
