@@ -165,6 +165,7 @@ const CacheManager = {
           season_prediction_avg: player.season_prediction_avg,
           current_gw_prediction: player.current_gw_prediction,
           news: player.news,
+          injury_status: player.injury_status,
 
           // Sleeper data (minimal)
           owned_by: player.owned_by,
