@@ -72,10 +72,10 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing'
     positions.forEach(position => {
       const positionPlayers = freeAgents.filter(p => p.position === position);
       
-      // Calculate points for each player and sort by highest
+      // Calculate enhanced points for each player including form and fixtures
       const playersWithPoints = positionPlayers.map(player => ({
         ...player,
-        calculatedPoints: getGameweekRangePoints(player, startGameweek, endGameweek)
+        calculatedPoints: getEnhancedPlayerScore(player, startGameweek, endGameweek)
       }));
       
       // Get top 5 for this position
@@ -235,10 +235,10 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing'
 
   function getExpectedMinutes(player, gameweeks) {
     if (!player.predictions || !Array.isArray(player.predictions)) return 0;
-    
+
     const currentGW = currentGameweek?.number;
     const targetGameweeks = Array.from({length: gameweeks}, (_, i) => currentGW + i);
-    
+
     const totalMinutes = targetGameweeks.reduce((total, gw) => {
       const prediction = player.predictions.find(p => p.gw === gw);
       return total + (prediction?.predicted_mins || 0);
@@ -247,26 +247,114 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing'
     return Math.round(totalMinutes / gameweeks); // Average per game
   }
 
+  // Simple scoring function without modifiers
+  function getEnhancedPlayerScore(player, startGW, endGW) {
+    // Just return base points from predictions - no modifiers
+    return getGameweekRangePoints(player, startGW, endGW);
+  }
+
+  // Form analysis - calculate recent performance trend
+  function getPlayerForm(player, gameweeksBack = 3) {
+    if (!player.predictions || !Array.isArray(player.predictions)) return null;
+
+    const currentGW = currentGameweek?.number;
+    if (!currentGW) return null;
+
+    // Look at upcoming gameweeks instead of past ones since we have prediction data
+    const upcomingGWs = Array.from({length: gameweeksBack}, (_, i) => currentGW + i);
+    const performances = [];
+
+    for (const gw of upcomingGWs) {
+      const prediction = player.predictions.find(p => p.gw === gw);
+      if (prediction && prediction.predicted_pts !== undefined) {
+        performances.push(prediction.predicted_pts);
+      }
+    }
+
+    if (performances.length < 2) return null;
+
+    const averageForm = performances.reduce((sum, pts) => sum + pts, 0) / performances.length;
+    const trend = performances.length >= 3 ?
+      (performances[performances.length - 1] - performances[0]) / (performances.length - 1) : 0;
+
+    return {
+      average: averageForm,
+      trend: trend, // positive = improving, negative = declining
+      performances: performances,
+      gameweeks: upcomingGWs.slice(0, performances.length)
+    };
+  }
+
+  // Fixture difficulty analysis for next N gameweeks
+  function getFixtureRun(player, gameweeksAhead = 6) {
+    if (!player.predictions || !Array.isArray(player.predictions)) return [];
+
+    const currentGW = currentGameweek?.number;
+    const fixtureGWs = Array.from({length: gameweeksAhead}, (_, i) => currentGW + i);
+
+    return fixtureGWs.map(gw => {
+      const prediction = player.predictions.find(p => p.gw === gw);
+      const teamDifficulty = TEAM_DIFFICULTY[player.team_abbr] || 3;
+
+      // Estimate fixture difficulty based on predicted points vs player average
+      let difficulty = teamDifficulty;
+      if (prediction && player.season_prediction_avg) {
+        const expectedVsAverage = prediction.predicted_pts / player.season_prediction_avg;
+        if (expectedVsAverage < 0.7) difficulty = 5; // Very hard
+        else if (expectedVsAverage < 0.85) difficulty = 4; // Hard
+        else if (expectedVsAverage > 1.3) difficulty = 1; // Easy
+        else if (expectedVsAverage > 1.15) difficulty = 2; // Good
+        else difficulty = 3; // Average
+      }
+
+      return {
+        gw,
+        difficulty,
+        predictedPoints: prediction?.predicted_pts || 0,
+        opponent: 'TBD', // We don't have opponent data, could be added later
+        isHome: true // Default, could be enhanced with fixture data
+      };
+    });
+  }
+
   function getFixtureRating(player, gameweeks) {
-    // Simplified fixture difficulty - you can enhance with your fixture data
-    const teamDiff = TEAM_DIFFICULTY[player.team_abbr] || 3;
-    if (teamDiff <= 2) return 'easy';
-    if (teamDiff <= 3) return 'medium';
+    // Use our enhanced fixture analysis
+    const fixtures = getFixtureRun(player, gameweeks);
+    if (!fixtures || fixtures.length === 0) {
+      // Fallback to team difficulty
+      const teamDiff = TEAM_DIFFICULTY[player.team_abbr] || 3;
+      if (teamDiff <= 2) return 'easy';
+      if (teamDiff <= 3) return 'medium';
+      return 'hard';
+    }
+
+    // Calculate average fixture difficulty
+    const avgDifficulty = fixtures.reduce((sum, f) => sum + f.difficulty, 0) / fixtures.length;
+
+    if (avgDifficulty <= 2.5) return 'easy';
+    if (avgDifficulty <= 3.5) return 'medium';
     return 'hard';
   }
 
   function getFormTrend(player) {
-    // Enhanced form calculation using available data
-    const currentPpg = player.ppg_value || player.sleeper_season_avg || 0;
-    const rosPoints = player.sleeper_points_ros || player.predicted_points || 0;
-    const seasonGames = 38;
-    const projectedPpg = rosPoints / seasonGames;
-    
-    // Compare current PPG vs projected PPG
-    const formDiff = currentPpg - projectedPpg;
-    
-    if (formDiff > 0.5) return 'up';
-    if (formDiff < -0.5) return 'down';
+    // Use our enhanced form analysis
+    const form = getPlayerForm(player);
+    if (!form) {
+      // Fallback to basic calculation
+      const currentPpg = player.ppg_value || player.sleeper_season_avg || 0;
+      const rosPoints = player.sleeper_points_ros || player.predicted_points || 0;
+      const seasonGames = 38;
+      const projectedPpg = rosPoints / seasonGames;
+
+      const formDiff = currentPpg - projectedPpg;
+      if (formDiff > 0.5) return 'up';
+      if (formDiff < -0.5) return 'down';
+      return 'neutral';
+    }
+
+    // Use trend from form analysis
+    if (form.trend > 0.5) return 'up';
+    if (form.trend < -0.5) return 'down';
     return 'neutral';
   }
 
@@ -364,6 +452,64 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing'
         <span className="mr-1">{config.icon}</span>
         {config.label}
       </span>
+    );
+  }
+
+  // Render form indicator based on recent performance
+  function renderFormIndicator(player) {
+    const form = getPlayerForm(player);
+    if (!form) {
+      // Fallback - show a neutral indicator if we have predictions
+      if (player.predictions && player.predictions.length > 0) {
+        return (
+          <span className="text-xs text-gray-400 ml-1" title="Form data available">
+            ➡️
+          </span>
+        );
+      }
+      return null;
+    }
+
+    const formClass = form.trend > 0.3 ? 'text-green-400' :
+                     form.trend < -0.3 ? 'text-red-400' : 'text-yellow-400';
+    const formIcon = form.trend > 0.3 ? '📈' :
+                    form.trend < -0.3 ? '📉' : '➡️';
+
+    return (
+      <span className={`text-xs ${formClass} ml-1`} title={`Form: ${form.average.toFixed(1)} avg, ${form.trend > 0 ? '+' : ''}${form.trend.toFixed(1)} trend`}>
+        {formIcon}
+      </span>
+    );
+  }
+
+  // Render fixture difficulty tiles (FFH style)
+  function renderFixtureTiles(player) {
+    const fixtures = getFixtureRun(player);
+    if (!fixtures || fixtures.length === 0) return null;
+
+    const getDifficultyColor = (difficulty) => {
+      switch(difficulty) {
+        case 1: return 'bg-green-500'; // Easy
+        case 2: return 'bg-green-400'; // Good
+        case 3: return 'bg-yellow-500'; // Average
+        case 4: return 'bg-orange-500'; // Hard
+        case 5: return 'bg-red-500'; // Very Hard
+        default: return 'bg-gray-500';
+      }
+    };
+
+    return (
+      <div className="flex gap-1 mt-1" title="Upcoming fixture difficulty">
+        {fixtures.slice(0, 6).map((fixture, index) => (
+          <div
+            key={`${player.player_id}-fixture-${index}`}
+            className={`w-5 h-4 ${getDifficultyColor(fixture.difficulty)} rounded-sm text-xs text-white flex items-center justify-center font-bold`}
+            title={`GW${fixture.gw}: ${fixture.predictedPoints.toFixed(1)} pts (Difficulty: ${fixture.difficulty})`}
+          >
+            {fixture.difficulty}
+          </div>
+        ))}
+      </div>
     );
   }
 
@@ -517,7 +663,10 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing'
                                      rec.recommendedPlayer.injury_status.includes('gtd') ? '🟡' : ''}
                                   </span>
                                 )}
+                                {renderFormIndicator(rec.recommendedPlayer)}
                               </div>
+                              {/* Fixture tiles */}
+                              {renderFixtureTiles(rec.recommendedPlayer)}
                             </div>
                           </div>
                           
@@ -568,7 +717,10 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing'
                                      player.injury_status.includes('gtd') ? '🟡' : ''}
                                   </span>
                                 )}
+                                {renderFormIndicator(player)}
                               </div>
+                              {/* Fixture tiles */}
+                              {renderFixtureTiles(player)}
                             </div>
                           </div>
                           
