@@ -25,11 +25,14 @@
 - **Real-time Analysis**: Current vs. optimal formation comparison with efficiency metrics
 - **Visual Formation Display**: Interactive formation diagrams with player positioning
 
-### 🔄 Transfer Analysis Engine
+### 🔄 Enhanced Transfer Analysis Engine
 - **Gameweek Range Analysis**: Customizable projection periods (current GW to GW 38)
 - **Position-Based Recommendations**: Smart transfer suggestions with net gain calculations
+- **Form Analysis**: Predicted performance trends with visual indicators (📈📉➡️)
+- **Fixture Difficulty Visualization**: Color-coded tiles showing difficulty ratings (1-5)
 - **Interactive Comparison**: Detailed player vs. player analysis modals
 - **Intelligent Controls**: Intuitive gameweek range selection and position filtering
+- **Pure Predictions**: Rankings based on unmodified prediction data for accuracy
 
 ### 🆚 Player Comparison (NEW in v3.1)
 - **Side-by-Side Analysis**: Complete player comparison with intelligent auto-suggestions

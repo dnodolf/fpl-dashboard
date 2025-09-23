@@ -71,8 +71,11 @@ app/
 - **Maintenance**: Annual schedule update only
 - **Smart Logging**: Deduplicated console output for cleaner development
 
-### Transfer Analysis
+### Enhanced Transfer Analysis
 - Position-based player recommendations with net gain calculations
+- **Form Analysis**: Predicted performance trends with visual indicators (📈📉➡️)
+- **Fixture Difficulty Visualization**: Color-coded tiles showing difficulty ratings (1-5)
+- **Pure Prediction Scoring**: Rankings based on unmodified prediction data for accuracy
 - Intuitive gameweek range controls with arrow navigation and text display
 - Detailed player comparison modals with side-by-side analytics
 - Enhanced filtering by position with visual indicators
@@ -214,6 +217,10 @@ async function importServices() {
 ### v3.1 - Player Comparison & Performance Optimization
 - **Player Comparison Tab**: Complete side-by-side player analysis with intelligent auto-suggestions
 - **Smart Search**: Real-time fuzzy matching with dropdown suggestions showing player stats
+- **Enhanced Transfer Analysis**: Form indicators and fixture difficulty visualization
+- **Form Analysis**: Predicted performance trends with visual indicators (📈📉➡️)
+- **Fixture Difficulty Tiles**: Color-coded tiles showing difficulty ratings (1-5)
+- **Pure Prediction Scoring**: Rankings based on unmodified prediction data for accuracy
 - **Performance Optimization**: Intelligent cache compression reducing storage from 7MB to 3MB
 - **Storage Management**: Automatic cleanup when localStorage quota exceeded
 - **Console Deduplication**: Eliminated duplicate logging from React re-renders
