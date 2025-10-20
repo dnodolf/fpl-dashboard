@@ -46,7 +46,7 @@ export async function POST(request) {
     const userId = requestData.userId || 'ThatDerekGuy';
     const analysisType = requestData.analysisType || 'current_roster';
     const forceRefresh = requestData.forceRefresh || false;
-    const scoringMode = requestData.scoringMode || 'existing';
+    const scoringMode = requestData.scoringMode || 'ffh';
 
     // Check cache
     const cacheKey = `${userId}_${analysisType}_${scoringMode}`;

@@ -126,29 +126,25 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     
     // Extract FFH predictions using enhanced logic
     const allGameweekPredictions = extractAllGameweekPredictions(ffhData);
-    
-    // Calculate season totals
-    const ffhSeasonPrediction = ffhData.season_prediction || 
-                                ffhData.range_prediction || 
-                                ffhData.predicted_pts || 
+
+    // Calculate season totals - PURE FFH DATA (no multipliers)
+    const ffhSeasonPrediction = ffhData.season_prediction ||
+                                ffhData.range_prediction ||
+                                ffhData.predicted_pts ||
                                 allGameweekPredictions.reduce((sum, gw) => sum + gw.predicted_pts, 0) ||
                                 0;
-    
-    // Convert to Sleeper scoring
-    const sleeperSeasonTotal = await convertFFHToSleeperPrediction(ffhSeasonPrediction, position);
-    const sleeperSeasonAvg = sleeperSeasonTotal / 38;
-    
-    // Create gameweek predictions object
+
+    const ffhSeasonAvg = ffhSeasonPrediction / 38;
+
+    // Create gameweek predictions object - PURE FFH DATA
     const ffhGwPredictions = {};
-    const sleeperGwPredictions = {};
-    
+
     allGameweekPredictions.forEach(gwPred => {
       ffhGwPredictions[gwPred.gw] = gwPred.predicted_pts;
-      sleeperGwPredictions[gwPred.gw] = gwPred.predicted_pts * (sleeperSeasonTotal / ffhSeasonPrediction || 1);
     });
-    
-    // Get current gameweek prediction
-    const currentGwPrediction = sleeperGwPredictions[currentGameweek] || sleeperSeasonAvg || 0;
+
+    // Get current gameweek prediction - PURE FFH DATA
+    const currentGwPrediction = ffhGwPredictions[currentGameweek] || ffhSeasonAvg || 0;
     
     // FIXED: Return enhanced player with ALL data properly merged
     return {
@@ -164,9 +160,9 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       // Position (Sleeper authority)
       position: position,
       
-      // FFH original predictions (FPL scoring)
+      // FFH original predictions (PURE FPL scoring - no multipliers)
       ffh_season_prediction: ffhSeasonPrediction,
-      ffh_season_avg: ffhSeasonPrediction / 38,
+      ffh_season_avg: ffhSeasonAvg,
       ffh_gw_predictions: JSON.stringify(ffhGwPredictions),
       ffh_web_name: ffhName,
       ffh_team: ffhTeam,
@@ -176,21 +172,19 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       predictions: ffhData.predictions || [],
       season_prediction_avg: ffhData.season_prediction_avg || 0,
       news: ffhData.player?.news || '',
-      
-      // Sleeper converted predictions (CRITICAL for all calculations)
-      sleeper_season_total: sleeperSeasonTotal,
-      sleeper_season_avg: Math.round(sleeperSeasonAvg * 100) / 100,
-      sleeper_gw_predictions: JSON.stringify(sleeperGwPredictions),
+
+      // Main prediction fields (PURE FFH DATA - no Sleeper conversion)
       current_gw_prediction: Math.round(currentGwPrediction * 100) / 100,
-      
-      // CRITICAL: Set the main predicted_points field that everything uses
-      predicted_points: Math.max(sleeperSeasonTotal, ffhSeasonPrediction),
-      sleeper_points: Math.max(sleeperSeasonTotal, ffhSeasonPrediction),
+
+      // CRITICAL: Set the main predicted_points field to PURE FFH data
+      predicted_points: ffhSeasonPrediction,
+      season_total: ffhSeasonPrediction,
+      season_avg: ffhSeasonAvg,
       
       // Enhanced status tracking
       ffh_matched: true,
       ffh_id: ffhData.fpl_id || ffhData.id,
-      scoring_conversion_applied: true,
+      scoring_conversion_applied: false, // No conversion - pure FFH data
       enhancement_status: 'success',
       
       // Metadata for debugging

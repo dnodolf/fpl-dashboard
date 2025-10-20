@@ -21,7 +21,7 @@ const TEAM_DIFFICULTY = {
   'LUT': 1, 'BUR': 1, 'MUN': 4, 'WHU': 3, 'NFO': 2
 };
 
-const TransferTabContent = ({ players, currentGameweek, scoringMode = 'existing', gameweekRange, onGameweekRangeChange }) => {
+const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gameweekRange, onGameweekRangeChange }) => {
   // Calculate default gameweek range: current GW + next 4 (total of 5)
   const currentGW = currentGameweek?.number;
   const defaultStartGW = currentGW;

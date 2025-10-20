@@ -605,7 +605,7 @@ const MatchingStats = ({ players, integration }) => {
 };
 
 // ----------------- OTHER STATS COMPONENTS (UNCHANGED) -----------------
-const OptimizerStats = ({ scoringMode = 'existing', currentGameweek = { number: 4 } }) => {
+const OptimizerStats = ({ scoringMode = 'ffh', currentGameweek = { number: 4 } }) => {
   const [rawData, setRawData] = useState(null); // Store raw API data
   const [stats, setStats] = useState({
     currentPoints: 0,
@@ -771,7 +771,7 @@ const OptimizerStats = ({ scoringMode = 'existing', currentGameweek = { number: 
   );
 };
 
-const TransferStats = ({ players, scoringMode = 'existing', gameweekRange }) => {
+const TransferStats = ({ players, scoringMode = 'ffh', gameweekRange }) => {
   // Calculate transfer analytics - FIX: Use correct ownership logic
   const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
   const myPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy'); // YOUR players specifically
@@ -1417,14 +1417,14 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                 Scoring:
               </span>
               <button
-                onClick={() => setScoringMode(scoringMode === 'existing' ? 'v3' : 'existing')}
+                onClick={() => setScoringMode(scoringMode === 'ffh' ? 'v3' : 'ffh')}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                   scoringMode === 'v3'
                     ? 'bg-green-500 text-white hover:bg-green-600'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
-                {scoringMode === 'v3' ? '🚀 v3' : '📊 Standard'}
+                {scoringMode === 'v3' ? '🚀 V3' : '📊 FFH'}
               </button>
             </div>
 
@@ -1477,7 +1477,7 @@ export default function FPLDashboard() {
     search: ''
   });
   const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' });
-  const [scoringMode, setScoringMode] = useState('existing'); // 'existing' or 'v3'
+  const [scoringMode, setScoringMode] = useState('ffh'); // 'ffh' or 'v3'
 
   // Shared gameweek range state for transfers tab
   const [transferGameweekRange, setTransferGameweekRange] = useState(null);

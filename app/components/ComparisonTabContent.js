@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { getScoringValue } from '../services/v3ScoringService.js';
 
-const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'existing' }) => {
+const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ffh' }) => {
   const [selectedPlayer1, setSelectedPlayer1] = useState(null);
   const [selectedPlayer2, setSelectedPlayer2] = useState(null);
   const [searchTerm1, setSearchTerm1] = useState('');

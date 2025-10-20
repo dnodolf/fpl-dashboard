@@ -333,7 +333,7 @@ export function applyV3Scoring(players, currentGameweek) {
 /**
  * Get the appropriate scoring values based on mode
  */
-export function getScoringValue(player, field, scoringMode = 'existing') {
+export function getScoringValue(player, field, scoringMode = 'ffh') {
   if (scoringMode === 'v3') {
     switch (field) {
       case 'season_total':

@@ -40,7 +40,7 @@ app/
 │   ├── gameweekService.js            # Hardcoded 2025-26 schedule
 │   ├── playerMatchingService.js      # Opta ID-based matching (98% success)
 │   ├── formationOptimizerService.js  # Lineup optimization algorithms
-│   └── scoringConversionService.js   # FPL→Sleeper point conversion
+│   └── scoringConversionService.js   # Pure FFH data extraction (no conversion)
 ├── components/                    # UI components
 │   ├── OptimizerTabContent.js        # Formation optimization interface
 │   ├── TransferTabContent.js         # Transfer recommendations
@@ -93,7 +93,7 @@ app/
 - Advanced filtering by position, team, owner, points, availability
 - Intelligent search with flexible pagination (10/25/50/100/All)
 - Color-coded optimization and ownership indicators
-- Dual scoring systems: Traditional FPL + V3 enhanced predictive scoring
+- Dual scoring systems: Pure FFH predictions + V3 enhanced scoring (minutes-weighted)
 - Interactive player comparison modals with detailed statistics
 
 ### Player Comparison (NEW in v3.1)

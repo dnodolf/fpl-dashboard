@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
 
-const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'existing' }) => {
+const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh' }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   

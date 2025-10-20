@@ -30,7 +30,7 @@ const getSleeperPositionCardStyle = (position) => {
 };
 
 // ----------------- OPTIMIZER HOOK -----------------
-function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', currentGameweek) {
+function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'ffh', currentGameweek) {
   const [data, setData] = useState({
     loading: true,
     error: null,
@@ -104,7 +104,7 @@ function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'existing', cur
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'existing', currentLineup = null }) => {
+const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
@@ -153,7 +153,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   };
 
   // Player Card Component - UPDATED WITH SLEEPER COLORS AND PREDICTED MINUTES
-  const PlayerCard = ({ player, isInOptimal = false, scoringMode = 'existing', currentLineup = null }) => {
+  const PlayerCard = ({ player, isInOptimal = false, scoringMode = 'ffh', currentLineup = null }) => {
     // Extract last name only for better readability
     const getLastName = (player) => {
       if (player.web_name) return player.web_name;
@@ -360,7 +360,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 };
 
 // ----------------- ACTIONABLE RECOMMENDATIONS COMPONENT -----------------
-const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'existing' }) => {
+const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'ffh' }) => {
   if (!recommendations || recommendations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
@@ -448,7 +448,7 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
 };
 
 // ----------------- FORMATION COMPARISON COMPONENT - FIXED LAYOUT -----------------
-const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'existing' }) => {
+const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'ffh' }) => {
   if (!allFormations || allFormations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
@@ -597,7 +597,7 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'e
 };
 
 // ----------------- MAIN OPTIMIZER TAB CONTENT - ENHANCED -----------------
-export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'existing' }) => {
+export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'ffh' }) => {
   // Don't render if gameweek data isn't loaded for v3 scoring
   if (scoringMode === 'v3' && !currentGameweek?.number) {
     return (
