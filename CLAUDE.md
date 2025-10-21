@@ -250,4 +250,49 @@ async function importServices() {
 - **Auto-suggestions**: Limit to 10 results and use fuzzy matching for best UX
 - **Logging**: Always implement deduplication for React development to prevent console spam
 
+---
+
+## V3 Scoring Methodology (In Development)
+
+### Goal
+Convert FFH's FPL-based predictions into Sleeper custom scoring predictions for accurate fantasy guidance.
+
+### Challenge
+- **FFH provides**: FPL predicted points + expected minutes per gameweek
+- **FFH does NOT provide**: Granular stat predictions (tackles, interceptions, dribbles, etc.)
+- **Sleeper scoring**: Custom rules with granular stats (see `sleeper_scoring/` images)
+- **No public API**: Sleeper doesn't expose historical EPL stats for backtesting
+
+### Simplified Conversion Approach
+Since granular stats aren't available from FFH predictions API, V3 uses **statistical conversion ratios**:
+
+1. **FPL → Sleeper conversion** (`sleeperScoringCalculator.js`):
+   - Position-based ratios derived from scoring system differences
+   - GKP: 0.9x (FPL overvalues GK goals, Sleeper rewards saves more)
+   - DEF: 1.15x (Sleeper rewards defensive stats heavily)
+   - MID: 1.05x (Sleeper rewards versatility)
+   - FWD: 0.97x (Sleeper penalizes dispossessions)
+
+2. **Appearance point adjustment**:
+   - Subtract FPL's 1-2 pts for playing (Sleeper doesn't have this)
+
+3. **Minutes weighting** (from existing V3):
+   - <30 mins: 0.1x (rotation risk penalty)
+   - 30-45 mins: 0.4x
+   - 45-60 mins: 0.7x
+   - 60-75 mins: 0.9x
+   - 75+ mins: 1.0x (full value)
+
+### Files
+- `app/services/sleeperScoringCalculator.js` - Conversion ratios and Sleeper scoring rules
+- `app/services/v3ScoringService.js` - Enhanced prediction calculations
+- `sleeper_scoring/scoring1-4.webp` - Reference images of custom Sleeper scoring
+
+### Future Enhancements
+- **Backtesting framework**: Validate conversion ratios against actual league results
+- **Player profiling**: Adjust ratios based on player style (tackle-heavy defenders, etc.)
+- **Granular stats estimation**: Use FFH `form_data` (historical key passes, shots, etc.) to project future stats
+
+---
+
 The system is optimized for the 2025-26 Premier League season and requires minimal maintenance.
