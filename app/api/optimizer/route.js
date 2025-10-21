@@ -90,10 +90,10 @@ export async function POST(request) {
         throw new Error('currentGameweek is required for v3 scoring mode');
       }
       // Convert number to gameweek object if needed
-      const currentGameweek = typeof requestData.currentGameweek === 'number' 
+      const currentGameweek = typeof requestData.currentGameweek === 'number'
         ? { number: requestData.currentGameweek }
         : requestData.currentGameweek;
-      players = v3ScoringService.applyV3Scoring(players, currentGameweek);
+      players = await v3ScoringService.applyV3Scoring(players, currentGameweek);
     }
 
     console.log(`📊 Processing ${players.length} players for optimization`);

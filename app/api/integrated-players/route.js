@@ -5,6 +5,7 @@ import GameweekService from '../../services/gameweekService.js';
 import { normalizePosition } from '../../../utils/positionUtils.js';
 import sleeperPredictionServiceV3 from '../../services/sleeperPredictionServiceV3';
 import ffhStatsService from '../../services/ffhStatsService';
+import v3ScoringService from '../../services/v3ScoringService.js';
 
 // Cache for API responses
 let cachedData = null;
@@ -13,81 +14,39 @@ const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
 async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) {
   try {
-    // Initialize V3 prediction engine
-    const ffhStatsData = await Promise.race([
-      ffhStatsService.fetchCurrentSeasonStats(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('FFH stats timeout')), 10000))
-    ]);
-    
-    const sleeperScoring = await Promise.race([
-      fetchSleeperScoringSettings(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Sleeper scoring timeout')), 5000))
-    ]);
-    
-    await sleeperPredictionServiceV3.initialize(sleeperScoring, ffhStatsService);
-    const enhancedPlayers = [];
-    let processedCount = 0;
-    
-    for (const player of matchedPlayers) {
-      processedCount++;
-      
-      // Processing players silently
-      
-      try {
-        // Find matching FFH stats player
-        const ffhStatsPlayer = findFFHStatsMatch(player, ffhStatsData.players);
-        
-        if (ffhStatsPlayer) {
-          // Calculate V3 bonus points
-          const v3BonusResult = sleeperPredictionServiceV3.calculateSleeperBonusPoints(ffhStatsPlayer);
-          
-          // Simple enhancement for now
-          enhancedPlayers.push({
-            ...player,
-            v3_predicted_points: (player.predicted_points || 0) + v3BonusResult.totalBonusPoints * 35,
-            v3_current_gw_prediction: (player.predicted_points || 0) / 35 + v3BonusResult.totalBonusPoints,
-            v3_bonus_points_per_game: v3BonusResult.totalBonusPoints,
-            prediction_model: 'v3_enhanced'
-          });
-        } else {
-          enhancedPlayers.push({
-            ...player,
-            v3_predicted_points: player.predicted_points || 0,
-            v3_current_gw_prediction: (player.predicted_points || 0) / 35,
-            v3_bonus_points_per_game: 0,
-            prediction_model: 'v3_fallback'
-          });
-        }
-      } catch (playerError) {
-        console.error(`DEBUG: Error processing player ${player.name}:`, playerError.message);
-        enhancedPlayers.push({
-          ...player,
-          prediction_model: 'v3_player_error'
-        });
-      }
-    }
-    
-    console.log('DEBUG: Player processing complete');
-    
-    // Simple stats calculation
-    const successfulV3 = enhancedPlayers.filter(p => p.prediction_model === 'v3_enhanced');
+    console.log(`🚀 V3 Sleeper Scoring: Converting ${matchedPlayers.length} players to Sleeper league scoring`);
+
+    // Use our simplified v3ScoringService with FPL→Sleeper conversion
+    const enhancedPlayers = await v3ScoringService.applyV3Scoring(matchedPlayers, currentGameweek);
+
+    // Calculate stats
+    const playersWithV3 = enhancedPlayers.filter(p => p.v3_season_total > 0);
     const v3Stats = {
       totalPlayers: enhancedPlayers.length,
-      v3Enhanced: successfulV3.length,
-      v3Coverage: Math.round((successfulV3.length / enhancedPlayers.length) * 100),
-      averageImprovement: 0 // Simplified for debugging
+      v3Enhanced: playersWithV3.length,
+      v3Coverage: Math.round((playersWithV3.length / enhancedPlayers.length) * 100),
+      averageImprovement: 0
     };
-    
-    console.log('DEBUG: V3 enhancement complete:', v3Stats);
-    
+
+    console.log(`📊 V3 Sleeper Summary: ${playersWithV3.length}/${enhancedPlayers.length} players with predictions`);
+
     return {
       players: enhancedPlayers,
       v3Stats: v3Stats
     };
-    
+
   } catch (error) {
-    console.error('DEBUG: V3 enhancement failed at top level:', error);
-    throw error; // Re-throw to see where it fails
+    console.error('❌ V3 enhancement failed:', error);
+    // Return players without V3 enhancement
+    return {
+      players: matchedPlayers,
+      v3Stats: {
+        totalPlayers: matchedPlayers.length,
+        v3Enhanced: 0,
+        v3Coverage: 0,
+        averageImprovement: 0
+      }
+    };
   }
 }
 
@@ -570,8 +529,8 @@ export async function POST(request) {
       console.log('📅 Getting current gameweek from authoritative service...');
       const gameweekService = (await import('../../services/gameweekService.js')).default;
       const gameweekData = await gameweekService.getCurrentGameweek();
-      currentGameweek = gameweekData.number;
-      console.log(`📅 Current gameweek: ${currentGameweek}`);
+      currentGameweek = gameweekData; // Keep full object with .number property
+      console.log(`📅 Current gameweek: ${currentGameweek.number}`);
     } catch (error) {
       console.error('❌ Failed to get current gameweek from authoritative service:', error);
       throw new Error('Cannot proceed without current gameweek information');

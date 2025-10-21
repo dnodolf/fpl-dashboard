@@ -4,6 +4,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 
+// V3 Sleeper scoring conversion ratios (same as v3ScoringService.js)
+const V3_CONVERSION_RATIOS = {
+  GKP: 0.90,  // GKP: Subtract appearance points, add save bonuses
+  DEF: 1.15,  // DEF: Add defensive stat rewards (tackles, interceptions, blocks)
+  MID: 1.05,  // MID: Add versatility bonus (goals, assists, defensive actions)
+  FWD: 0.97   // FWD: Subtract dispossession penalties
+};
+
 // Fixture difficulty mapping (consistent with your existing system)
 const FIXTURE_DIFFICULTY = {
   1: { difficulty: 2, color: 'text-green-500' },    // Easy
@@ -217,19 +225,21 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gam
       const gameweekCount = endGW - startGW + 1;
       return fallbackPpg * gameweekCount;
     }
-    
+
     let totalPoints = 0;
-    
+
+    // Get V3 conversion ratio for this player's position
+    const v3Ratio = scoringMode === 'v3' ? (V3_CONVERSION_RATIOS[player.position] || 1.0) : 1.0;
+
     for (let gw = startGW; gw <= endGW; gw++) {
       const prediction = player.predictions.find(p => p.gw === gw);
       if (prediction) {
-        const gwPoints = scoringMode === 'v3' 
-          ? (prediction.v3_predicted_pts || prediction.predicted_pts || 0)
-          : (prediction.predicted_pts || 0);
+        const fplPoints = prediction.predicted_pts || 0;
+        const gwPoints = scoringMode === 'v3' ? (fplPoints * v3Ratio) : fplPoints;
         totalPoints += gwPoints;
       }
     }
-    
+
     return totalPoints;
   }
 

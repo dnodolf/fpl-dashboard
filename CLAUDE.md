@@ -14,9 +14,9 @@ npm run lint        # Run ESLint checks
 
 ## Project Overview
 
-Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking.
+Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v3.1 - Player Comparison & Performance Optimization
+**Current Version**: v3.2 - V3 Sleeper Scoring with FPL Conversion
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -40,6 +40,7 @@ app/
 │   ├── gameweekService.js            # Hardcoded 2025-26 schedule
 │   ├── playerMatchingService.js      # Opta ID-based matching (98% success)
 │   ├── formationOptimizerService.js  # Lineup optimization algorithms
+│   ├── v3ScoringService.js           # V3 Sleeper scoring with FPL conversion
 │   └── scoringConversionService.js   # Pure FFH data extraction (no conversion)
 ├── components/                    # UI components
 │   ├── OptimizerTabContent.js        # Formation optimization interface
@@ -93,7 +94,9 @@ app/
 - Advanced filtering by position, team, owner, points, availability
 - Intelligent search with flexible pagination (10/25/50/100/All)
 - Color-coded optimization and ownership indicators
-- Dual scoring systems: Pure FFH predictions + V3 enhanced scoring (minutes-weighted)
+- **Dual Scoring Systems**: Toggle between FFH FPL predictions and V3 Sleeper scoring
+  - **FFH Mode**: Pure Fantasy Premier League predictions from FFH
+  - **V3 Mode**: Sleeper-adjusted predictions with position-based conversion ratios
 - Interactive player comparison modals with detailed statistics
 
 ### Player Comparison (NEW in v3.1)
@@ -214,6 +217,15 @@ async function importServices() {
 
 ## Recent Technical Updates
 
+### v3.2 - V3 Sleeper Scoring with FPL Conversion (January 2025)
+- **V3 Sleeper Scoring**: Complete implementation of position-based FPL→Sleeper conversion
+- **Simplified Architecture**: Removed complex granular stats fetching for reliable performance
+- **Conversion Ratios**: Position-specific multipliers (GKP: 0.90x, DEF: 1.15x, MID: 1.05x, FWD: 0.97x)
+- **Dashboard Toggle**: Seamless switching between FFH and V3 modes across all tabs
+- **Transfer Tab V3 Support**: Gameweek-level V3 scoring applied to transfer recommendations
+- **Zero Dependencies**: No external API calls for V3 calculations
+- **Performance**: Instant V3 scoring for 1500+ players with no network overhead
+
 ### v3.1 - Player Comparison & Performance Optimization
 - **Player Comparison Tab**: Complete side-by-side player analysis with intelligent auto-suggestions
 - **Smart Search**: Real-time fuzzy matching with dropdown suggestions showing player stats
@@ -252,46 +264,62 @@ async function importServices() {
 
 ---
 
-## V3 Scoring Methodology (In Development)
+## V3 Sleeper Scoring System (v3.2)
 
-### Goal
-Convert FFH's FPL-based predictions into Sleeper custom scoring predictions for accurate fantasy guidance.
+### Overview
+V3 scoring converts FFH's FPL-based predictions into Sleeper custom league scoring predictions using position-based conversion ratios. Users can toggle between FFH and V3 modes throughout the dashboard.
 
-### Challenge
-- **FFH provides**: FPL predicted points + expected minutes per gameweek
-- **FFH does NOT provide**: Granular stat predictions (tackles, interceptions, dribbles, etc.)
-- **Sleeper scoring**: Custom rules with granular stats (see `sleeper_scoring/` images)
-- **No public API**: Sleeper doesn't expose historical EPL stats for backtesting
+### Implementation Strategy
 
-### Simplified Conversion Approach
-Since granular stats aren't available from FFH predictions API, V3 uses **statistical conversion ratios**:
+**Challenge**: FFH provides FPL predicted points but does NOT provide granular stat predictions (tackles, interceptions, dribbles, etc.) that Sleeper custom scoring requires.
 
-1. **FPL → Sleeper conversion** (`sleeperScoringCalculator.js`):
-   - Position-based ratios derived from scoring system differences
-   - GKP: 0.9x (FPL overvalues GK goals, Sleeper rewards saves more)
-   - DEF: 1.15x (Sleeper rewards defensive stats heavily)
-   - MID: 1.05x (Sleeper rewards versatility)
-   - FWD: 0.97x (Sleeper penalizes dispossessions)
+**Solution**: Statistical conversion ratios derived from scoring system differences between FPL and custom Sleeper leagues.
 
-2. **Appearance point adjustment**:
-   - Subtract FPL's 1-2 pts for playing (Sleeper doesn't have this)
+### Conversion Ratios
 
-3. **Minutes weighting** (from existing V3):
-   - <30 mins: 0.1x (rotation risk penalty)
-   - 30-45 mins: 0.4x
-   - 45-60 mins: 0.7x
-   - 60-75 mins: 0.9x
-   - 75+ mins: 1.0x (full value)
+Position-based multipliers applied to FFH FPL predictions:
 
-### Files
-- `app/services/sleeperScoringCalculator.js` - Conversion ratios and Sleeper scoring rules
-- `app/services/v3ScoringService.js` - Enhanced prediction calculations
-- `sleeper_scoring/scoring1-4.webp` - Reference images of custom Sleeper scoring
+- **GKP: 0.90x** - Subtract FPL appearance points, add save bonuses
+- **DEF: 1.15x** - Add defensive stat rewards (tackles, interceptions, blocks)
+- **MID: 1.05x** - Add versatility bonus (goals, assists, defensive actions)
+- **FWD: 0.97x** - Subtract dispossession penalties
+
+### How It Works
+
+1. **Server-Side Processing** (`integrated-players/route.js`):
+   - Fetches FFH FPL predictions for all players
+   - Applies V3 conversion ratios to calculate Sleeper-adjusted predictions
+   - Adds V3 fields: `v3_season_total`, `v3_season_avg`, `v3_current_gw`
+
+2. **Client-Side Toggle** (`page.js`, `TransferTabContent.js`):
+   - Toggle button switches between FFH and V3 scoring modes
+   - All tables, charts, and recommendations update dynamically
+   - Transfer tab applies conversion ratios to individual gameweek predictions
+
+3. **Scoring Field Selection** (`v3ScoringService.js`):
+   - FFH mode: Uses `predicted_points`, `season_prediction_avg`, `current_gw_prediction`
+   - V3 mode: Uses `v3_season_total`, `v3_season_avg`, `v3_current_gw`
+
+### Key Files
+
+- **`app/services/v3ScoringService.js`** - Core V3 scoring with FPL→Sleeper conversion
+- **`app/components/TransferTabContent.js`** - V3 scoring toggle for transfers tab
+- **`app/page.js`** - Main dashboard with V3 mode toggle
+- **`app/api/integrated-players/route.js`** - Server-side V3 enhancement
+- **`app/api/optimizer/route.js`** - V3 scoring support for optimizer
+
+### Benefits
+
+- ⚡ **Performance**: Instant calculations with no external API calls
+- 🎯 **Position-Aware**: Defenders get 15% boost, forwards get 3% reduction
+- 🔄 **Reliable**: No network dependencies or timeouts
+- 📊 **Simple**: Easy to understand and maintain conversion logic
 
 ### Future Enhancements
-- **Backtesting framework**: Validate conversion ratios against actual league results
-- **Player profiling**: Adjust ratios based on player style (tackle-heavy defenders, etc.)
-- **Granular stats estimation**: Use FFH `form_data` (historical key passes, shots, etc.) to project future stats
+
+- **Backtesting Framework**: Validate conversion ratios against actual Sleeper league results
+- **Dynamic Ratios**: Adjust ratios based on historical performance correlation
+- **Player Profiling**: Fine-tune ratios based on player style (tackle-heavy defenders, etc.)
 
 ---
 

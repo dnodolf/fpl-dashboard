@@ -1515,29 +1515,35 @@ export default function FPLDashboard() {
   }, []);
 
   // Process players when scoring mode or players change
+  // Note: V3 scoring is already applied server-side in the API
+  // We just need to trigger a re-render when scoringMode changes
   useEffect(() => {
     if (players && Array.isArray(players) && players.length > 0) {
-      // Create a unique key for this processing session
-      const logKey = `${scoringMode}-${players.length}-${currentGameweek.number}`;
+      // Create a unique key for logging
+      const logKey = `${scoringMode}-${players.length}`;
 
-      if (scoringMode === 'v3') {
-        // Only log if this combination hasn't been logged yet
-        if (!window._lastScoringLog || window._lastScoringLog !== logKey) {
-          console.log(`📊 Dashboard: Applying V3 scoring to ${players.length} players`);
-          window._lastScoringLog = logKey;
+      // Only log if this combination hasn't been logged yet
+      if (!window._lastScoringLog || window._lastScoringLog !== logKey) {
+        console.log(`📊 Dashboard: Displaying ${scoringMode === 'v3' ? 'V3 Sleeper' : 'FFH'} scoring for ${players.length} players`);
+
+        // Debug: Check if V3 data exists
+        const samplePlayer = players.find(p => p.predicted_points > 0);
+        if (samplePlayer) {
+          console.log('Sample player data:', {
+            name: samplePlayer.name,
+            ffh_predicted: samplePlayer.predicted_points,
+            v3_season_total: samplePlayer.v3_season_total,
+            v3_current_gw: samplePlayer.v3_current_gw,
+            v3_confidence: samplePlayer.v3_confidence
+          });
         }
-        const enhancedPlayers = v3ScoringService.applyV3Scoring(players, currentGameweek);
-        setProcessedPlayers(enhancedPlayers);
-      } else {
-        // Only log if this combination hasn't been logged yet
-        if (!window._lastScoringLog || window._lastScoringLog !== logKey) {
-          console.log(`📊 Dashboard: Using standard scoring for ${players.length} players`);
-          window._lastScoringLog = logKey;
-        }
-        setProcessedPlayers(players);
+
+        window._lastScoringLog = logKey;
       }
+
+      setProcessedPlayers(players);
     }
-  }, [players, scoringMode, currentGameweek.number]);
+  }, [players, scoringMode]);
 
   // Update data function
   const updateData = (type = 'manual', forceRefresh = true, useCache = false) => {
