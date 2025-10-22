@@ -232,7 +232,15 @@ const getFixtureDifficultyColorDark = (difficulty) => {
     predicted_points: getPlayerPredictedPoints(player),
     predicted_minutes: getPlayerPredictedMinutes(player),
     ppg_value: getPlayerPPG(player),
-    fixture_difficulty_value: getFixtureDifficulty(player)
+    fixture_difficulty_value: getFixtureDifficulty(player),
+    // Extract THIS WEEK matchup and START/BENCH recommendation (V3 only)
+    this_week_opponent: player.v3_this_week_opponent || 'TBD',
+    this_week_is_home: player.v3_this_week_is_home !== undefined ? player.v3_this_week_is_home : true,
+    this_week_matchup_label: player.v3_this_week_matchup_label || '❓ Unknown',
+    this_week_matchup_color: player.v3_this_week_matchup_color || 'text-gray-500',
+    start_recommendation: player.v3_start_recommendation || 'UNKNOWN',
+    start_label: player.v3_start_label || '❓ N/A',
+    start_color: player.v3_start_color || 'text-gray-500'
   }));
 
   // Sort players
@@ -395,11 +403,23 @@ const getSleeperPositionBadgeColor = (position) => {
                 >
                   PPG {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
                 </th>
-                <th 
+                <th
                   onClick={() => handleSort('fixture_difficulty_value')}
                   className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Fixture Difficulty {renderSortIcon('fixture_difficulty_value')}
+                </th>
+                <th
+                  onClick={() => handleSort('this_week_opponent')}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                >
+                  THIS WEEK 🔥 {renderSortIcon('this_week_opponent')}
+                </th>
+                <th
+                  onClick={() => handleSort('start_recommendation')}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                >
+                  START/BENCH {renderSortIcon('start_recommendation')}
                 </th>
               </tr>
             </thead>
@@ -473,9 +493,34 @@ const getSleeperPositionBadgeColor = (position) => {
                     {/* Fixture Difficulty - ENHANCED WITH PROPER COLOR CODING */}
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getFixtureDifficultyColor(player.fixture_difficulty_value)}`}>
-                        {player.fixture_difficulty_value !== 'N/A' && !isNaN(parseFloat(player.fixture_difficulty_value)) 
+                        {player.fixture_difficulty_value !== 'N/A' && !isNaN(parseFloat(player.fixture_difficulty_value))
                           ? parseFloat(player.fixture_difficulty_value).toFixed(1)
                           : player.fixture_difficulty_value || 'N/A'}
+                      </span>
+                    </td>
+
+                    {/* THIS WEEK Matchup - NEW */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-200">
+                          vs {player.this_week_opponent} {player.this_week_is_home ? '(H)' : '(A)'}
+                        </span>
+                        <span className={`text-xs font-medium ${player.this_week_matchup_color}`}>
+                          {player.this_week_matchup_label}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* START/BENCH Recommendation - NEW */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border-2 ${
+                        player.start_recommendation === 'MUST_START' ? 'bg-green-900 border-green-500 text-green-200' :
+                        player.start_recommendation === 'SAFE_START' ? 'bg-blue-900 border-blue-500 text-blue-200' :
+                        player.start_recommendation === 'FLEX' ? 'bg-yellow-900 border-yellow-500 text-yellow-200' :
+                        player.start_recommendation === 'BENCH' ? 'bg-red-900 border-red-500 text-red-200' :
+                        'bg-gray-800 border-gray-600 text-gray-400'
+                      }`}>
+                        {player.start_label}
                       </span>
                     </td>
                   </tr>

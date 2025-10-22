@@ -1,11 +1,13 @@
 // app/services/v3ScoringService.js
-// V3 Sleeper Scoring System with simplified FPL→Sleeper conversion
+// V3 Sleeper Scoring System with archetype-based FPL→Sleeper conversion
+
+import { getPlayerArchetype, getArchetypeStats } from './playerArchetypeService.js';
 
 /**
- * Position-based FPL to Sleeper conversion ratios
- * Based on scoring differences between FPL and custom Sleeper leagues
+ * Fallback position-based FPL to Sleeper conversion ratios
+ * Used when player archetype cannot be determined
  */
-const CONVERSION_RATIOS = {
+const FALLBACK_CONVERSION_RATIOS = {
   GKP: 0.90,  // GKP: Subtract appearance points, add save bonuses
   DEF: 1.15,  // DEF: Add defensive stat rewards (tackles, interceptions, blocks)
   MID: 1.05,  // MID: Add versatility bonus (goals, assists, defensive actions)
@@ -140,9 +142,263 @@ function calculateFixtureRunQuality(player, currentGameweek) {
 }
 
 /**
+ * Extract THIS WEEK's matchup details for start/sit decisions
+ * Returns opponent, difficulty, and home/away status for current gameweek
+ */
+function extractCurrentGameweekMatchup(player, currentGameweek) {
+  if (!player.predictions || !Array.isArray(player.predictions)) {
+    return {
+      hasMatchup: false,
+      opponent: 'TBD',
+      difficulty: 3,
+      isHome: true,
+      source: 'no_predictions'
+    };
+  }
+
+  // Find current gameweek prediction with opponent data
+  const currentPred = player.predictions.find(p => p.gw === currentGameweek);
+
+  if (!currentPred) {
+    return {
+      hasMatchup: false,
+      opponent: 'TBD',
+      difficulty: 3,
+      isHome: true,
+      source: 'no_current_gw_prediction'
+    };
+  }
+
+  // Extract opponent data (FFH provides opponent, opponent_full, fixture_difficulty)
+  const opponent = currentPred.opponent || currentPred.opp || 'TBD';
+  const opponentFull = currentPred.opponent_full || opponent;
+  const difficulty = currentPred.fixture_difficulty || currentPred.fdr || 3;
+
+  // Determine home/away from opponent string (typically has (H) or (A) suffix)
+  const isHome = !opponent.includes('(A)');
+  const cleanOpponent = opponent.replace(/\(H\)|\(A\)/g, '').trim();
+
+  return {
+    hasMatchup: true,
+    opponent: cleanOpponent,
+    opponentFull: opponentFull,
+    difficulty: difficulty,
+    isHome: isHome,
+    predicted_points: currentPred.predicted_pts || 0,
+    predicted_minutes: currentPred.predicted_mins || currentPred.xmins || 0,
+    source: 'ffh_predictions'
+  };
+}
+
+/**
+ * Calculate START/BENCH recommendation based on predicted points
+ * Provides clear guidance for weekly lineup decisions
+ */
+function calculateStartRecommendation(predictedPoints, position) {
+  // Position-adjusted thresholds (some positions score more on average)
+  let mustStartThreshold = 10;
+  let safeStartThreshold = 6;
+  let flexThreshold = 4;
+
+  // Adjust thresholds by position (GKP/DEF score less on average)
+  if (position === 'GKP') {
+    mustStartThreshold = 8;
+    safeStartThreshold = 5;
+    flexThreshold = 3;
+  } else if (position === 'DEF') {
+    mustStartThreshold = 9;
+    safeStartThreshold = 5.5;
+    flexThreshold = 3.5;
+  } else if (position === 'FWD') {
+    mustStartThreshold = 11;
+    safeStartThreshold = 6.5;
+    flexThreshold = 4;
+  }
+
+  if (predictedPoints >= mustStartThreshold) {
+    return {
+      recommendation: 'MUST_START',
+      label: '✅ MUST START',
+      color: 'text-green-500',
+      confidence: 'high',
+      description: `Excellent projection (${predictedPoints.toFixed(1)} pts)`
+    };
+  } else if (predictedPoints >= safeStartThreshold) {
+    return {
+      recommendation: 'SAFE_START',
+      label: '✔️ SAFE START',
+      color: 'text-blue-500',
+      confidence: 'medium',
+      description: `Solid projection (${predictedPoints.toFixed(1)} pts)`
+    };
+  } else if (predictedPoints >= flexThreshold) {
+    return {
+      recommendation: 'FLEX',
+      label: '⚠️ FLEX PLAY',
+      color: 'text-yellow-500',
+      confidence: 'low',
+      description: `Risky play (${predictedPoints.toFixed(1)} pts)`
+    };
+  } else {
+    return {
+      recommendation: 'BENCH',
+      label: '❌ BENCH',
+      color: 'text-red-500',
+      confidence: 'none',
+      description: `Low projection (${predictedPoints.toFixed(1)} pts)`
+    };
+  }
+}
+
+/**
+ * Calculate single gameweek matchup quality
+ * Different from fixture run quality - this is ONLY for THIS WEEK's decision
+ */
+function calculateSingleGameweekMatchup(player, currentGameweek) {
+  const matchup = extractCurrentGameweekMatchup(player, currentGameweek);
+
+  if (!matchup.hasMatchup) {
+    return {
+      quality: 'unknown',
+      label: '❓ Unknown',
+      color: 'text-gray-500',
+      description: 'No matchup data available',
+      source: 'no_data'
+    };
+  }
+
+  const difficulty = matchup.difficulty;
+  const isHome = matchup.isHome;
+
+  // Home advantage bonus to difficulty assessment
+  const adjustedDifficulty = isHome ? Math.max(1, difficulty - 0.5) : Math.min(5, difficulty + 0.3);
+
+  // Categorize matchup quality
+  let quality, label, color, description;
+
+  if (adjustedDifficulty <= 2) {
+    quality = 'smash_spot';
+    label = '🔥 SMASH SPOT';
+    color = 'text-green-500';
+    description = `Great matchup vs ${matchup.opponent} ${isHome ? '(H)' : '(A)'}`;
+  } else if (adjustedDifficulty <= 2.8) {
+    quality = 'favorable';
+    label = '✅ GOOD MATCHUP';
+    color = 'text-blue-500';
+    description = `Favorable vs ${matchup.opponent} ${isHome ? '(H)' : '(A)'}`;
+  } else if (adjustedDifficulty <= 3.5) {
+    quality = 'neutral';
+    label = '➡️ NEUTRAL';
+    color = 'text-gray-400';
+    description = `Average vs ${matchup.opponent} ${isHome ? '(H)' : '(A)'}`;
+  } else if (adjustedDifficulty <= 4.2) {
+    quality = 'difficult';
+    label = '⚠️ TOUGH MATCHUP';
+    color = 'text-orange-500';
+    description = `Difficult vs ${matchup.opponent} ${isHome ? '(H)' : '(A)'}`;
+  } else {
+    quality = 'avoid';
+    label = '❌ AVOID';
+    color = 'text-red-500';
+    description = `Very tough vs ${matchup.opponent} ${isHome ? '(H)' : '(A)'}`;
+  }
+
+  return {
+    quality,
+    label,
+    color,
+    description,
+    opponent: matchup.opponent,
+    opponentFull: matchup.opponentFull,
+    difficulty: matchup.difficulty,
+    adjustedDifficulty,
+    isHome,
+    predicted_points: matchup.predicted_points,
+    predicted_minutes: matchup.predicted_minutes,
+    source: 'calculated'
+  };
+}
+
+/**
+ * Calculate injury return adjustment
+ * Players returning from injury get reduced predictions for first few games back
+ */
+function calculateInjuryReturnAdjustment(player, currentGameweek) {
+  // Check if player has injury status indicating recent return
+  const injuryStatus = (player.injury_status || '').toLowerCase();
+  const news = (player.news || '').toLowerCase();
+
+  // Keywords that indicate injury/return
+  const injuryKeywords = ['injured', 'injury', 'out', 'suspended', 'banned'];
+  const returnKeywords = ['returned', 'back', 'fit', 'available', 'recovered'];
+
+  const hasInjuryIndicator = injuryKeywords.some(kw => injuryStatus.includes(kw) || news.includes(kw));
+  const hasReturnIndicator = returnKeywords.some(kw => news.includes(kw));
+
+  // If no injury info, no adjustment
+  if (!hasInjuryIndicator && !hasReturnIndicator) {
+    return { multiplier: 1.0, status: 'healthy', source: 'no_injury_data' };
+  }
+
+  // Check recent minutes to estimate games back from injury
+  if (!player.predictions || player.predictions.length === 0) {
+    return { multiplier: 1.0, status: 'unknown', source: 'no_predictions' };
+  }
+
+  // Look at last 3 gameweeks of predicted minutes
+  const recentGWs = player.predictions
+    .filter(p => p.gw < currentGameweek && p.gw >= currentGameweek - 3)
+    .sort((a, b) => b.gw - a.gw);
+
+  if (recentGWs.length === 0) {
+    return { multiplier: 1.0, status: 'unknown', source: 'no_recent_data' };
+  }
+
+  // Count how many recent GWs had low/zero minutes (injury period)
+  const lowMinutesGWs = recentGWs.filter(gw => (gw.predicted_mins || gw.xmins || 90) < 30);
+
+  // If player had 1-2 recent low-minute games, they might be returning
+  if (lowMinutesGWs.length >= 1 && hasReturnIndicator) {
+    const weeksBack = recentGWs.length - lowMinutesGWs.length + 1;
+
+    // Graduated recovery: 70% → 85% → 95% → 100% over 4 weeks
+    const recoveryMultipliers = [0.70, 0.85, 0.95, 1.00];
+    const multiplier = recoveryMultipliers[Math.min(weeksBack - 1, 3)];
+
+    return {
+      multiplier: multiplier,
+      status: 'returning',
+      weeks_back: weeksBack,
+      source: 'calculated',
+      description: `Returning from injury (week ${weeksBack})`
+    };
+  }
+
+  // Player is currently injured/out
+  if (hasInjuryIndicator && !hasReturnIndicator) {
+    return {
+      multiplier: 0.5, // Heavy reduction if currently injured
+      status: 'injured',
+      source: 'injury_status',
+      description: 'Currently injured or doubtful'
+    };
+  }
+
+  // No adjustment needed
+  return { multiplier: 1.0, status: 'healthy', source: 'no_adjustment_needed' };
+}
+
+/**
  * Calculate V3 Sleeper prediction from FFH FPL predictions
- * Uses position-based conversion ratios to estimate Sleeper league points
- * NOW INCLUDES: Playing time + Form momentum + Fixture run quality
+ * Uses archetype-based conversion ratios to estimate Sleeper league points
+ *
+ * Enhancement Pipeline (6 steps):
+ * 1. Archetype-based conversion ratio (player style)
+ * 2. Form momentum (last 3 GWs vs season avg)
+ * 3. Fixture run quality (next 6 GWs vs season avg)
+ * 4. Injury return adjustment (graduated recovery)
+ * 5. Playing time confidence (rotation risk)
+ * 6. Final V3 prediction
  */
 export async function calculateV3Prediction(player, currentGameweek) {
   try {
@@ -152,7 +408,10 @@ export async function calculateV3Prediction(player, currentGameweek) {
     }
 
     const position = player.position || 'MID';
-    const ratio = CONVERSION_RATIOS[position] || 1.0;
+
+    // Get player-specific archetype and ratio
+    const archetypeInfo = getPlayerArchetype(player);
+    const ratio = archetypeInfo.ratio;
 
     // Use FFH FPL predictions as base
     const fplSeasonTotal = player.predicted_points || 0;
@@ -180,7 +439,15 @@ export async function calculateV3Prediction(player, currentGameweek) {
     v3SeasonAvg *= fixtureMultiplier;
     v3CurrentGW *= fixtureMultiplier;
 
-    // Step 4: Get expected minutes for playing time adjustment
+    // Step 4: Apply injury return adjustment
+    const injuryData = calculateInjuryReturnAdjustment(player, currentGameweek.number);
+    const injuryMultiplier = injuryData.multiplier;
+
+    v3SeasonTotal *= injuryMultiplier;
+    v3SeasonAvg *= injuryMultiplier;
+    v3CurrentGW *= injuryMultiplier;
+
+    // Step 5: Get expected minutes for playing time adjustment
     // Try multiple sources: current GW prediction, season average, or player metadata
     let expectedMinutes = 90; // Default assumption
 
@@ -203,7 +470,7 @@ export async function calculateV3Prediction(player, currentGameweek) {
       }
     }
 
-    // Step 5: Apply playing time adjustment
+    // Step 6: Apply playing time adjustment
     const playingTimeMultiplier = applyPlayingTimeAdjustment(1.0, expectedMinutes);
 
     v3SeasonTotal *= playingTimeMultiplier;
@@ -222,9 +489,20 @@ export async function calculateV3Prediction(player, currentGameweek) {
       }
     }
 
+    // Step 7: Extract THIS WEEK's matchup data for start/sit decisions
+    const thisWeekMatchup = calculateSingleGameweekMatchup(player, currentGameweek.number);
+
+    // Step 8: Calculate START/BENCH recommendation based on V3 current GW prediction
+    const startRec = calculateStartRecommendation(v3CurrentGW, position);
+
     // Log significant adjustments (only for players with meaningful predictions)
-    const totalMultiplier = formMultiplier * fixtureMultiplier * playingTimeMultiplier;
+    const totalMultiplier = formMultiplier * fixtureMultiplier * injuryMultiplier * playingTimeMultiplier;
     const playerName = player.name || player.full_name;
+
+    // Log archetype assignment for known players
+    if (archetypeInfo.source === 'archetype_mapping' && fplSeasonTotal > 100) {
+      console.log(`🎯 Archetype: ${playerName} → ${archetypeInfo.archetype} (${ratio}x)`);
+    }
 
     if (formMultiplier !== 1.0 && formData.trend !== 'neutral' && fplSeasonTotal > 50) {
       console.log(`🔥 Form ${formData.trend}: ${playerName} - Recent: ${formData.recentAvg} vs Avg: ${formData.seasonAvg} → ${(formMultiplier * 100).toFixed(0)}%`);
@@ -232,6 +510,10 @@ export async function calculateV3Prediction(player, currentGameweek) {
 
     if (fixtureMultiplier !== 1.0 && fixtureData.rating !== 'average' && fplSeasonTotal > 50) {
       console.log(`📅 Fixtures ${fixtureData.rating}: ${playerName} - Upcoming: ${fixtureData.upcomingAvg} vs Avg: ${fixtureData.seasonAvg} → ${(fixtureMultiplier * 100).toFixed(0)}%`);
+    }
+
+    if (injuryMultiplier < 0.95 && fplSeasonTotal > 50) {
+      console.log(`🏥 Injury return: ${playerName} - ${injuryData.description} → ${(injuryMultiplier * 100).toFixed(0)}%`);
     }
 
     if (playingTimeMultiplier < 0.95 && fplSeasonTotal > 50) {
@@ -246,9 +528,11 @@ export async function calculateV3Prediction(player, currentGameweek) {
       v3_season_total: Math.round(v3SeasonTotal * 100) / 100,
       v3_season_avg: Math.round(v3SeasonAvg * 100) / 100,
       v3_current_gw: Math.round(v3CurrentGW * 100) / 100,
-      v3_calculation_source: 'fpl_conversion_with_all_adjustments',
+      v3_calculation_source: 'fpl_conversion_with_all_enhancements',
       v3_confidence: confidence,
       v3_conversion_ratio: ratio,
+      v3_archetype: archetypeInfo.archetype,
+      v3_archetype_source: archetypeInfo.source,
       v3_minutes_adjustment: playingTimeMultiplier,
       v3_expected_minutes: Math.round(expectedMinutes),
       v3_form_multiplier: formMultiplier,
@@ -257,7 +541,25 @@ export async function calculateV3Prediction(player, currentGameweek) {
       v3_form_season_avg: formData.seasonAvg,
       v3_fixture_multiplier: fixtureMultiplier,
       v3_fixture_rating: fixtureData.rating,
-      v3_fixture_upcoming_avg: fixtureData.upcomingAvg
+      v3_fixture_upcoming_avg: fixtureData.upcomingAvg,
+      v3_injury_multiplier: injuryMultiplier,
+      v3_injury_status: injuryData.status,
+      v3_injury_weeks_back: injuryData.weeks_back,
+      // NEW: THIS WEEK matchup data for start/sit decisions
+      v3_this_week_opponent: thisWeekMatchup.opponent,
+      v3_this_week_opponent_full: thisWeekMatchup.opponentFull,
+      v3_this_week_difficulty: thisWeekMatchup.difficulty,
+      v3_this_week_is_home: thisWeekMatchup.isHome,
+      v3_this_week_matchup_quality: thisWeekMatchup.quality,
+      v3_this_week_matchup_label: thisWeekMatchup.label,
+      v3_this_week_matchup_color: thisWeekMatchup.color,
+      v3_this_week_matchup_description: thisWeekMatchup.description,
+      // NEW: START/BENCH recommendation
+      v3_start_recommendation: startRec.recommendation,
+      v3_start_label: startRec.label,
+      v3_start_color: startRec.color,
+      v3_start_confidence: startRec.confidence,
+      v3_start_description: startRec.description
     };
 
   } catch (error) {
@@ -291,11 +593,14 @@ export async function applyV3Scoring(players, currentGameweek) {
 
   let playersWithPredictions = 0;
   let playersWithZeroPredictions = 0;
+  let playersWithArchetype = 0;
   let playersWithMinutesAdjustment = 0;
   let playersWithFormBoost = 0;
   let playersWithFormPenalty = 0;
   let playersWithFavorableFixtures = 0;
   let playersWithDifficultFixtures = 0;
+  let playersReturningFromInjury = 0;
+  let playersCurrentlyInjured = 0;
 
   // Process players in parallel - now lightweight since no external fetches
   const enhancedPlayers = await Promise.all(
@@ -306,6 +611,10 @@ export async function applyV3Scoring(players, currentGameweek) {
         playersWithPredictions++;
       } else {
         playersWithZeroPredictions++;
+      }
+
+      if (v3Results.v3_archetype_source === 'archetype_mapping') {
+        playersWithArchetype++;
       }
 
       if (v3Results.v3_minutes_adjustment && v3Results.v3_minutes_adjustment < 1.0) {
@@ -324,6 +633,12 @@ export async function applyV3Scoring(players, currentGameweek) {
         playersWithDifficultFixtures++;
       }
 
+      if (v3Results.v3_injury_status === 'returning') {
+        playersReturningFromInjury++;
+      } else if (v3Results.v3_injury_status === 'injured') {
+        playersCurrentlyInjured++;
+      }
+
       return {
         ...player,
         ...v3Results,
@@ -334,9 +649,11 @@ export async function applyV3Scoring(players, currentGameweek) {
   );
 
   console.log(`📊 V3 Sleeper Summary: ${playersWithPredictions} with predictions, ${playersWithZeroPredictions} with 0/no predictions`);
+  console.log(`🎯 Archetypes: ${playersWithArchetype} players with style-specific ratios`);
   console.log(`⏱️ Playing time: ${playersWithMinutesAdjustment} players adjusted`);
   console.log(`🔥 Form: ${playersWithFormBoost} hot, ${playersWithFormPenalty} cold`);
   console.log(`📅 Fixtures: ${playersWithFavorableFixtures} favorable, ${playersWithDifficultFixtures} difficult`);
+  console.log(`🏥 Injury: ${playersReturningFromInjury} returning, ${playersCurrentlyInjured} currently out`);
 
   return enhancedPlayers;
 }
