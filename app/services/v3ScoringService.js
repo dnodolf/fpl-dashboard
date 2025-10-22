@@ -89,9 +89,60 @@ function calculateFormMomentum(player, currentGameweek) {
 }
 
 /**
+ * Calculate fixture run quality adjustment
+ * Analyzes upcoming fixtures to see if they're easier or harder than average
+ * FFH predictions already factor in fixtures, so we infer difficulty from predicted points
+ */
+function calculateFixtureRunQuality(player, currentGameweek) {
+  // Need predictions array and season average
+  if (!player.predictions || !Array.isArray(player.predictions) || player.predictions.length < 3) {
+    return { multiplier: 1.0, source: 'insufficient_data' };
+  }
+
+  const seasonAvg = player.season_prediction_avg || 0;
+  if (seasonAvg <= 0) {
+    return { multiplier: 1.0, source: 'no_season_avg' };
+  }
+
+  // Get next 6 gameweeks (medium-term fixture run)
+  const upcomingGWs = player.predictions
+    .filter(p => p.gw >= currentGameweek && p.gw < currentGameweek + 6)
+    .sort((a, b) => a.gw - b.gw);
+
+  if (upcomingGWs.length < 3) {
+    // Need at least 3 upcoming gameweeks for meaningful assessment
+    return { multiplier: 1.0, source: 'insufficient_upcoming_data' };
+  }
+
+  // Calculate average of upcoming gameweeks
+  const upcomingAvg = upcomingGWs.reduce((sum, gw) => sum + (gw.predicted_pts || 0), 0) / upcomingGWs.length;
+
+  // Calculate fixture quality ratio
+  const fixtureQuality = upcomingAvg / seasonAvg;
+
+  // Apply conservative caps: 0.92x to 1.08x (±8% max adjustment)
+  // More conservative than form because fixtures are already in FFH predictions
+  let cappedQuality = Math.max(0.92, Math.min(1.08, fixtureQuality));
+
+  // Determine fixture run rating
+  let rating = 'average';
+  if (cappedQuality > 1.05) rating = 'favorable';
+  else if (cappedQuality < 0.95) rating = 'difficult';
+
+  return {
+    multiplier: cappedQuality,
+    upcomingAvg: Math.round(upcomingAvg * 100) / 100,
+    seasonAvg: Math.round(seasonAvg * 100) / 100,
+    rating: rating,
+    gameweeksAnalyzed: upcomingGWs.length,
+    source: 'calculated'
+  };
+}
+
+/**
  * Calculate V3 Sleeper prediction from FFH FPL predictions
  * Uses position-based conversion ratios to estimate Sleeper league points
- * NOW INCLUDES: Playing time confidence adjustment + Form momentum
+ * NOW INCLUDES: Playing time + Form momentum + Fixture run quality
  */
 export async function calculateV3Prediction(player, currentGameweek) {
   try {
@@ -121,7 +172,15 @@ export async function calculateV3Prediction(player, currentGameweek) {
     v3SeasonAvg *= formMultiplier;
     v3CurrentGW *= formMultiplier;
 
-    // Step 3: Get expected minutes for playing time adjustment
+    // Step 3: Apply fixture run quality adjustment
+    const fixtureData = calculateFixtureRunQuality(player, currentGameweek.number);
+    const fixtureMultiplier = fixtureData.multiplier;
+
+    v3SeasonTotal *= fixtureMultiplier;
+    v3SeasonAvg *= fixtureMultiplier;
+    v3CurrentGW *= fixtureMultiplier;
+
+    // Step 4: Get expected minutes for playing time adjustment
     // Try multiple sources: current GW prediction, season average, or player metadata
     let expectedMinutes = 90; // Default assumption
 
@@ -144,7 +203,7 @@ export async function calculateV3Prediction(player, currentGameweek) {
       }
     }
 
-    // Step 4: Apply playing time adjustment
+    // Step 5: Apply playing time adjustment
     const playingTimeMultiplier = applyPlayingTimeAdjustment(1.0, expectedMinutes);
 
     v3SeasonTotal *= playingTimeMultiplier;
@@ -164,26 +223,30 @@ export async function calculateV3Prediction(player, currentGameweek) {
     }
 
     // Log significant adjustments (only for players with meaningful predictions)
-    const totalMultiplier = formMultiplier * playingTimeMultiplier;
+    const totalMultiplier = formMultiplier * fixtureMultiplier * playingTimeMultiplier;
     const playerName = player.name || player.full_name;
 
     if (formMultiplier !== 1.0 && formData.trend !== 'neutral' && fplSeasonTotal > 50) {
       console.log(`🔥 Form ${formData.trend}: ${playerName} - Recent: ${formData.recentAvg} vs Avg: ${formData.seasonAvg} → ${(formMultiplier * 100).toFixed(0)}%`);
     }
 
+    if (fixtureMultiplier !== 1.0 && fixtureData.rating !== 'average' && fplSeasonTotal > 50) {
+      console.log(`📅 Fixtures ${fixtureData.rating}: ${playerName} - Upcoming: ${fixtureData.upcomingAvg} vs Avg: ${fixtureData.seasonAvg} → ${(fixtureMultiplier * 100).toFixed(0)}%`);
+    }
+
     if (playingTimeMultiplier < 0.95 && fplSeasonTotal > 50) {
       console.log(`⏱️ Minutes adjustment: ${playerName} - ${expectedMinutes}min → ${(playingTimeMultiplier * 100).toFixed(0)}%`);
     }
 
-    if (totalMultiplier < 0.9 && fplSeasonTotal > 50) {
-      console.log(`📉 Combined adjustments: ${playerName} - ${(fplSeasonTotal * ratio).toFixed(1)} → ${v3SeasonTotal.toFixed(1)} pts (${(totalMultiplier * 100).toFixed(0)}%)`);
+    if (totalMultiplier < 0.85 || totalMultiplier > 1.15) {
+      console.log(`📊 Total adjustments: ${playerName} - ${(fplSeasonTotal * ratio).toFixed(1)} → ${v3SeasonTotal.toFixed(1)} pts (${(totalMultiplier * 100).toFixed(0)}%)`);
     }
 
     return {
       v3_season_total: Math.round(v3SeasonTotal * 100) / 100,
       v3_season_avg: Math.round(v3SeasonAvg * 100) / 100,
       v3_current_gw: Math.round(v3CurrentGW * 100) / 100,
-      v3_calculation_source: 'fpl_conversion_with_minutes_and_form',
+      v3_calculation_source: 'fpl_conversion_with_all_adjustments',
       v3_confidence: confidence,
       v3_conversion_ratio: ratio,
       v3_minutes_adjustment: playingTimeMultiplier,
@@ -191,7 +254,10 @@ export async function calculateV3Prediction(player, currentGameweek) {
       v3_form_multiplier: formMultiplier,
       v3_form_trend: formData.trend,
       v3_form_recent_avg: formData.recentAvg,
-      v3_form_season_avg: formData.seasonAvg
+      v3_form_season_avg: formData.seasonAvg,
+      v3_fixture_multiplier: fixtureMultiplier,
+      v3_fixture_rating: fixtureData.rating,
+      v3_fixture_upcoming_avg: fixtureData.upcomingAvg
     };
 
   } catch (error) {
@@ -221,13 +287,15 @@ export async function applyV3Scoring(players, currentGameweek) {
     throw new Error('currentGameweek is required for V3 scoring');
   }
 
-  console.log(`🚀 V3 Sleeper Scoring (FPL Conversion + Minutes + Form): Processing ${players.length} players for GW${currentGameweek.number}`);
+  console.log(`🚀 V3 Sleeper Scoring (Full Pipeline): Processing ${players.length} players for GW${currentGameweek.number}`);
 
   let playersWithPredictions = 0;
   let playersWithZeroPredictions = 0;
   let playersWithMinutesAdjustment = 0;
   let playersWithFormBoost = 0;
   let playersWithFormPenalty = 0;
+  let playersWithFavorableFixtures = 0;
+  let playersWithDifficultFixtures = 0;
 
   // Process players in parallel - now lightweight since no external fetches
   const enhancedPlayers = await Promise.all(
@@ -250,6 +318,12 @@ export async function applyV3Scoring(players, currentGameweek) {
         playersWithFormPenalty++;
       }
 
+      if (v3Results.v3_fixture_rating === 'favorable') {
+        playersWithFavorableFixtures++;
+      } else if (v3Results.v3_fixture_rating === 'difficult') {
+        playersWithDifficultFixtures++;
+      }
+
       return {
         ...player,
         ...v3Results,
@@ -260,8 +334,9 @@ export async function applyV3Scoring(players, currentGameweek) {
   );
 
   console.log(`📊 V3 Sleeper Summary: ${playersWithPredictions} with predictions, ${playersWithZeroPredictions} with 0/no predictions`);
-  console.log(`⏱️ Playing time adjustments: ${playersWithMinutesAdjustment} players`);
-  console.log(`🔥 Form adjustments: ${playersWithFormBoost} boosted (hot), ${playersWithFormPenalty} reduced (cold)`);
+  console.log(`⏱️ Playing time: ${playersWithMinutesAdjustment} players adjusted`);
+  console.log(`🔥 Form: ${playersWithFormBoost} hot, ${playersWithFormPenalty} cold`);
+  console.log(`📅 Fixtures: ${playersWithFavorableFixtures} favorable, ${playersWithDifficultFixtures} difficult`);
 
   return enhancedPlayers;
 }
