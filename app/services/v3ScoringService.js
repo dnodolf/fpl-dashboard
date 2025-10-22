@@ -1,11 +1,13 @@
 // app/services/v3ScoringService.js
-// V3 Sleeper Scoring System with simplified FPL→Sleeper conversion
+// V3 Sleeper Scoring System with archetype-based FPL→Sleeper conversion
+
+import { getPlayerArchetype, getArchetypeStats } from './playerArchetypeService.js';
 
 /**
- * Position-based FPL to Sleeper conversion ratios
- * Based on scoring differences between FPL and custom Sleeper leagues
+ * Fallback position-based FPL to Sleeper conversion ratios
+ * Used when player archetype cannot be determined
  */
-const CONVERSION_RATIOS = {
+const FALLBACK_CONVERSION_RATIOS = {
   GKP: 0.90,  // GKP: Subtract appearance points, add save bonuses
   DEF: 1.15,  // DEF: Add defensive stat rewards (tackles, interceptions, blocks)
   MID: 1.05,  // MID: Add versatility bonus (goals, assists, defensive actions)
@@ -141,8 +143,8 @@ function calculateFixtureRunQuality(player, currentGameweek) {
 
 /**
  * Calculate V3 Sleeper prediction from FFH FPL predictions
- * Uses position-based conversion ratios to estimate Sleeper league points
- * NOW INCLUDES: Playing time + Form momentum + Fixture run quality
+ * Uses archetype-based conversion ratios to estimate Sleeper league points
+ * NOW INCLUDES: Archetype + Playing time + Form momentum + Fixture run quality
  */
 export async function calculateV3Prediction(player, currentGameweek) {
   try {
@@ -152,7 +154,10 @@ export async function calculateV3Prediction(player, currentGameweek) {
     }
 
     const position = player.position || 'MID';
-    const ratio = CONVERSION_RATIOS[position] || 1.0;
+
+    // Get player-specific archetype and ratio
+    const archetypeInfo = getPlayerArchetype(player);
+    const ratio = archetypeInfo.ratio;
 
     // Use FFH FPL predictions as base
     const fplSeasonTotal = player.predicted_points || 0;
@@ -226,6 +231,11 @@ export async function calculateV3Prediction(player, currentGameweek) {
     const totalMultiplier = formMultiplier * fixtureMultiplier * playingTimeMultiplier;
     const playerName = player.name || player.full_name;
 
+    // Log archetype assignment for known players
+    if (archetypeInfo.source === 'archetype_mapping' && fplSeasonTotal > 100) {
+      console.log(`🎯 Archetype: ${playerName} → ${archetypeInfo.archetype} (${ratio}x)`);
+    }
+
     if (formMultiplier !== 1.0 && formData.trend !== 'neutral' && fplSeasonTotal > 50) {
       console.log(`🔥 Form ${formData.trend}: ${playerName} - Recent: ${formData.recentAvg} vs Avg: ${formData.seasonAvg} → ${(formMultiplier * 100).toFixed(0)}%`);
     }
@@ -246,9 +256,11 @@ export async function calculateV3Prediction(player, currentGameweek) {
       v3_season_total: Math.round(v3SeasonTotal * 100) / 100,
       v3_season_avg: Math.round(v3SeasonAvg * 100) / 100,
       v3_current_gw: Math.round(v3CurrentGW * 100) / 100,
-      v3_calculation_source: 'fpl_conversion_with_all_adjustments',
+      v3_calculation_source: 'fpl_conversion_with_archetypes',
       v3_confidence: confidence,
       v3_conversion_ratio: ratio,
+      v3_archetype: archetypeInfo.archetype,
+      v3_archetype_source: archetypeInfo.source,
       v3_minutes_adjustment: playingTimeMultiplier,
       v3_expected_minutes: Math.round(expectedMinutes),
       v3_form_multiplier: formMultiplier,
@@ -287,10 +299,11 @@ export async function applyV3Scoring(players, currentGameweek) {
     throw new Error('currentGameweek is required for V3 scoring');
   }
 
-  console.log(`🚀 V3 Sleeper Scoring (Full Pipeline): Processing ${players.length} players for GW${currentGameweek.number}`);
+  console.log(`🚀 V3 Sleeper Scoring (Full Pipeline with Archetypes): Processing ${players.length} players for GW${currentGameweek.number}`);
 
   let playersWithPredictions = 0;
   let playersWithZeroPredictions = 0;
+  let playersWithArchetype = 0;
   let playersWithMinutesAdjustment = 0;
   let playersWithFormBoost = 0;
   let playersWithFormPenalty = 0;
@@ -306,6 +319,10 @@ export async function applyV3Scoring(players, currentGameweek) {
         playersWithPredictions++;
       } else {
         playersWithZeroPredictions++;
+      }
+
+      if (v3Results.v3_archetype_source === 'archetype_mapping') {
+        playersWithArchetype++;
       }
 
       if (v3Results.v3_minutes_adjustment && v3Results.v3_minutes_adjustment < 1.0) {
@@ -334,6 +351,7 @@ export async function applyV3Scoring(players, currentGameweek) {
   );
 
   console.log(`📊 V3 Sleeper Summary: ${playersWithPredictions} with predictions, ${playersWithZeroPredictions} with 0/no predictions`);
+  console.log(`🎯 Archetypes: ${playersWithArchetype} players with style-specific ratios`);
   console.log(`⏱️ Playing time: ${playersWithMinutesAdjustment} players adjusted`);
   console.log(`🔥 Form: ${playersWithFormBoost} hot, ${playersWithFormPenalty} cold`);
   console.log(`📅 Fixtures: ${playersWithFavorableFixtures} favorable, ${playersWithDifficultFixtures} difficult`);

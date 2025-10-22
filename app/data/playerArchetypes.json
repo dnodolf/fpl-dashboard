@@ -1,0 +1,125 @@
+{
+  "archetypes": {
+    "GKP": {
+      "sweeper_keeper": {
+        "ratio": 0.92,
+        "description": "Active goalkeeper who sweeps and distributes",
+        "sleeper_advantage": "Extra points for effective clearances and distribution"
+      },
+      "traditional_keeper": {
+        "ratio": 0.88,
+        "description": "Shot-stopping focused goalkeeper",
+        "sleeper_advantage": "Standard save bonuses"
+      }
+    },
+    "DEF": {
+      "defensive_specialist": {
+        "ratio": 1.20,
+        "description": "Tackle and interception focused defender",
+        "sleeper_advantage": "High tackles won, interceptions, and blocks"
+      },
+      "ball_playing_defender": {
+        "ratio": 1.12,
+        "description": "Technical defender who builds from back",
+        "sleeper_advantage": "Moderate defensive stats, good passing"
+      },
+      "attacking_fullback": {
+        "ratio": 1.18,
+        "description": "Offensive-minded fullback or wingback",
+        "sleeper_advantage": "Assists, key passes, crosses, and tackles"
+      }
+    },
+    "MID": {
+      "box_to_box": {
+        "ratio": 1.08,
+        "description": "All-around midfielder covering both ends",
+        "sleeper_advantage": "Balanced offensive and defensive contributions"
+      },
+      "attacking_mid": {
+        "ratio": 1.02,
+        "description": "Creative, forward-focused midfielder",
+        "sleeper_advantage": "Goals, assists, key passes, shots on target"
+      },
+      "defensive_mid": {
+        "ratio": 1.10,
+        "description": "Holding midfielder focused on breaking up play",
+        "sleeper_advantage": "High tackles, interceptions, limited dispossessions"
+      }
+    },
+    "FWD": {
+      "target_man": {
+        "ratio": 0.95,
+        "description": "Physical striker who holds up play",
+        "sleeper_advantage": "Aerials won offset by dispossession penalties"
+      },
+      "pressing_forward": {
+        "ratio": 1.00,
+        "description": "High-energy striker who presses defenders",
+        "sleeper_advantage": "Balanced - tackles won offset by dispossessions"
+      },
+      "poacher": {
+        "ratio": 0.94,
+        "description": "Clinical finisher focused on goals",
+        "sleeper_advantage": "Goals and shots on target, minimal other stats"
+      }
+    }
+  },
+  "playerMappings": {
+    "GKP": {
+      "sweeper_keeper": [
+        "Ederson", "Alisson", "David Raya", "Aaron Ramsdale", "Robert Sánchez",
+        "Bernd Leno", "Guglielmo Vicario", "José Sá", "Nick Pope"
+      ],
+      "traditional_keeper": [
+        "Jordan Pickford", "Sam Johnstone", "Alphonse Areola", "Lukasz Fabianski",
+        "Jason Steele", "Thomas Kaminski", "James Trafford"
+      ]
+    },
+    "DEF": {
+      "defensive_specialist": [
+        "William Saliba", "Virgil van Dijk", "Rúben Dias", "Cristian Romero",
+        "Ezri Konsa", "Jarrad Branthwaite", "Max Kilman", "Marc Guéhi",
+        "Sven Botman", "Nathan Aké", "Pau Torres", "Ibrahima Konaté"
+      ],
+      "ball_playing_defender": [
+        "Gabriel", "John Stones", "Lisandro Martínez", "Micky van de Ven",
+        "Josko Gvardiol", "Ben White", "Lewis Dunk", "Joachim Andersen"
+      ],
+      "attacking_fullback": [
+        "Trent Alexander-Arnold", "Pedro Porro", "Kieran Trippier", "Reece James",
+        "Andrew Robertson", "João Cancelo", "Ben Chilwell", "Oleksandr Zinchenko",
+        "Pervis Estupiñán", "Malo Gusto", "Valentino Livramento", "Rayan Aït-Nouri"
+      ]
+    },
+    "MID": {
+      "box_to_box": [
+        "Declan Rice", "Bruno Guimarães", "Alexis Mac Allister", "Yves Bissouma",
+        "Moisés Caicedo", "Kobbie Mainoo", "Rodrigo Bentancur", "Douglas Luiz",
+        "Amadou Onana", "Ryan Gravenberch"
+      ],
+      "attacking_mid": [
+        "Cole Palmer", "Bukayo Saka", "Mohamed Salah", "Son Heung-min",
+        "Phil Foden", "Bruno Fernandes", "James Maddison", "Martin Ødegaard",
+        "Jarrod Bowen", "Luis Díaz", "Anthony Gordon", "Eberechi Eze"
+      ],
+      "defensive_mid": [
+        "Rodri", "Casemiro", "Thomas Partey", "Pape Matar Sarr",
+        "Joao Palhinha", "Wilfred Ndidi", "André", "Adam Wharton"
+      ]
+    },
+    "FWD": {
+      "target_man": [
+        "Erling Haaland", "Dominic Calvert-Lewin", "Alexander Isak",
+        "Ollie Watkins", "Chris Wood", "Evan Ferguson", "Jhon Durán"
+      ],
+      "pressing_forward": [
+        "Darwin Núñez", "Gabriel Jesus", "Kai Havertz", "Nicolas Jackson",
+        "Yoane Wissa", "Matheus Cunha", "Bryan Mbeumo"
+      ],
+      "poacher": [
+        "Ivan Toney", "Raúl Jiménez", "Richarlison", "Callum Wilson",
+        "Danny Welbeck", "Jean-Philippe Mateta"
+      ]
+    }
+  }
+}
