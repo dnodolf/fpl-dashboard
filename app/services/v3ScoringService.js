@@ -13,8 +13,34 @@ const CONVERSION_RATIOS = {
 };
 
 /**
+ * Playing time confidence adjustment factors
+ * Reduces predictions for rotation-risk players
+ */
+function applyPlayingTimeAdjustment(prediction, expectedMinutes) {
+  if (!expectedMinutes || expectedMinutes <= 0) {
+    // No minutes data - apply conservative reduction
+    return prediction * 0.7;
+  }
+
+  if (expectedMinutes < 30) {
+    // Substitute/rotation risk - heavy reduction
+    return prediction * 0.4;
+  } else if (expectedMinutes < 60) {
+    // Partial starter - moderate reduction
+    return prediction * 0.75;
+  } else if (expectedMinutes < 75) {
+    // Regular but sometimes subbed - light reduction
+    return prediction * 0.90;
+  }
+
+  // Regular starter (75+ mins) - no reduction
+  return prediction;
+}
+
+/**
  * Calculate V3 Sleeper prediction from FFH FPL predictions
  * Uses position-based conversion ratios to estimate Sleeper league points
+ * NOW INCLUDES: Playing time confidence adjustment
  */
 export async function calculateV3Prediction(player, currentGameweek) {
   try {
@@ -32,9 +58,39 @@ export async function calculateV3Prediction(player, currentGameweek) {
     const fplCurrentGW = player.current_gw_prediction || 0;
 
     // Convert to Sleeper points using position ratio
-    const v3SeasonTotal = fplSeasonTotal * ratio;
-    const v3SeasonAvg = fplSeasonAvg * ratio;
-    const v3CurrentGW = fplCurrentGW * ratio;
+    let v3SeasonTotal = fplSeasonTotal * ratio;
+    let v3SeasonAvg = fplSeasonAvg * ratio;
+    let v3CurrentGW = fplCurrentGW * ratio;
+
+    // Get expected minutes for playing time adjustment
+    // Try multiple sources: current GW prediction, season average, or player metadata
+    let expectedMinutes = 90; // Default assumption
+
+    if (player.predictions && player.predictions.length > 0) {
+      // Find current gameweek prediction for minutes
+      const currentPred = player.predictions.find(p => p.gw === currentGameweek.number);
+      if (currentPred && currentPred.predicted_mins) {
+        expectedMinutes = currentPred.predicted_mins;
+      } else if (currentPred && currentPred.xmins) {
+        expectedMinutes = currentPred.xmins;
+      } else {
+        // Calculate average expected minutes from all predictions
+        const minsData = player.predictions
+          .map(p => p.predicted_mins || p.xmins || 0)
+          .filter(m => m > 0);
+
+        if (minsData.length > 0) {
+          expectedMinutes = minsData.reduce((a, b) => a + b) / minsData.length;
+        }
+      }
+    }
+
+    // Apply playing time adjustment
+    const playingTimeMultiplier = applyPlayingTimeAdjustment(1.0, expectedMinutes);
+
+    v3SeasonTotal *= playingTimeMultiplier;
+    v3SeasonAvg *= playingTimeMultiplier;
+    v3CurrentGW *= playingTimeMultiplier;
 
     // Determine confidence based on FFH data availability
     let confidence = 'none';
@@ -48,13 +104,20 @@ export async function calculateV3Prediction(player, currentGameweek) {
       }
     }
 
+    // Log significant adjustments (only for players with meaningful predictions)
+    if (playingTimeMultiplier < 0.95 && fplSeasonTotal > 50) {
+      console.log(`⏱️ Minutes adjustment: ${player.name || player.full_name} - ${expectedMinutes}min → ${(playingTimeMultiplier * 100).toFixed(0)}% (${fplSeasonTotal.toFixed(1)} → ${v3SeasonTotal.toFixed(1)} pts)`);
+    }
+
     return {
       v3_season_total: Math.round(v3SeasonTotal * 100) / 100,
       v3_season_avg: Math.round(v3SeasonAvg * 100) / 100,
       v3_current_gw: Math.round(v3CurrentGW * 100) / 100,
-      v3_calculation_source: 'fpl_conversion',
+      v3_calculation_source: 'fpl_conversion_with_minutes',
       v3_confidence: confidence,
-      v3_conversion_ratio: ratio
+      v3_conversion_ratio: ratio,
+      v3_minutes_adjustment: playingTimeMultiplier,
+      v3_expected_minutes: Math.round(expectedMinutes)
     };
 
   } catch (error) {
@@ -84,10 +147,11 @@ export async function applyV3Scoring(players, currentGameweek) {
     throw new Error('currentGameweek is required for V3 scoring');
   }
 
-  console.log(`🚀 V3 Sleeper Scoring (FPL Conversion): Processing ${players.length} players for GW${currentGameweek.number}`);
+  console.log(`🚀 V3 Sleeper Scoring (FPL Conversion + Minutes): Processing ${players.length} players for GW${currentGameweek.number}`);
 
   let playersWithPredictions = 0;
   let playersWithZeroPredictions = 0;
+  let playersWithMinutesAdjustment = 0;
 
   // Process players in parallel - now lightweight since no external fetches
   const enhancedPlayers = await Promise.all(
@@ -100,6 +164,10 @@ export async function applyV3Scoring(players, currentGameweek) {
         playersWithZeroPredictions++;
       }
 
+      if (v3Results.v3_minutes_adjustment && v3Results.v3_minutes_adjustment < 1.0) {
+        playersWithMinutesAdjustment++;
+      }
+
       return {
         ...player,
         ...v3Results,
@@ -110,6 +178,7 @@ export async function applyV3Scoring(players, currentGameweek) {
   );
 
   console.log(`📊 V3 Sleeper Summary: ${playersWithPredictions} with predictions, ${playersWithZeroPredictions} with 0/no predictions`);
+  console.log(`⏱️ Playing time adjustments applied: ${playersWithMinutesAdjustment} players`);
 
   return enhancedPlayers;
 }
