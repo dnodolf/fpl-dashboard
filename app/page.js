@@ -1534,7 +1534,14 @@ export default function FPLDashboard() {
             ffh_predicted: samplePlayer.predicted_points,
             v3_season_total: samplePlayer.v3_season_total,
             v3_current_gw: samplePlayer.v3_current_gw,
-            v3_confidence: samplePlayer.v3_confidence
+            v3_confidence: samplePlayer.v3_confidence,
+            // NEW V3 Enhancement Fields
+            v3_minutes_adjustment: samplePlayer.v3_minutes_adjustment,
+            v3_expected_minutes: samplePlayer.v3_expected_minutes,
+            v3_form_multiplier: samplePlayer.v3_form_multiplier,
+            v3_form_trend: samplePlayer.v3_form_trend,
+            v3_fixture_multiplier: samplePlayer.v3_fixture_multiplier,
+            v3_fixture_rating: samplePlayer.v3_fixture_rating
           });
         }
 
