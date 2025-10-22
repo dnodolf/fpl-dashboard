@@ -361,7 +361,59 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 
 // ----------------- ACTIONABLE RECOMMENDATIONS COMPONENT -----------------
 const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'ffh' }) => {
-  if (!recommendations || recommendations.length === 0) {
+  // Get explicit bench and start recommendations by comparing current vs optimal
+  const getExplicitChanges = () => {
+    if (!current?.players || !optimal?.players) {
+      return { toBench: [], toStart: [], netGain: 0 };
+    }
+
+    const currentIds = new Set(current.players.map(p => p.id || p.player_id || p.sleeper_id));
+    const optimalIds = new Set(optimal.players.map(p => p.id || p.player_id || p.sleeper_id));
+
+    // Players to BENCH: in current but NOT in optimal
+    const toBench = current.players.filter(p => {
+      const id = p.id || p.player_id || p.sleeper_id;
+      return !optimalIds.has(id);
+    }).map(p => {
+      const pts = scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0);
+      return {
+        name: p.full_name || p.web_name || p.name,
+        position: p.position,
+        team: p.team_abbr || p.team,
+        points: pts
+      };
+    }).sort((a, b) => a.points - b.points); // Sort by points (lowest first)
+
+    // Players to START: in optimal but NOT in current
+    const toStart = optimal.players.filter(p => {
+      const id = p.id || p.player_id || p.sleeper_id;
+      return !currentIds.has(id);
+    }).map(p => {
+      const pts = scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0);
+      return {
+        name: p.full_name || p.web_name || p.name,
+        position: p.position,
+        team: p.team_abbr || p.team,
+        points: pts
+      };
+    }).sort((a, b) => b.points - a.points); // Sort by points (highest first)
+
+    // Calculate net gain
+    const currentPts = current.players.reduce((sum, p) => {
+      return sum + (scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0));
+    }, 0);
+    const optimalPts = optimal.players.reduce((sum, p) => {
+      return sum + (scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0));
+    }, 0);
+    const netGain = optimalPts - currentPts;
+
+    return { toBench, toStart, netGain };
+  };
+
+  const { toBench, toStart, netGain } = getExplicitChanges();
+
+  // Perfect lineup - no changes needed
+  if (toBench.length === 0 && toStart.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
         'bg-gray-800 border-gray-700'
@@ -377,69 +429,69 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
     );
   }
 
-  // Use API recommendations directly 
-  const getActionableChanges = () => {
-    const changes = [];
-    
-    // Process API recommendations
-    recommendations.forEach(rec => {
-      if (rec.type === 'player_swap' && rec.message && rec.impact) {
-        changes.push({
-          type: 'player',
-          action: rec.message,
-          reason: `+${rec.impact.toFixed(1)} points`,
-          priority: rec.impact > 1 ? 'high' : 'medium'
-        });
-      } else if (rec.type === 'formation_change' && rec.message) {
-        changes.push({
-          type: 'formation', 
-          action: rec.message,
-          reason: 'Formation adjustment needed',
-          priority: 'high'
-        });
-      }
-    });
-    
-    return changes;
-  };
-
-  const actionableChanges = getActionableChanges();
-
   return (
     <div className={`rounded-lg border ${'bg-gray-800 border-gray-700'}`}>
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-600">
         <h3 className={`text-lg font-medium flex items-center gap-2 text-white`}>
-          🎯 Quick Actions
+          🎯 Lineup Changes
         </h3>
         <p className={`text-sm mt-1 text-gray-400`}>
-          Make these changes to optimize your lineup
+          Make these changes for <span className="font-bold text-green-400">+{netGain.toFixed(1)} pts</span>
         </p>
       </div>
-      <div className="p-4 space-y-3">
-        {actionableChanges.map((change, index) => (
-          <div key={index} className={`p-3 rounded-lg border-l-4 ${
-            change.priority === 'high' 
-              ? 'bg-red-900/20 border-red-600'
-              : 'bg-blue-900/20 border-blue-600'
-          }`}>
-            <div className={`text-sm font-medium text-white`}>
-              {change.action}
+
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* BENCH Column */}
+        {toBench.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h4 className="text-sm font-semibold text-red-400 uppercase">🔴 Bench ({toBench.length})</h4>
             </div>
-            <div className={`text-xs mt-1 ${
-              change.priority === 'high'
-                ? 'text-red-400'
-                : 'text-blue-400'
-            }`}>
-              {change.reason}
+            <div className="space-y-2">
+              {toBench.map((player, idx) => (
+                <div key={idx} className="p-2 rounded-lg bg-red-900/20 border border-red-600/30">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-sm font-medium text-white">{player.name}</div>
+                      <div className="text-xs text-gray-400">
+                        {player.position} • {player.team}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-red-400">{player.points.toFixed(1)}</div>
+                      <div className="text-xs text-gray-500">pts</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-        
-        {actionableChanges.length === 0 && (
-          <div className="text-center py-4">
-            <p className={`text-sm text-gray-400`}>
-              No specific recommendations available
-            </p>
+        )}
+
+        {/* START Column */}
+        {toStart.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h4 className="text-sm font-semibold text-green-400 uppercase">🟢 Start ({toStart.length})</h4>
+            </div>
+            <div className="space-y-2">
+              {toStart.map((player, idx) => (
+                <div key={idx} className="p-2 rounded-lg bg-green-900/20 border border-green-600/30">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-sm font-medium text-white">{player.name}</div>
+                      <div className="text-xs text-gray-400">
+                        {player.position} • {player.team}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-green-400">{player.points.toFixed(1)}</div>
+                      <div className="text-xs text-gray-500">pts</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
