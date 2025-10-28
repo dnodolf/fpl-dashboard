@@ -169,14 +169,23 @@ function extractCurrentGameweekMatchup(player, currentGameweek) {
     };
   }
 
-  // Extract opponent data (FFH provides opponent, opponent_full, fixture_difficulty)
-  const opponent = currentPred.opponent || currentPred.opp || 'TBD';
-  const opponentFull = currentPred.opponent_full || opponent;
-  const difficulty = currentPred.fixture_difficulty || currentPred.fdr || 3;
+  // Extract opponent data from FFH nested array format: opp: [["AVL", "Aston Villa (H)", 3]]
+  let opponent = 'TBD';
+  let opponentFull = 'TBD';
+  let difficulty = 3;
 
-  // Determine home/away from opponent string (typically has (H) or (A) suffix)
-  const isHome = !opponent.includes('(A)');
-  const cleanOpponent = opponent.replace(/\(H\)|\(A\)/g, '').trim();
+  if (currentPred.opp && Array.isArray(currentPred.opp) && currentPred.opp.length > 0) {
+    const oppData = currentPred.opp[0];
+    if (Array.isArray(oppData) && oppData.length >= 3) {
+      opponent = oppData[0] || 'TBD';
+      opponentFull = oppData[1] || 'TBD';
+      difficulty = oppData[2] || 3;
+    }
+  }
+
+  // Determine home/away from opponentFull string (has (H) or (A) suffix)
+  const isHome = opponentFull.includes('(H)');
+  const cleanOpponent = opponent.toUpperCase();
 
   return {
     hasMatchup: true,
@@ -185,7 +194,7 @@ function extractCurrentGameweekMatchup(player, currentGameweek) {
     difficulty: difficulty,
     isHome: isHome,
     predicted_points: currentPred.predicted_pts || 0,
-    predicted_minutes: currentPred.predicted_mins || currentPred.xmins || 0,
+    predicted_minutes: currentPred.xmins || currentPred.predicted_mins || 0,
     source: 'ffh_predictions'
   };
 }
