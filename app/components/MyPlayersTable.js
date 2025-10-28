@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
 
-const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh' }) => {
+const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [] }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -391,18 +391,20 @@ const getSleeperPositionBadgeColor = (position) => {
                 >
                   Predicted Points {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_points')}
                 </th>
-                <th 
+                <th
                   onClick={() => handleSort('predicted_minutes')}
                   className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Predicted Minutes {renderSortIcon('predicted_minutes')}
                 </th>
-                <th 
-                  onClick={() => handleSort('ppg_value')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
-                >
-                  PPG {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
-                </th>
+                {!hideColumns.includes('ppg') && (
+                  <th
+                    onClick={() => handleSort('ppg_value')}
+                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  >
+                    PPG {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
+                  </th>
+                )}
                 <th
                   onClick={() => handleSort('fixture_difficulty_value')}
                   className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
@@ -484,11 +486,13 @@ const getSleeperPositionBadgeColor = (position) => {
                     </td>
 
                     {/* PPG */}
-                    <td className="px-4 py-3">
-                      <span className="text-sm font-medium text-blue-400">
-                        {formatPoints(player.ppg_value)}
-                      </span>
-                    </td>
+                    {!hideColumns.includes('ppg') && (
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-medium text-blue-400">
+                          {formatPoints(player.ppg_value)}
+                        </span>
+                      </td>
+                    )}
 
                     {/* Fixture Difficulty - ENHANCED WITH PROPER COLOR CODING */}
                     <td className="px-4 py-3">
