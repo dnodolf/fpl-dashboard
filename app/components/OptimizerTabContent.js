@@ -837,6 +837,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
           currentGameweek={currentGameweek}
           optimalPlayerIds={optimalPlayerIdsForDisplay}
           scoringMode={scoringMode}
+          hideColumns={['ppg']}
         />
       </div>
 
