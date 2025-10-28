@@ -263,6 +263,13 @@ function calculateSingleGameweekMatchup(player, currentGameweek) {
       label: '❓ Unknown',
       color: 'text-gray-500',
       description: 'No matchup data available',
+      opponent: 'TBD',
+      opponentFull: 'TBD',
+      difficulty: 3,
+      adjustedDifficulty: 3,
+      isHome: true,
+      predicted_points: 0,
+      predicted_minutes: 0,
       source: 'no_data'
     };
   }
@@ -489,15 +496,48 @@ export async function calculateV3Prediction(player, currentGameweek) {
       }
     }
 
+    // Get player name for logging (define early to avoid ReferenceError)
+    const playerName = player.name || player.full_name || 'Unknown';
+
     // Step 7: Extract THIS WEEK's matchup data for start/sit decisions
-    const thisWeekMatchup = calculateSingleGameweekMatchup(player, currentGameweek.number);
+    let thisWeekMatchup;
+    try {
+      thisWeekMatchup = calculateSingleGameweekMatchup(player, currentGameweek.number);
+    } catch (matchupError) {
+      console.error(`⚠️ Matchup calculation failed for ${playerName}:`, matchupError.message);
+      thisWeekMatchup = {
+        quality: 'unknown',
+        label: '❓ Unknown',
+        color: 'text-gray-500',
+        description: 'Matchup calculation error',
+        opponent: 'TBD',
+        opponentFull: 'TBD',
+        difficulty: 3,
+        adjustedDifficulty: 3,
+        isHome: true,
+        predicted_points: 0,
+        predicted_minutes: 0,
+        source: 'error'
+      };
+    }
 
     // Step 8: Calculate START/BENCH recommendation based on V3 current GW prediction
-    const startRec = calculateStartRecommendation(v3CurrentGW, position);
+    let startRec;
+    try {
+      startRec = calculateStartRecommendation(v3CurrentGW, position);
+    } catch (startRecError) {
+      console.error(`⚠️ Start recommendation failed for ${playerName}:`, startRecError.message);
+      startRec = {
+        recommendation: 'UNKNOWN',
+        label: '❓ N/A',
+        color: 'text-gray-500',
+        confidence: 'none',
+        description: 'Recommendation calculation error'
+      };
+    }
 
     // Log significant adjustments (only for players with meaningful predictions)
     const totalMultiplier = formMultiplier * fixtureMultiplier * injuryMultiplier * playingTimeMultiplier;
-    const playerName = player.name || player.full_name;
 
     // Log archetype assignment for known players
     if (archetypeInfo.source === 'archetype_mapping' && fplSeasonTotal > 100) {
@@ -546,20 +586,20 @@ export async function calculateV3Prediction(player, currentGameweek) {
       v3_injury_status: injuryData.status,
       v3_injury_weeks_back: injuryData.weeks_back,
       // NEW: THIS WEEK matchup data for start/sit decisions
-      v3_this_week_opponent: thisWeekMatchup.opponent,
-      v3_this_week_opponent_full: thisWeekMatchup.opponentFull,
-      v3_this_week_difficulty: thisWeekMatchup.difficulty,
-      v3_this_week_is_home: thisWeekMatchup.isHome,
-      v3_this_week_matchup_quality: thisWeekMatchup.quality,
-      v3_this_week_matchup_label: thisWeekMatchup.label,
-      v3_this_week_matchup_color: thisWeekMatchup.color,
-      v3_this_week_matchup_description: thisWeekMatchup.description,
+      v3_this_week_opponent: thisWeekMatchup?.opponent || 'TBD',
+      v3_this_week_opponent_full: thisWeekMatchup?.opponentFull || 'TBD',
+      v3_this_week_difficulty: thisWeekMatchup?.difficulty || 3,
+      v3_this_week_is_home: thisWeekMatchup?.isHome !== undefined ? thisWeekMatchup.isHome : true,
+      v3_this_week_matchup_quality: thisWeekMatchup?.quality || 'unknown',
+      v3_this_week_matchup_label: thisWeekMatchup?.label || '❓ Unknown',
+      v3_this_week_matchup_color: thisWeekMatchup?.color || 'text-gray-500',
+      v3_this_week_matchup_description: thisWeekMatchup?.description || 'No matchup data',
       // NEW: START/BENCH recommendation
-      v3_start_recommendation: startRec.recommendation,
-      v3_start_label: startRec.label,
-      v3_start_color: startRec.color,
-      v3_start_confidence: startRec.confidence,
-      v3_start_description: startRec.description
+      v3_start_recommendation: startRec?.recommendation || 'UNKNOWN',
+      v3_start_label: startRec?.label || '❓ N/A',
+      v3_start_color: startRec?.color || 'text-gray-500',
+      v3_start_confidence: startRec?.confidence || 'none',
+      v3_start_description: startRec?.description || 'No recommendation'
     };
 
   } catch (error) {
