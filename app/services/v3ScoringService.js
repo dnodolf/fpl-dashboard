@@ -204,24 +204,25 @@ function extractCurrentGameweekMatchup(player, currentGameweek) {
  * Provides clear guidance for weekly lineup decisions
  */
 function calculateStartRecommendation(predictedPoints, position) {
-  // Position-adjusted thresholds (some positions score more on average)
-  let mustStartThreshold = 10;
-  let safeStartThreshold = 6;
-  let flexThreshold = 4;
+  // Position-adjusted thresholds for V3 Sleeper scoring (lower than FPL)
+  // Based on actual V3 prediction ranges: 2-6 pts typical
+  let mustStartThreshold = 6;
+  let safeStartThreshold = 4;
+  let flexThreshold = 3;
 
   // Adjust thresholds by position (GKP/DEF score less on average)
   if (position === 'GKP') {
-    mustStartThreshold = 8;
-    safeStartThreshold = 5;
-    flexThreshold = 3;
+    mustStartThreshold = 4.5;
+    safeStartThreshold = 3;
+    flexThreshold = 2;
   } else if (position === 'DEF') {
-    mustStartThreshold = 9;
-    safeStartThreshold = 5.5;
-    flexThreshold = 3.5;
+    mustStartThreshold = 5;
+    safeStartThreshold = 3.5;
+    flexThreshold = 2.5;
   } else if (position === 'FWD') {
-    mustStartThreshold = 11;
-    safeStartThreshold = 6.5;
-    flexThreshold = 4;
+    mustStartThreshold = 6.5;
+    safeStartThreshold = 4.5;
+    flexThreshold = 3.5;
   }
 
   if (predictedPoints >= mustStartThreshold) {
