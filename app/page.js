@@ -6,6 +6,7 @@ import v3ScoringService from './services/v3ScoringService';
 import { OptimizerTabContent } from './components/OptimizerTabContent';
 import TransferTabContent from './components/TransferTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
+import TradeAnalyzerTabContent from './components/TradeAnalyzerTabContent';
 
 // ----------------- EPL TEAMS FILTER -----------------
 const EPL_TEAMS = [
@@ -1446,7 +1447,8 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             { id: 'matching', label: 'Matching' },
             { id: 'optimizer', label: 'Optimizer' },
             { id: 'transfers', label: 'Transfers' },
-            { id: 'comparison', label: 'Comparison' }
+            { id: 'comparison', label: 'Comparison' },
+            { id: 'trade-analyzer', label: 'Trade Analyzer' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -2245,6 +2247,15 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
           {/* Compare 2 players side by side */}
           {activeTab === 'comparison' && (
             <ComparisonTabContent
+              players={processedPlayers}
+              currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
+            />
+          )}
+
+          {/* Trade Analyzer */}
+          {activeTab === 'trade-analyzer' && (
+            <TradeAnalyzerTabContent
               players={processedPlayers}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
