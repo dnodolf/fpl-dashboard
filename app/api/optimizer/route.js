@@ -5,13 +5,10 @@ import { NextResponse } from 'next/server';
 import { FormationOptimizerService } from '../../services/formationOptimizerService.js';
 import { normalizePosition } from '../../../utils/positionUtils.js';
 import v3ScoringService from '../../services/v3ScoringService.js';
+import { transformPlayerForClient } from '../../utils/playerTransformUtils.js';
+import { cacheService } from '../../services/cacheService.js';
 
 const optimizerService = new FormationOptimizerService();
-
-// Cache for optimizer results
-let cachedResults = null;
-let cacheTimestamp = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Fetch integrated player data
@@ -49,15 +46,15 @@ export async function POST(request) {
     const scoringMode = requestData.scoringMode || 'ffh';
 
     // Check cache
-    const cacheKey = `${userId}_${analysisType}_${scoringMode}`;
-    if (!forceRefresh && cachedResults && cacheTimestamp) {
-      const isValid = (Date.now() - cacheTimestamp) < CACHE_DURATION;
-      if (isValid && cachedResults.userId === userId && cachedResults.scoringMode === scoringMode) {
+    const cacheKey = `optimizer_${userId}_${analysisType}_${scoringMode}`;
+    if (!forceRefresh) {
+      const cached = cacheService.get(cacheKey);
+      if (cached) {
         console.log('📋 Returning cached optimizer results');
         return NextResponse.json({
-          ...cachedResults,
+          ...cached,
           cached: true,
-          cache_age: Math.round((Date.now() - cacheTimestamp) / 1000 / 60)
+          cache_age: Math.round(cached._age / 1000 / 60)
         });
       }
     }
@@ -130,26 +127,7 @@ export async function POST(request) {
       formation: formation.formation,
       points: formation.totalPoints,
       totalPoints: formation.totalPoints,
-      players: formation.players?.map(p => ({
-        id: p.sleeper_id || p.id || p.player_id,
-        player_id: p.sleeper_id || p.id || p.player_id,
-        sleeper_id: p.sleeper_id || p.id || p.player_id,
-        name: p.name || p.web_name || 'Unknown Player',
-        web_name: p.web_name || p.name || 'Unknown Player',
-        full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
-        position: normalizePosition(p), // Use unified position logic
-        team: p.team || p.team_abbr || 'Unknown',
-        team_abbr: p.team_abbr || p.team || 'Unknown',
-        points: optimizerService.getPlayerPoints(p),
-        predicted_pts: optimizerService.getPlayerPoints(p),
-        // Preserve v3 scoring fields if they exist
-        v3_current_gw: p.v3_current_gw || null,
-        v3_season_avg: p.v3_season_avg || null,
-        v3_season_total: p.v3_season_total || null,
-        current_gw_prediction: p.current_gw_prediction || null,
-        sleeper_season_avg: p.sleeper_season_avg || null,
-        minutes: optimizerService.getPlayerMinutes(p) || 90
-      })) || [],
+      players: formation.players?.map(p => transformPlayerForClient(p, optimizerService)) || [],
       valid: formation.valid
     })) || [];
 
@@ -159,53 +137,13 @@ export async function POST(request) {
       stats,
       current: {
         formation: analysis.current?.formation || 'Unknown',
-        players: analysis.current?.players?.map(p => {
-          return {
-            id: p.sleeper_id || p.id || p.player_id,
-            player_id: p.sleeper_id || p.id || p.player_id,
-            sleeper_id: p.sleeper_id || p.id || p.player_id,
-            name: p.name || p.web_name || 'Unknown Player',
-            web_name: p.web_name || p.name || 'Unknown Player',
-            full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
-            position: normalizePosition(p), // Use unified position logic
-            team: p.team || p.team_abbr || 'Unknown',
-            team_abbr: p.team_abbr || p.team || 'Unknown',
-            points: optimizerService.getPlayerPoints(p),
-            current_gw_prediction: optimizerService.getPlayerPoints(p),
-            predicted_pts: optimizerService.getPlayerPoints(p),
-            // Preserve v3 scoring fields if they exist
-            v3_current_gw: p.v3_current_gw || null,
-            v3_season_avg: p.v3_season_avg || null,
-            v3_season_total: p.v3_season_total || null,
-            sleeper_season_avg: p.sleeper_season_avg || null,
-            minutes: optimizerService.getPlayerMinutes(p)
-          };
-        }) || [],
+        players: analysis.current?.players?.map(p => transformPlayerForClient(p, optimizerService)) || [],
         points: analysis.current?.points || 0,
         totalPoints: analysis.current?.points || 0
       },
       optimal: analysis.optimal ? {
         formation: analysis.optimal.formation,
-        players: analysis.optimal.players?.map(p => ({
-          id: p.sleeper_id || p.id || p.player_id,
-          player_id: p.sleeper_id || p.id || p.player_id,
-          sleeper_id: p.sleeper_id || p.id || p.player_id,
-          name: p.name || p.web_name || 'Unknown Player',
-          web_name: p.web_name || p.name || 'Unknown Player',
-          full_name: p.full_name || p.name || p.web_name || 'Unknown Player',
-          position: normalizePosition(p), // Use unified position logic
-          team: p.team || p.team_abbr || 'Unknown',
-          team_abbr: p.team_abbr || p.team || 'Unknown',
-          points: optimizerService.getPlayerPoints(p),
-          predicted_pts: optimizerService.getPlayerPoints(p),
-          // Preserve v3 scoring fields if they exist
-          v3_current_gw: p.v3_current_gw || null,
-          v3_season_avg: p.v3_season_avg || null,
-          v3_season_total: p.v3_season_total || null,
-          current_gw_prediction: p.current_gw_prediction || null,
-          sleeper_season_avg: p.sleeper_season_avg || null,
-          minutes: optimizerService.getPlayerMinutes(p)
-        })) || [],
+        players: analysis.optimal.players?.map(p => transformPlayerForClient(p, optimizerService)) || [],
         points: analysis.optimal.totalPoints,
         totalPoints: analysis.optimal.totalPoints,
         valid: analysis.optimal.valid
@@ -231,8 +169,7 @@ export async function POST(request) {
     };
 
     // Cache successful results
-    cachedResults = result;
-    cacheTimestamp = Date.now();
+    cacheService.set(cacheKey, result, 5 * 60 * 1000); // 5 minutes
 
     return NextResponse.json(result);
 

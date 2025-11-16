@@ -6,11 +6,9 @@ import { normalizePosition } from '../../../utils/positionUtils.js';
 import sleeperPredictionServiceV3 from '../../services/sleeperPredictionServiceV3';
 import ffhStatsService from '../../services/ffhStatsService';
 import v3ScoringService from '../../services/v3ScoringService.js';
-
-// Cache for API responses
-let cachedData = null;
-let cacheTimestamp = null;
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+import { extractAllGameweekPredictions, extractAllGameweekMinutes } from '../../utils/ffhDataUtils.js';
+import { fetchSleeperScoringSettings } from '../../services/scoringConversionService.js';
+import { cacheService } from '../../services/cacheService.js';
 
 async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) {
   try {
@@ -65,23 +63,6 @@ function findFFHStatsMatch(sleeperPlayer, ffhStatsPlayers) {
   });
 }
 
-// Helper function for Sleeper scoring (if you don't already have this)
-async function fetchSleeperScoringSettings() {
-  try {
-    const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
-    const response = await fetch(`https://api.sleeper.app/v1/league/${leagueId}`);
-    const leagueData = await response.json();
-    return leagueData.scoring_settings || {};
-  } catch (error) {
-    console.error('Error fetching Sleeper scoring:', error);
-    return {
-      'pos_gk_sv': 1, 'pos_d_tkw': 1, 'pos_d_int': 0.5, 
-      'pos_m_kp': 1, 'pos_m_tkw': 0.5, 'pos_m_int': 1, 
-      'pos_f_sot': 1, 'pos_f_kp': 0.5
-    };
-  }
-}
-
 /**
  * Fail-fast import wrapper - no fallbacks, system errors if services unavailable
  */
@@ -121,109 +102,6 @@ async function importServices() {
     scoring: scoringService,
     available: true
   };
-}
-
-/**
- * Enhanced FFH prediction extraction - handles both results and predictions arrays
- * DURABLE FIX: Works for all gameweeks by checking both arrays intelligently
- */
-function extractAllGameweekPredictions(ffhPlayer) {
-  const allPredictions = new Map(); // Use Map to avoid duplicates and maintain order
-  
-  // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
-  if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
-    ffhPlayer.predictions.forEach(pred => {
-      if (pred.gw && pred.predicted_pts) {
-        const pts = typeof pred.predicted_pts === 'object' ?
-                    pred.predicted_pts.predicted_pts : pred.predicted_pts;
-        const mins = pred.predicted_mins || pred.xmins || 0;
-        
-        if (typeof pts === 'number' && pts >= 0) {
-          allPredictions.set(pred.gw, {
-            gw: pred.gw,
-            predicted_pts: pts,
-            predicted_mins: mins,
-            source: 'predictions'
-          });
-        }
-      }
-    });
-  }
-  
-  // Step 2: Process the 'results' array (current/completed gameweeks)
-  // Results take PRIORITY over predictions for the same gameweek
-  if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
-    ffhPlayer.results
-      .filter(result => result.season === 2025) // Only current season
-      .forEach(result => {
-        if (result.gw && result.predicted_pts) {
-          const pts = typeof result.predicted_pts === 'object' ?
-                      result.predicted_pts.predicted_pts : result.predicted_pts;
-          const mins = result.predicted_mins || result.xmins || 0;
-          
-          if (typeof pts === 'number' && pts >= 0) {
-            // OVERRIDE prediction with result for same gameweek
-            allPredictions.set(result.gw, {
-              gw: result.gw,
-              predicted_pts: pts,
-              predicted_mins: mins,
-              source: 'results'
-            });
-          }
-        }
-      });
-  }
-  
-  // Convert to arrays
-  const allPredictionsArray = Array.from(allPredictions.values())
-    .sort((a, b) => a.gw - b.gw);
-  
-  const upcomingPredictions = allPredictionsArray.filter(p => p.gw >= 2); // Adjust as needed
-  const currentPredictions = allPredictionsArray.filter(p => p.gw < 10); // Current season predictions
-  
-  return {
-    all: allPredictionsArray,
-    upcoming: upcomingPredictions,
-    current: currentPredictions
-  };
-}
-
-/**
- * Extract gameweek minutes predictions from FFH player data
- * Extracts xmins from predictions array and mins from results array
- */
-function extractAllGameweekMinutes(ffhPlayer) {
-  const allMinutes = new Map(); // Use Map to avoid duplicates and maintain order
-  
-  // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
-  if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
-    ffhPlayer.predictions.forEach(pred => {
-      if (pred.gw && pred.xmins) {
-        allMinutes.set(pred.gw, pred.xmins);
-      }
-    });
-  }
-  
-  // Step 2: Process the 'results' array (past gameweeks)
-  // Results take PRIORITY over predictions for the same gameweek
-  if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
-    ffhPlayer.results
-      .filter(result => result.season === 2025) // Only current season
-      .forEach(result => {
-        if (result.gw && result.mins !== undefined) {
-          // Override prediction with actual result for same gameweek
-          allMinutes.set(result.gw, result.mins);
-        }
-      });
-  }
-  
-  // Convert Map to object with string keys (for JSON compatibility)
-  const minutesObject = {};
-  for (const [gw, mins] of allMinutes) {
-    minutesObject[gw.toString()] = mins;
-  }
-  
-  return minutesObject;
 }
 
 /**
@@ -512,14 +390,14 @@ export async function POST(request) {
     const forceRefresh = requestData.forceRefresh || false;
 
     // Check cache unless force refresh
-    if (!forceRefresh && cachedData && cacheTimestamp) {
-      const isValid = (Date.now() - cacheTimestamp) < CACHE_DURATION;
-      if (isValid) {
+    if (!forceRefresh) {
+      const cached = cacheService.get('integrated-players');
+      if (cached) {
         console.log('📋 Returning cached data');
         return NextResponse.json({
-          ...cachedData,
+          ...cached,
           cached: true,
-          cache_age: Math.round((Date.now() - cacheTimestamp) / 1000 / 60)
+          cache_age: Math.round(cached._age / 1000 / 60)
         });
       }
     }
@@ -590,8 +468,7 @@ const responseData = {
 };
 
 // Cache successful results
-cachedData = responseData;
-cacheTimestamp = Date.now();
+cacheService.set('integrated-players', responseData, 15 * 60 * 1000); // 15 minutes
 console.log('💾 Data cached successfully');
 
 return NextResponse.json(responseData);

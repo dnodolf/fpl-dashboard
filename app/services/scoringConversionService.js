@@ -2,6 +2,7 @@
 // FIXED - Proper data enhancement and merging
 
 import { normalizePosition } from '../../utils/positionUtils.js';
+import { extractAllGameweekPredictions } from '../utils/ffhDataUtils.js';
 
 /**
  * FPL Scoring System (what FFH predictions are based on)
@@ -47,58 +48,6 @@ let cachedSleeperScoring = null;
 let cachedConversionRatios = null;
 
 /**
- * Enhanced FFH prediction extraction - handles both results and predictions arrays
- */
-function extractAllGameweekPredictions(ffhPlayer) {
-  const allPredictions = new Map();
-  
-  // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
-  if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
-    ffhPlayer.predictions.forEach(pred => {
-      if (pred.gw && pred.predicted_pts) {
-        const pts = typeof pred.predicted_pts === 'object' ?
-                    pred.predicted_pts.predicted_pts : pred.predicted_pts;
-        const mins = pred.predicted_mins || pred.xmins || 0;
-        
-        if (typeof pts === 'number' && pts >= 0) {
-          allPredictions.set(pred.gw, {
-            gw: pred.gw,
-            predicted_pts: pts,
-            predicted_mins: mins,
-            source: 'predictions'
-          });
-        }
-      }
-    });
-  }
-  
-  // Step 2: Process the 'results' array (current/completed gameweeks)
-  if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
-    ffhPlayer.results
-      .filter(result => result.season === 2025) // Only current season
-      .forEach(result => {
-        if (result.gw && result.predicted_pts) {
-          const pts = typeof result.predicted_pts === 'object' ?
-                      result.predicted_pts.predicted_pts : result.predicted_pts;
-          const mins = result.predicted_mins || result.xmins || 0;
-          
-          if (typeof pts === 'number' && pts >= 0) {
-            // OVERRIDE prediction with result for same gameweek
-            allPredictions.set(result.gw, {
-              gw: result.gw,
-              predicted_pts: pts,
-              predicted_mins: mins,
-              source: 'results'
-            });
-          }
-        }
-      });
-  }
-  
-  return Array.from(allPredictions.values()).sort((a, b) => a.gw - b.gw);
-}
-
-/**
  * FIXED: Main conversion function for enhanced player records
  */
 export async function enhancePlayerWithScoringConversion(player, ffhData, currentGameweek) {
@@ -125,7 +74,8 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const ffhTeam = ffhData.team?.code_name || ffhData.team_short_name || ffhData.club || '';
     
     // Extract FFH predictions using enhanced logic
-    const allGameweekPredictions = extractAllGameweekPredictions(ffhData);
+    const gameweekPredictions = extractAllGameweekPredictions(ffhData);
+    const allGameweekPredictions = gameweekPredictions.all || [];
 
     // Calculate season totals - PURE FFH DATA (no multipliers)
     const ffhSeasonPrediction = ffhData.season_prediction ||
