@@ -316,13 +316,14 @@ async function fetchSleeperData() {
  */
 async function fetchFFHData() {
   console.log('📡 Pipeline: Fetching FFH predictions & stats');
-  
+
   const ffhBaseUrl = 'https://data.fantasyfootballhub.co.uk/api';
-  const authStatic = process.env.FFH_AUTH_STATIC || 'r5C(e3.JeS^:_7LF';
+  const authStatic = process.env.FFH_AUTH_STATIC;
   const bearerToken = process.env.FFH_BEARER_TOKEN;
-  
-  if (!bearerToken) {
-    throw new Error('FFH_BEARER_TOKEN environment variable is required');
+
+  if (!authStatic || !bearerToken) {
+    console.warn('⚠️ FFH credentials not configured. Falling back to Sleeper-only mode.');
+    throw new Error('FFH credentials not available');
   }
   
   const url = `${ffhBaseUrl}/player-predictions/?orderBy=points&focus=range&positions=1,2,3,4&min_cost=40&max_cost=145&search_term=&gw_start=1&gw_end=47&first=0&last=1000&use_predicted_fixtures=false&selected_players=`;

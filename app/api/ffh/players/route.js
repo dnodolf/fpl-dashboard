@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 class FFHApiService {
   constructor() {
     this.baseUrl = 'https://data.fantasyfootballhub.co.uk/api';
-    this.authStatic = process.env.FFH_AUTH_STATIC || 'r5C(e3.JeS^:_7LF';
+    this.authStatic = process.env.FFH_AUTH_STATIC;
     this.bearerToken = process.env.FFH_BEARER_TOKEN;
   }
 
@@ -218,18 +218,30 @@ export async function POST(request) {
 // Health check endpoint
 export async function HEAD() {
   try {
+    const authStatic = process.env.FFH_AUTH_STATIC;
+    const bearerToken = process.env.FFH_BEARER_TOKEN;
+
+    if (!authStatic || !bearerToken) {
+      return new NextResponse(null, {
+        status: 503,
+        headers: {
+          'X-Health-Status': 'FFH credentials not configured'
+        }
+      });
+    }
+
     const testUrl = `https://data.fantasyfootballhub.co.uk/api/player-predictions/?first=0&last=1`;
     const response = await fetch(testUrl, {
       method: 'GET',
       headers: {
         'Accept-Language': 'en-US',
-        'Authorization': process.env.FFH_AUTH_STATIC || 'r5C(e3.JeS^:_7LF',
+        'Authorization': authStatic,
         'Content-Type': 'application/json',
-        'Token': process.env.FFH_BEARER_TOKEN
+        'Token': bearerToken
       }
     });
 
-    return new NextResponse(null, { 
+    return new NextResponse(null, {
       status: response.ok ? 200 : 503,
       headers: {
         'X-Health-Status': response.ok ? 'FFH API connection successful' : 'FFH API connection failed'

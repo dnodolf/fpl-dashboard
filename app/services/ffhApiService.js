@@ -2,8 +2,12 @@
 class FFHApiService {
   constructor() {
     this.baseUrl = 'https://data.fantasyfootballhub.co.uk/api';
-    this.authStatic = process.env.FFH_AUTH_STATIC || 'r5C(e3.JeS^:_7LF';
+    this.authStatic = process.env.FFH_AUTH_STATIC;
     this.bearerToken = process.env.FFH_BEARER_TOKEN;
+
+    if (!this.authStatic || !this.bearerToken) {
+      console.warn('⚠️ FFH credentials not configured. FFH predictions will be unavailable.');
+    }
   }
 
   // Get common headers for FFH API
