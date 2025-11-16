@@ -3,8 +3,6 @@
 import { NextResponse } from 'next/server';
 import GameweekService from '../../services/gameweekService.js';
 import { normalizePosition } from '../../../utils/positionUtils.js';
-import sleeperPredictionServiceV3 from '../../services/sleeperPredictionServiceV3';
-import ffhStatsService from '../../services/ffhStatsService';
 import v3ScoringService from '../../services/v3ScoringService.js';
 import { extractAllGameweekPredictions, extractAllGameweekMinutes } from '../../utils/ffhDataUtils.js';
 import { fetchSleeperScoringSettings } from '../../services/scoringConversionService.js';
