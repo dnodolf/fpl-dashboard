@@ -35,6 +35,431 @@ const ErrorBoundary = ({ children }) => {
   return children;
 };
 
+// ----------------- CURRENT GAMEWEEK FUNCTION -----------------
+const getCurrentGameweek = async () => {
+  try {
+    return await GameweekService.getCurrentGameweek();
+  } catch (error) {
+    console.error('Error getting current gameweek:', error);
+    // Return a safe fallback
+    return {
+      number: 2,
+      status: 'upcoming',
+      statusDisplay: '🏁 GW 2 (Upcoming)',
+      date: 'Aug 22',
+      fullDate: '2025-08-22',
+      source: 'error_fallback'
+    };
+  }
+};
+
+// ----------------- CACHE MANAGER -----------------
+const CACHE_KEY = 'fpl_dashboard_cache';
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+const CacheManager = {
+  // Get size of data in bytes
+  getDataSize: (obj) => {
+    return new Blob([JSON.stringify(obj)]).size;
+  },
+
+  // Check if localStorage has enough space
+  checkStorageSpace: () => {
+    try {
+      // Try to get rough localStorage usage
+      let totalSize = 0;
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          totalSize += localStorage[key].length;
+        }
+      }
+      return totalSize;
+    } catch (error) {
+      return 0;
+    }
+  },
+
+  // Clean up old cache data and other stale items
+  cleanupStorage: () => {
+    try {
+      console.log('🧹 Cleaning up localStorage...');
+
+      // Remove old FPL cache
+      localStorage.removeItem(CACHE_KEY);
+
+      // Remove other potential cache items that might be stale
+      const keysToCheck = Object.keys(localStorage);
+      keysToCheck.forEach(key => {
+        if (key.includes('cache') || key.includes('temp') || key.includes('old')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            // Continue cleanup even if one item fails
+          }
+        }
+      });
+
+      console.log('✅ localStorage cleanup completed');
+    } catch (error) {
+      console.warn('⚠️ Storage cleanup failed:', error);
+    }
+  },
+
+  // Compress data by removing non-essential fields
+  compressData: (data) => {
+    if (!data || !data.players) return data;
+
+    const compressed = {
+      ...data,
+      players: data.players.map(player => {
+        // Keep only essential fields for caching
+        return {
+          // Core identity
+          player_id: player.player_id,
+          name: player.name,
+          full_name: player.full_name,
+          web_name: player.web_name,
+          position: player.position,
+          team: player.team,
+          team_abbr: player.team_abbr,
+
+          // Essential stats only
+          predictions: player.predictions,
+          season_prediction_avg: player.season_prediction_avg,
+          current_gw_prediction: player.current_gw_prediction,
+          news: player.news,
+          injury_status: player.injury_status,
+
+          // Sleeper data (minimal)
+          owned_by: player.owned_by,
+          sleeper_season_total: player.sleeper_season_total,
+          sleeper_season_avg: player.sleeper_season_avg,
+
+          // V3 data (if exists)
+          v3_season_total: player.v3_season_total,
+          v3_season_avg: player.v3_season_avg,
+          v3_current_gw: player.v3_current_gw,
+
+          // Market data
+          now_cost: player.now_cost,
+          ownership_percentage: player.ownership_percentage,
+
+          // Remove large fields like:
+          // - sleeper_gw_predictions (JSON strings)
+          // - ffh_gw_predictions (JSON strings)
+          // - detailed match history
+          // - other verbose fields
+        };
+      })
+    };
+
+    return compressed;
+  },
+
+  set: (data) => {
+    try {
+      // First, try with compressed data
+      const compressedData = CacheManager.compressData(data);
+      const cacheData = {
+        data: compressedData,
+        timestamp: Date.now(),
+        compressed: true
+      };
+
+      const dataString = JSON.stringify(cacheData);
+      const dataSize = new Blob([dataString]).size;
+
+      // Log cache size for monitoring (deduplicated)
+      const sizeStr = `${(dataSize / 1024 / 1024).toFixed(2)}MB (compressed)`;
+      if (!window._lastCacheLog || window._lastCacheLog !== sizeStr) {
+        console.log(`💾 Cache size: ${sizeStr}`);
+        window._lastCacheLog = sizeStr;
+      }
+
+      // Check if still too large (>4MB threshold for safety)
+      if (dataSize > 4 * 1024 * 1024) {
+        console.warn('📦 Data still too large after compression, skipping cache');
+        return;
+      }
+
+      // Try to save
+      localStorage.setItem(CACHE_KEY, dataString);
+
+    } catch (error) {
+      if (error.name === 'QuotaExceededError') {
+        console.warn('📦 Storage quota exceeded, attempting cleanup...');
+
+        // Clean up storage and try again
+        CacheManager.cleanupStorage();
+
+        try {
+          // Try again with compressed data
+          const compressedData = CacheManager.compressData(data);
+          const cacheData = {
+            data: compressedData,
+            timestamp: Date.now(),
+            compressed: true
+          };
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+          console.log('✅ Compressed cache saved after cleanup');
+        } catch (retryError) {
+          console.warn('❌ Cache save failed even after compression and cleanup. Skipping cache.');
+          // Don't cache this time, but continue without failing
+        }
+      } else {
+        console.warn('Could not save to cache:', error);
+      }
+    }
+  },
+
+  get: () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return null;
+
+      const cacheData = JSON.parse(cached);
+      const age = Date.now() - cacheData.timestamp;
+      
+      if (age > CACHE_DURATION) {
+        localStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+
+      return {
+        ...cacheData.data,
+        fromCache: true,
+        cacheAge: Math.round(age / 1000) // seconds
+      };
+    } catch (error) {
+      console.warn('Could not read from cache:', error);
+      return null;
+    }
+  },
+
+  clear: () => {
+    try {
+      localStorage.removeItem(CACHE_KEY);
+    } catch (error) {
+      console.warn('Could not clear cache:', error);
+    }
+  },
+
+  getAge: () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return null;
+      
+      const cacheData = JSON.parse(cached);
+      return Math.round((Date.now() - cacheData.timestamp) / 1000);
+    } catch (error) {
+      return null;
+    }
+  }
+};
+
+// ----------------- DATA FRESHNESS UTILS -----------------
+const getDataFreshnessStatus = (lastUpdated) => {
+  if (!lastUpdated) return { status: 'unknown', message: 'Unknown', color: 'gray' };
+  
+  const now = Date.now();
+  const updateTime = new Date(lastUpdated).getTime();
+  const ageMinutes = Math.round((now - updateTime) / (1000 * 60));
+  
+  if (ageMinutes < 30) {
+    return { status: 'fresh', message: `${ageMinutes}m ago`, color: 'green' };
+  } else if (ageMinutes < 120) {
+    return { status: 'stale', message: `${ageMinutes}m ago`, color: 'yellow' };
+  } else {
+    const ageHours = Math.round(ageMinutes / 60);
+    return { status: 'old', message: `${ageHours}h ago`, color: 'red' };
+  }
+};
+
+const formatCacheAge = (ageSeconds) => {
+  if (!ageSeconds) return '';
+  
+  if (ageSeconds < 60) {
+    return 'less than a minute ago';
+  } else if (ageSeconds < 3600) {
+    const minutes = Math.round(ageSeconds / 60);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  } else if (ageSeconds < 86400) {
+    const hours = Math.round(ageSeconds / 3600);
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  } else {
+    const days = Math.round(ageSeconds / 86400);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
+  }
+};
+
+// ----------------- CUSTOM HOOK FOR PLAYER DATA -----------------
+function usePlayerData() {
+  const [data, setData] = useState({
+    players: [],
+    loading: true,
+    error: null,
+    lastUpdated: null,
+    source: 'loading',
+    quality: null,
+    ownershipData: false,
+    ownershipCount: 0,
+    enhanced: false,
+    integrated: false,
+    integration: null
+  });
+
+  const fetchData = async (type = 'auto', forceRefresh = false, useCache = true) => {
+    try {
+      setData(prev => ({ ...prev, loading: true, error: null }));
+
+      if (!forceRefresh && useCache) {
+        const cachedData = CacheManager.get();
+        if (cachedData) {
+          setData(prev => ({
+            ...prev,
+            loading: false,
+            ...cachedData
+          }));
+          return;
+        }
+      }
+      const response = await fetch('/api/integrated-players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          includeMatching: true,
+          includeScoring: true,
+          forceRefresh
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Direct check for players array
+      if (result.players && Array.isArray(result.players)) {
+        const newData = {
+          players: result.players,
+          loading: false,
+          error: null,
+          lastUpdated: result.timestamp,
+          source: 'integrated',
+          quality: 'high',
+          ownershipData: true,
+          enhanced: true,
+          cached: result.cached || false,
+          ownershipCount: result.count || result.players.length,
+          integrated: true,
+          integration: result.stats
+        };
+
+        CacheManager.set(newData);
+        setData(newData);
+      } else {
+        throw new Error('No player data received from API');
+      }
+    } catch (error) {
+      console.error('Error fetching player data:', error);
+      setData(prev => ({
+        ...prev,
+        loading: false,
+        error: error.message
+      }));
+    }
+  };
+
+  useEffect(() => {
+    fetchData('auto', false, true);
+  }, []);
+
+  return { ...data, refetch: fetchData };
+}
+
+// Update data function with caching
+const fetchData = async (type = 'auto', forceRefresh = false, useCache = true) => {
+  try {
+    setData(prev => ({ ...prev, loading: true, error: null }));
+
+    // Check cache first unless force refresh
+    if (!forceRefresh && useCache) {
+      const cachedData = CacheManager.get();
+      if (cachedData) {
+        console.log('⚡ Loading from cache');
+        setData(prev => ({
+          ...prev,
+          loading: false,
+          ...cachedData
+        }));
+        return;
+      }
+    }
+
+    console.log('🔄 Fetching fresh data from API');
+    
+    const response = await fetch('/api/integrated-players', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        includeMatching: true,
+        includeScoring: true,
+        forceRefresh
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    // ADD DEBUG LINES:
+    console.log('🔍 API Response received:', {
+      hasPlayers: !!result.players,
+      playersLength: result.players?.length,
+      isArray: Array.isArray(result.players),
+      firstPlayer: result.players?.[0]?.name,
+      resultKeys: Object.keys(result)
+    });
+    
+    // Check if we have players data (API working) instead of success field
+    if (result.players && Array.isArray(result.players)) {
+      console.log('✅ Setting player data:', result.players.length, 'players');
+      
+      const newData = {
+        players: result.players,
+        loading: false,
+        error: null,
+        lastUpdated: result.timestamp,
+        source: 'integrated',
+        quality: 'high',
+        ownershipData: true,
+        enhanced: true,
+        cached: result.cached || false,
+        ownershipCount: result.count || result.players.length,
+        integrated: true,
+        integration: result.stats
+      };
+
+      // Save to cache
+      CacheManager.set(newData);
+      
+      setData(newData);
+      console.log('✅ State should be updated with:', newData.players.length, 'players');
+    } else {
+      throw new Error(result.error || 'Failed to fetch integrated player data');
+    }
+  } catch (error) {
+    console.error('❌ Error fetching player data:', error);
+    setData(prev => ({
+      ...prev,
+      loading: false,
+      error: error.message
+    }));
+  }
+};
 
 // ----------------- SLEEPER POSITION COLORS -----------------
 const getSleeperPositionStyle = (position) => {
