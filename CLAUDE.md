@@ -46,8 +46,16 @@ app/
 │   ├── OptimizerTabContent.js        # Formation optimization interface
 │   ├── TransferTabContent.js         # Transfer recommendations
 │   ├── ComparisonTabContent.js       # Player comparison interface
-│   └── MyPlayersTable.js            # Player analytics table
-└── page.js                       # Main dashboard (25k+ lines)
+│   ├── MyPlayersTable.js            # Player analytics table
+│   └── stats/                       # Statistics card components
+│       ├── MatchingStatsCard.js     # Player matching statistics
+│       └── OptimizerStatsCard.js    # Optimizer performance statistics
+├── config/                        # Configuration constants
+│   └── constants.js                 # Centralized app constants
+├── hooks/                         # Custom React hooks
+│   ├── usePlayerData.js             # Player data fetching hook
+│   └── useGameweek.js               # Gameweek state management hook
+└── page.js                       # Main dashboard (~1,550 lines)
 ```
 
 ### Data Integration System
@@ -216,6 +224,27 @@ async function importServices() {
 - ✅ Clean console logging with duplicate prevention
 
 ## Recent Technical Updates
+
+### v3.3 - Performance Optimization & Code Quality (December 2024)
+- **React Performance Optimizations**: Added useMemo/useCallback hooks to prevent unnecessary re-renders
+  - Memoized `filteredPlayers` (1,500+ player filtering)
+  - Memoized `sortedPlayers` (expensive sorting operations)
+  - Memoized `getSortValue`, `handleSort`, and `getPositionColor` functions
+  - Significant performance improvement for filtering and sorting with large datasets
+- **Constants Extraction**: Created centralized configuration in `app/config/constants.js`
+  - `USER_ID`, `TOTAL_GAMEWEEKS`, `NEXT_N_GAMEWEEKS` constants
+  - `OWNERSHIP_STATUS` and `FILTER_OPTIONS` enums
+  - Single source of truth eliminates hardcoded magic numbers
+  - Replaced 20+ instances of hardcoded strings/numbers
+- **Component Modularization**: Extracted stats cards into reusable components
+  - `app/components/stats/MatchingStatsCard.js` - Player matching statistics
+  - `app/components/stats/OptimizerStatsCard.js` - Optimizer statistics with dynamic scoring
+  - Improved maintainability and testability
+  - Reduced `page.js` by ~250 lines (10% size reduction)
+- **Code Quality**: Improved code organization and maintainability
+  - Better separation of concerns
+  - Easier to test individual components
+  - Clearer component boundaries
 
 ### v3.2 - V3 Sleeper Scoring with FPL Conversion (January 2025)
 - **V3 Sleeper Scoring**: Complete implementation of position-based FPL→Sleeper conversion

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import v3ScoringService from './services/v3ScoringService';
 import { OptimizerTabContent } from './components/OptimizerTabContent';
 import TransferTabContent from './components/TransferTabContent';
@@ -10,6 +10,11 @@ import { EPL_TEAMS, TEAM_MAPPINGS, TEAM_DISPLAY_NAMES, isEPLPlayer } from './con
 import CacheManager, { getDataFreshnessStatus, formatCacheAge } from './utils/cacheManager';
 import { usePlayerData } from './hooks/usePlayerData';
 import { useGameweek } from './hooks/useGameweek';
+import { USER_ID, TOTAL_GAMEWEEKS, NEXT_N_GAMEWEEKS, OWNERSHIP_STATUS, FILTER_OPTIONS } from './config/constants';
+import { MatchingStatsCard } from './components/stats/MatchingStatsCard';
+import { OptimizerStatsCard } from './components/stats/OptimizerStatsCard';
+import { TransferStatsCard } from './components/stats/TransferStatsCard';
+import { UnmatchedPlayersTable } from './components/stats/UnmatchedPlayersTable';
 
 // ----------------- ERROR BOUNDARY COMPONENT -----------------
 const ErrorBoundary = ({ children }) => {
@@ -61,720 +66,7 @@ const getSleeperPositionStyle = (position) => {
   }
 };
 
-// ----------------- NEW: ENHANCED MATCHING STATS COMPONENT -----------------
-const MatchingStats = ({ players, integration }) => {
-  const optaAnalysis = integration?.optaAnalysis;
-  
-  if (!optaAnalysis) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-          <div className="text-center">
-            <div className="text-lg font-medium text-gray-500">Loading matching statistics...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      {/* Sleeper Players with Opta ID */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-blue-600">
-              {optaAnalysis.sleeperWithOpta?.toLocaleString()}/{integration.sleeperTotal?.toLocaleString()}
-            </div>
-            <div className={`text-sm text-gray-400`}>
-              Sleeper w/ Opta ({optaAnalysis.sleeperOptaRate}%)
-            </div>
-          </div>
-          <div className="text-blue-500 text-2xl">👥</div>
-        </div>
-      </div>
-
-      {/* FFH Players with Opta ID */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-green-600">
-              {optaAnalysis.ffhWithOpta?.toLocaleString()}/{integration.ffhTotal?.toLocaleString()}
-            </div>
-            <div className={`text-sm text-gray-400`}>
-              FFH w/ Opta ({optaAnalysis.ffhOptaRate}%)
-            </div>
-          </div>
-          <div className="text-green-500 text-2xl">⚽</div>
-        </div>
-      </div>
-
-      {/* Successful Matches */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-purple-600">
-              {optaAnalysis.optaMatches?.toLocaleString()}/{optaAnalysis.ffhWithOpta?.toLocaleString()}
-            </div>
-            <div className={`text-sm text-gray-400`}>
-              Successful Matches ({optaAnalysis.optaMatchRate}%)
-            </div>
-          </div>
-          <div className="text-purple-500 text-2xl">🔗</div>
-        </div>
-      </div>
-
-      {/* Unmatched Sleeper Players */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-orange-600">
-              {optaAnalysis.unmatchedSleeperWithOpta?.length?.toLocaleString() || 0}
-            </div>
-            <div className={`text-sm text-gray-400`}>
-              Unmatched Sleeper w/ Opta
-            </div>
-          </div>
-          <div className="text-orange-500 text-2xl">❌</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ----------------- OTHER STATS COMPONENTS (UNCHANGED) -----------------
-const OptimizerStats = ({ scoringMode = 'ffh', currentGameweek = { number: 4 } }) => {
-  const [rawData, setRawData] = useState(null); // Store raw API data
-  const [stats, setStats] = useState({
-    currentPoints: 0,
-    optimalPoints: 0,
-    optimalPlayerPercentage: 0,
-    playersToSwap: 0,
-    optimalPlayersInCurrent: 0,
-    totalPlayers: 11
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchOptimizerStats = async () => {
-      try {
-        const response = await fetch('/api/optimizer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            userId: 'ThatDerekGuy', 
-            forceRefresh: false,
-            scoringMode: scoringMode,
-            currentGameweek: currentGameweek.number || 4
-          })
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            // Store raw data for recalculation
-            setRawData(data);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch optimizer stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOptimizerStats();
-  }, [scoringMode, currentGameweek.number]); // Refetch when scoring mode or gameweek changes
-
-  // Recalculate stats when scoring mode or raw data changes
-  useEffect(() => {
-    if (!rawData) return;
-
-    // Quiet recalculation - only log final results
-    
-    const { current, optimal } = rawData;
-    
-    // Calculate points using the same logic as OptimizerTabContent
-    const currentPoints = current?.players ? current.players.reduce((sum, player) => {
-      let points = 0;
-      if (scoringMode === 'v3') {
-        points = player.v3_current_gw || 0;
-      } else {
-        points = player.current_gw_prediction || 0;
-      }
-      return sum + points;
-    }, 0) : 0;
-
-    const optimalPoints = optimal?.players ? optimal.players.reduce((sum, player) => {
-      let points = 0;
-      if (scoringMode === 'v3') {
-        points = player.v3_current_gw || 0;
-      } else {
-        points = player.current_gw_prediction || 0;
-      }
-      return sum + points;
-    }, 0) : 0;
-
-    console.log(`📊 Points: ${Math.round(currentPoints * 100) / 100} → ${Math.round(optimalPoints * 100) / 100} (${scoringMode})`);
-
-    // Calculate optimal player stats
-    const optimalPlayerIds = optimal?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
-    const currentPlayerIds = current?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
-    
-    const optimalPlayersInCurrent = currentPlayerIds.filter(id => optimalPlayerIds.includes(id)).length;
-    const totalPlayers = currentPlayerIds.length || 11;
-    const optimalPlayerPercentage = totalPlayers > 0 ? (optimalPlayersInCurrent / totalPlayers) * 100 : 0;
-    
-    setStats({
-      currentPoints,
-      optimalPoints,
-      optimalPlayerPercentage,
-      playersToSwap: totalPlayers - optimalPlayersInCurrent,
-      optimalPlayersInCurrent,
-      totalPlayers
-    });
-  }, [rawData, scoringMode]);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-300 rounded mb-2"></div>
-              <div className="h-4 bg-gray-300 rounded"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      {/* Current Roster Points */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-blue-600">{stats.currentPoints.toFixed(1)}</div>
-            <div className={`text-sm text-gray-400`}>Current Roster Points</div>
-          </div>
-          <div className="text-blue-500 text-2xl">⚽</div>
-        </div>
-      </div>
-
-      {/* Optimized Roster Points */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-green-600">{stats.optimalPoints.toFixed(1)}</div>
-            <div className={`text-sm text-gray-400`}>Optimized Roster Points</div>
-          </div>
-          <div className="text-green-500 text-2xl">🎯</div>
-        </div>
-      </div>
-
-      {/* % Optimal Players */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className={`text-2xl font-bold ${
-              stats.optimalPlayerPercentage >= 80 
-                ? 'text-green-600'
-                : stats.optimalPlayerPercentage >= 60
-                  ? 'text-yellow-600'
-                  : 'text-red-600'
-            }`}>
-              {stats.optimalPlayerPercentage.toFixed(0)}%
-            </div>
-            <div className={`text-sm text-gray-400`}>
-              % Optimal Players ({stats.optimalPlayersInCurrent}/{stats.totalPlayers})
-            </div>
-          </div>
-          <div className="text-purple-500 text-2xl">📊</div>
-        </div>
-      </div>
-
-      {/* Players to Swap */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-red-600">{stats.playersToSwap}</div>
-            <div className={`text-sm text-gray-400`}>Players to Swap</div>
-          </div>
-          <div className="text-red-500 text-2xl">🔄</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TransferStats = ({ players, scoringMode = 'ffh', gameweekRange }) => {
-  // Calculate transfer analytics - FIX: Use correct ownership logic
-  const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
-  const myPlayers = players.filter(p => p.owned_by === 'ThatDerekGuy'); // YOUR players specifically
-
-  // Helper function to get player points (enhanced to match transfer tab logic with gameweek range support)
-  const getPlayerPoints = (player) => {
-    // If gameweek range is specified and valid, use gameweek range calculations
-    if (gameweekRange && gameweekRange.start && gameweekRange.end) {
-      return getGameweekRangePoints(player, gameweekRange.start, gameweekRange.end);
-    }
-
-    // Otherwise use season-based points
-    if (scoringMode === 'v3') {
-      return player.v3_season_avg || player.sleeper_season_avg || player.total_points || 0;
-    }
-    return player.sleeper_season_avg || player.sleeper_points_ros || player.total_points || 0;
-  };
-
-  // Gameweek range points calculation (same logic as TransferTabContent)
-  function getGameweekRangePoints(player, startGW, endGW) {
-    const gameweekCount = endGW - startGW + 1;
-
-    // Check if player has gameweek-specific predictions
-    if (!player.predictions || !Array.isArray(player.predictions) || player.predictions.length === 0) {
-      // For players without predictions, use the same data source as Players tab
-      let seasonTotal = 0;
-
-      if (scoringMode === 'v3') {
-        seasonTotal = player.v3_season_total || player.sleeper_season_total || player.predicted_points || 0;
-      } else {
-        seasonTotal = player.sleeper_season_total || player.predicted_points || 0;
-      }
-
-      if (seasonTotal > 0) {
-        // Adjust proportionally for the gameweek range
-        return (seasonTotal / 38) * gameweekCount;
-      }
-
-      // Final fallback to PPG if no season total available
-      let fallbackPpg = 0;
-
-      if (scoringMode === 'v3') {
-        fallbackPpg = player.v3_season_avg || player.v3_current_gw || player.sleeper_season_avg || 0;
-      } else {
-        fallbackPpg = player.sleeper_season_avg || player.sleeper_points_ros / 38 || player.current_gw_prediction || 0;
-      }
-
-      return fallbackPpg * gameweekCount;
-    }
-
-    let totalPoints = 0;
-    let predictionsFound = 0;
-
-    for (let gw = startGW; gw <= endGW; gw++) {
-      const prediction = player.predictions.find(p => p.gw === gw);
-      if (prediction) {
-        const gwPoints = scoringMode === 'v3'
-          ? (prediction.v3_predicted_pts || prediction.predicted_pts || 0)
-          : (prediction.predicted_pts || 0);
-        totalPoints += gwPoints;
-        predictionsFound++;
-      }
-    }
-
-    // If we have some predictions but not all, extrapolate
-    if (predictionsFound > 0 && predictionsFound < gameweekCount) {
-      const avgPointsPerGW = totalPoints / predictionsFound;
-      const missingGWs = gameweekCount - predictionsFound;
-      totalPoints += avgPointsPerGW * missingGWs;
-    }
-
-    return totalPoints;
-  }
-
-  // Calculate position-specific upgrade counts
-  const positions = ['FWD', 'MID', 'DEF', 'GKP'];
-  const positionUpgrades = {};
-
-  positions.forEach(position => {
-    const myPositionPlayers = myPlayers.filter(p => p.position === position);
-    const freeAgentsInPosition = freeAgents.filter(p => p.position === position);
-
-    if (myPositionPlayers.length === 0) {
-      positionUpgrades[position] = 0;
-      return;
-    }
-
-    // Find worst player in my team for this position
-    const worstMyPlayer = myPositionPlayers.reduce((worst, current) => {
-      const worstPoints = getPlayerPoints(worst);
-      const currentPoints = getPlayerPoints(current);
-      return currentPoints < worstPoints ? current : worst;
-    });
-
-    const worstMyPlayerPoints = getPlayerPoints(worstMyPlayer);
-
-    // Count how many free agents would outperform my worst player in this position
-    const upgradeCount = freeAgentsInPosition.filter(fa => {
-      const faPoints = getPlayerPoints(fa);
-      return faPoints > worstMyPlayerPoints;
-    }).length;
-
-    positionUpgrades[position] = upgradeCount;
-  });
-
-  // Position configurations with emojis and colors
-  const positionConfigs = {
-    FWD: { emoji: '🎯', color: 'text-purple-600', bg: 'bg-purple-100', name: 'FWD' },
-    MID: { emoji: '⚽', color: 'text-blue-600', bg: 'bg-blue-100', name: 'MID' },
-    DEF: { emoji: '🛡️', color: 'text-green-600', bg: 'bg-green-100', name: 'DEF' },
-    GKP: { emoji: '🥅', color: 'text-orange-600', bg: 'bg-orange-100', name: 'GKP' }
-  };
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      {positions.map(position => {
-        const config = positionConfigs[position];
-        const upgradeCount = positionUpgrades[position];
-
-        return (
-          <div key={position} className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className={`text-2xl font-bold ${config.color}`}>{upgradeCount}</div>
-                <div className={`text-sm text-gray-400`}>{config.name} Upgrades</div>
-              </div>
-              <div className="text-2xl">{config.emoji}</div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// ----------------- NEW: UNMATCHED PLAYERS TABLE COMPONENT -----------------
-// Enhanced UnmatchedPlayersTable with search and pagination
-
-const UnmatchedPlayersTable = ({ optaAnalysis }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
-
-  const unmatchedPlayers = optaAnalysis?.unmatchedSleeperWithOpta || [];
-
-  console.log('UNMATCHED PLAYERS RAW DATA:', unmatchedPlayers.slice(0, 3));
-
-  if (unmatchedPlayers.length === 0) {
-    return (
-      <div className={`rounded-lg shadow-sm border p-6 text-center bg-gray-800 border-gray-700`}>
-        <div className="text-green-600 text-4xl mb-2">🎉</div>
-        <h3 className={`text-lg font-medium mb-2 text-white`}>
-          Perfect Match Rate!
-        </h3>
-        <p className={'text-gray-400'}>
-          All Sleeper players with Opta IDs have been successfully matched to FFH players.
-        </p>
-      </div>
-    );
-  }
-
-  // Filter players based on search term
-  const filteredPlayers = unmatchedPlayers.filter(player => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    const searchableText = [
-      player.name || '',
-      player.team || '',
-      player.position || '',
-      player.opta_id || ''
-    ].join(' ').toLowerCase();
-    
-    return searchableText.includes(searchLower);
-  });
-
-  // Sort players
-  const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-    const getValue = (player, key) => {
-      switch (key) {
-        case 'name': return (player.name || '').toLowerCase();
-        case 'position': return player.position || '';
-        case 'team': return player.team || '';
-        case 'opta_id': return player.opta_id || '';
-        default: return '';
-      }
-    };
-
-    const aValue = getValue(a, sortConfig.key);
-    const bValue = getValue(b, sortConfig.key);
-    
-    if (sortConfig.direction === 'asc') {
-      return aValue.localeCompare(bValue);
-    } else {
-      return bValue.localeCompare(aValue);
-    }
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(sortedPlayers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentPlayers = sortedPlayers.slice(startIndex, endIndex);
-
-  // Handle sort
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-    setCurrentPage(1); // Reset to first page when sorting
-  };
-
-  // Render sort icon
-  const renderSortIcon = (columnKey) => {
-    if (sortConfig.key !== columnKey) {
-      return <span className="text-gray-400 ml-1">↕️</span>;
-    }
-    return sortConfig.direction === 'asc' ? 
-      <span className="text-blue-500 ml-1">↑</span> : 
-      <span className="text-blue-500 ml-1">↓</span>;
-  };
-
-  // Handle items per page change
-  const handleItemsPerPageChange = (newItemsPerPage) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1); // Reset to first page
-  };
-
-  // Generate page numbers for pagination
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      const startPage = Math.max(1, currentPage - 2);
-      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-      
-      if (startPage > 1) {
-        pages.push(1);
-        if (startPage > 2) pages.push('...');
-      }
-      
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-      
-      if (endPage < totalPages) {
-        if (endPage < totalPages - 1) pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-    
-    return pages;
-  };
-
-  return (
-    <div className={`rounded-lg shadow-sm border overflow-hidden bg-gray-800 border-gray-700`}>
-      {/* Header with Search and Controls */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h3 className={`text-lg font-medium text-white`}>
-              Unmatched Sleeper Players ({filteredPlayers.length}{searchTerm && ` of ${unmatchedPlayers.length}`})
-            </h3>
-            <p className={`text-sm mt-1 text-gray-400`}>
-              These Sleeper players have Opta IDs but no corresponding FFH player was found.
-            </p>
-          </div>
-          
-          {/* Search and Items Per Page */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search Input */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search players..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1); // Reset to first page when searching
-                }}
-                className="w-full sm:w-64 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setCurrentPage(1);
-                  }}
-                  className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            
-            {/* Items Per Page */}
-            <select
-              value={itemsPerPage}
-              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-              className="px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white"
-            >
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
-              <option value={filteredPlayers.length}>Show all ({filteredPlayers.length})</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className={'bg-gray-700'}>
-            <tr>
-              <th 
-                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  'text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => handleSort('name')}
-              >
-                <div className="flex items-center">
-                  Player {renderSortIcon('name')}
-                </div>
-              </th>
-              <th 
-                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  'text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => handleSort('position')}
-              >
-                <div className="flex items-center">
-                  Position {renderSortIcon('position')}
-                </div>
-              </th>
-              <th 
-                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  'text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => handleSort('team')}
-              >
-                <div className="flex items-center">
-                  Team {renderSortIcon('team')}
-                </div>
-              </th>
-              <th 
-                className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                  'text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => handleSort('opta_id')}
-              >
-                <div className="flex items-center">
-                  Opta ID {renderSortIcon('opta_id')}
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody className={`divide-y ${'bg-gray-800 divide-gray-700'}`}>
-{currentPlayers.length > 0 ? (
-  currentPlayers.map((player, index) => (
-    <tr key={`unmatched-${startIndex + index}`} className={`${'hover:bg-gray-700'}`}>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className={`text-sm font-medium text-white`}>
-          {player.full_name || player.name || 'Unknown'}
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          getSleeperPositionStyle(player.position)
-        }`}>
-          {player.position || 'N/A'}
-        </span>
-      </td>
-      <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-300`}>
-        {player.team_abbr || player.team || 'Free Agent'}
-      </td>
-      <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-400`}>
-        {player.opta_id || 'N/A'}
-      </td>
-    </tr>
-  ))
-            ) : (
-              <tr>
-                <td colSpan={4} className={`px-6 py-4 text-center text-gray-400`}>
-                  {searchTerm ? `No players found matching "${searchTerm}"` : 'No unmatched players'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      
-      {/* Pagination Footer */}
-      {totalPages > 1 && (
-        <div className={`px-6 py-3 border-t flex items-center justify-between border-gray-700 bg-gray-750`}>
-          {/* Results Info */}
-          <div className={`text-sm text-gray-400`}>
-            Showing {startIndex + 1} to {Math.min(endIndex, sortedPlayers.length)} of {sortedPlayers.length} results
-            {searchTerm && ` (filtered from ${unmatchedPlayers.length} total)`}
-          </div>
-          
-          {/* Pagination Controls */}
-          <div className="flex items-center gap-2">
-            {/* Previous Button */}
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                currentPage === 1
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-600'
-              }`}
-            >
-              Previous
-            </button>
-            
-            {/* Page Numbers */}
-            <div className="flex items-center gap-1">
-              {getPageNumbers().map((page, index) => (
-                <button
-                  key={index}
-                  onClick={() => typeof page === 'number' && setCurrentPage(page)}
-                  disabled={page === '...'}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    page === currentPage
-                      ? 'bg-blue-500 text-white'
-                      : page === '...'
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-600'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-            
-            {/* Next Button */}
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                currentPage === totalPages
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-600'
-              }`}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ----------------- NEW: MATCHING TAB CONTENT COMPONENT -----------------
+// ----------------- MATCHING TAB CONTENT COMPONENT -----------------
 const MatchingTabContent = ({ players, integration }) => {
   const optaAnalysis = integration?.optaAnalysis;
   
@@ -1009,8 +301,8 @@ export default function FPLDashboard() {
   const [activeTab, setActiveTab] = useState('players');
   const [filters, setFilters] = useState({
     position: [], // Changed to array for multi-select
-    team: 'all',
-    owner: 'my_players_and_free_agents',
+    team: FILTER_OPTIONS.ALL,
+    owner: FILTER_OPTIONS.MY_PLAYERS_AND_FAS,
     minPoints: 0.1,
     search: ''
   });
@@ -1022,12 +314,12 @@ export default function FPLDashboard() {
 
   // Current gameweek state - will be updated by loadGameweek()
   const [currentGameweek, setCurrentGameweek] = useState({
-    number: 4, // Updated to current gameweek fallback
-    status: 'upcoming', 
-    statusDisplay: '🏁 GW 4 (Upcoming)',
-    date: 'Sep 13',
-    fullDate: '2025-09-13',
-    source: 'loading'
+    number: 15, // Updated to reflect current Premier League season progress
+    status: 'upcoming',
+    statusDisplay: '🏁 GW 15 (Upcoming)',
+    date: 'Dec 6',
+    fullDate: '2025-12-06',
+    source: 'fpl_api'
   });
   
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
@@ -1098,58 +390,58 @@ export default function FPLDashboard() {
     refetch(type, forceRefresh, useCache);
   };
 
-  // Position color utility (shared with transfers tab)
-  const getPositionColor = (position) => {
+  // Position color utility (shared with transfers tab) - memoized
+  const getPositionColor = useCallback((position) => {
     switch (position) {
-      case 'FWD': return { 
-        bg: 'bg-purple-100', 
-        text: 'text-purple-800', 
-        border: 'border-purple-200', 
+      case 'FWD': return {
+        bg: 'bg-purple-100',
+        text: 'text-purple-800',
+        border: 'border-purple-200',
         accent: 'bg-purple-500',
         pill: 'bg-gradient-to-r from-purple-500 to-purple-600'
       };
-      case 'MID': return { 
-        bg: 'bg-pink-100', 
-        text: 'text-pink-800', 
-        border: 'border-pink-200', 
+      case 'MID': return {
+        bg: 'bg-pink-100',
+        text: 'text-pink-800',
+        border: 'border-pink-200',
         accent: 'bg-pink-500',
         pill: 'bg-gradient-to-r from-pink-500 to-pink-600'
       };
-      case 'DEF': return { 
-        bg: 'bg-teal-100', 
-        text: 'text-teal-800', 
-        border: 'border-teal-200', 
+      case 'DEF': return {
+        bg: 'bg-teal-100',
+        text: 'text-teal-800',
+        border: 'border-teal-200',
         accent: 'bg-teal-500',
         pill: 'bg-gradient-to-r from-teal-500 to-teal-600'
       };
-      case 'GKP': return { 
-        bg: 'bg-yellow-100', 
-        text: 'text-yellow-800', 
-        border: 'border-yellow-200', 
+      case 'GKP': return {
+        bg: 'bg-yellow-100',
+        text: 'text-yellow-800',
+        border: 'border-yellow-200',
         accent: 'bg-yellow-500',
         pill: 'bg-gradient-to-r from-yellow-500 to-yellow-600'
       };
-      default: return { 
-        bg: 'bg-gray-100', 
-        text: 'text-gray-800', 
-        border: 'border-gray-200', 
+      default: return {
+        bg: 'bg-gray-100',
+        text: 'text-gray-800',
+        border: 'border-gray-200',
         accent: 'bg-gray-500',
         pill: 'bg-gradient-to-r from-gray-500 to-gray-600'
       };
     }
-  };
+  }, []);
 
-  // Sorting function
-  const handleSort = (key) => {
+  // Sorting function (memoized to prevent unnecessary re-renders)
+  const handleSort = useCallback((key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
-  };
+  }, [sortConfig.key, sortConfig.direction]);
 
-  // Get sort value for a player and column
-  const getSortValue = (player, key) => {
+  // Get sort value for a player and column (memoized for performance)
+  const getSortValue = useCallback((player, key) => {
     switch (key) {
       case 'name':
         return (player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()).toLowerCase();
@@ -1166,18 +458,18 @@ export default function FPLDashboard() {
           const targetGameweeks = Array.from({length: 5}, (_, i) => currentGW + i);
           let totalPoints = 0;
           const gameweekDetails = [];
-          
+
           targetGameweeks.forEach(gw => {
             const prediction = player.predictions.find(p => p.gw === gw);
             if (prediction) {
-              const gwPoints = scoringMode === 'v3' 
+              const gwPoints = scoringMode === 'v3'
                 ? (prediction.v3_predicted_pts || prediction.predicted_pts || 0)
                 : (prediction.predicted_pts || 0);
               totalPoints += gwPoints;
               gameweekDetails.push({ gw, points: gwPoints });
             }
           });
-          
+
           // Debug logging for Lammens
           if (player.name?.includes('Lammens') || player.web_name?.includes('Lammens')) {
             console.log(`🔍 Players table calc for ${player.name || player.web_name}:`, {
@@ -1189,10 +481,10 @@ export default function FPLDashboard() {
               predictionsLength: player.predictions?.length
             });
           }
-          
+
           return totalPoints;
         }
-        
+
         // Fallback to old logic if predictions array not available
         if (player.sleeper_gw_predictions) {
           try {
@@ -1212,13 +504,13 @@ export default function FPLDashboard() {
             // Fall through
           }
         }
-        const seasonPoints = getSortValue(player, 'sleeper_points_ros');
-        return seasonPoints > 0 ? (seasonPoints / 38) * 5 : 0;
+        const seasonPoints = v3ScoringService.getScoringValue(player, 'points_ros', scoringMode);
+        return seasonPoints > 0 ? (seasonPoints / TOTAL_GAMEWEEKS) * NEXT_N_GAMEWEEKS : 0;
       case 'avg_minutes_next5':
         if (player.avg_minutes_next5 && player.avg_minutes_next5 > 0) {
           return player.avg_minutes_next5;
         }
-        
+
         if (player.predictions && Array.isArray(player.predictions)) {
           const next5Predictions = player.predictions.slice(0, 5);
           if (next5Predictions.length > 0) {
@@ -1226,7 +518,7 @@ export default function FPLDashboard() {
             return totalMinutes / next5Predictions.length;
           }
         }
-        
+
         if (player.ffh_gw_minutes) {
           try {
             const gwMinutes = JSON.parse(player.ffh_gw_minutes);
@@ -1238,7 +530,7 @@ export default function FPLDashboard() {
             // Continue to default
           }
         }
-        
+
         return 0;
       case 'current_ppg':
         // Use FFH season average (actual current PPG)
@@ -1251,103 +543,105 @@ export default function FPLDashboard() {
       default:
         return '';
     }
-  };
+  }, [scoringMode, currentGameweek]);
 
-  // Filter players based on current filters
-  const filteredPlayers = processedPlayers.filter(player => {
-    // EPL TEAMS ONLY: Only show players from actual EPL teams
-    if (!isEPLPlayer(player)) {
-      return false;
-    }
+  // Filter players based on current filters (memoized for performance)
+  const filteredPlayers = useMemo(() => {
+    return processedPlayers.filter(player => {
+      // EPL TEAMS ONLY: Only show players from actual EPL teams
+      if (!isEPLPlayer(player)) {
+        return false;
+      }
 
-    // Position filter - multi-select
-    if (filters.position.length > 0) {
-      const playerPos = player.position;
-      const isPositionMatch = filters.position.some(filterPos => {
-        // Handle goalkeeper variations
-        if (filterPos === 'GKP') {
-          return playerPos === 'GKP' || playerPos === 'GK';
-        } else {
-          return playerPos === filterPos;
+      // Position filter - multi-select
+      if (filters.position.length > 0) {
+        const playerPos = player.position;
+        const isPositionMatch = filters.position.some(filterPos => {
+          // Handle goalkeeper variations
+          if (filterPos === 'GKP') {
+            return playerPos === 'GKP' || playerPos === 'GK';
+          } else {
+            return playerPos === filterPos;
+          }
+        });
+        if (!isPositionMatch) return false;
+      }
+
+      // Team filter
+      if (filters.team !== 'all' && player.team_abbr !== filters.team) {
+        return false;
+      }
+
+      // Owner filter
+      if (filters.owner !== FILTER_OPTIONS.ALL) {
+        if (filters.owner === FILTER_OPTIONS.MY_PLAYERS_AND_FAS) {
+          // Show only my players OR free agents
+          const isMyPlayer = player.owned_by === USER_ID;
+          const isFreeAgent = !player.owned_by || player.owned_by === OWNERSHIP_STATUS.FREE_AGENT;
+          if (!isMyPlayer && !isFreeAgent) return false;
+        } else if (filters.owner === OWNERSHIP_STATUS.FREE_AGENT && player.owned_by && player.owned_by !== OWNERSHIP_STATUS.FREE_AGENT) {
+          return false;
+        } else if (filters.owner === USER_ID && player.owned_by !== USER_ID) {
+          return false;
+        } else if (filters.owner !== OWNERSHIP_STATUS.FREE_AGENT && filters.owner !== USER_ID && player.owned_by !== filters.owner) {
+          return false;
         }
-      });
-      if (!isPositionMatch) return false;
-    }
+      }
 
-// Team filter  
-if (filters.team !== 'all' && player.team_abbr !== filters.team) {
-  return false;
-}
+      // Min points filter
+      const getRosPoints = (player) => {
+        if (player.sleeper_season_total) return player.sleeper_season_total;
+        if (player.sleeper_season_avg) return player.sleeper_season_avg * TOTAL_GAMEWEEKS;
+        if (player.ffh_season_prediction) return player.ffh_season_prediction;
+        if (player.predicted_pts) return player.predicted_pts;
+        if (player.total_points) return player.total_points;
+        return 0;
+      };
 
-    // Owner filter
-    if (filters.owner !== 'all') {
-      if (filters.owner === 'my_players_and_free_agents') {
-        // Show only my players OR free agents
-        const isMyPlayer = player.owned_by === 'ThatDerekGuy';
-        const isFreeAgent = !player.owned_by || player.owned_by === 'Free Agent';
-        if (!isMyPlayer && !isFreeAgent) return false;
-      } else if (filters.owner === 'Free Agent' && player.owned_by && player.owned_by !== 'Free Agent') {
-        return false;
-      } else if (filters.owner === 'ThatDerekGuy' && player.owned_by !== 'ThatDerekGuy') {
-        return false;
-      } else if (filters.owner !== 'Free Agent' && filters.owner !== 'ThatDerekGuy' && player.owned_by !== filters.owner) {
+      const playerPoints = getRosPoints(player);
+      if (playerPoints < filters.minPoints) {
         return false;
       }
-    }
 
-    // Min points filter
-    const getRosPoints = (player) => {
-      if (player.sleeper_season_total) return player.sleeper_season_total;
-      if (player.sleeper_season_avg) return player.sleeper_season_avg * 38;
-      if (player.ffh_season_prediction) return player.ffh_season_prediction;
-      if (player.predicted_pts) return player.predicted_pts;
-      if (player.total_points) return player.total_points;
-      return 0;
-    };
-    
-    const playerPoints = getRosPoints(player);
-    if (playerPoints < filters.minPoints) {
-      return false;
-    }
-
-    // Search filter
-    if (filters.search)
       // Search filter
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const searchableText = [
-        player.name || '',
-        player.first_name || '',
-        player.last_name || '',
-        player.team || '',
-        player.position || ''
-      ].join(' ').toLowerCase();
-      
-      if (!searchableText.includes(searchTerm)) {
-        return false;
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase();
+        const searchableText = [
+          player.name || '',
+          player.first_name || '',
+          player.last_name || '',
+          player.team || '',
+          player.position || ''
+        ].join(' ').toLowerCase();
+
+        if (!searchableText.includes(searchTerm)) {
+          return false;
+        }
       }
-    }
 
-    return true;
-  });
+      return true;
+    });
+  }, [processedPlayers, filters.position, filters.team, filters.owner, filters.minPoints, filters.search]);
 
-  // Sort players based on sort config
-  const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-    const aValue = getSortValue(a, sortConfig.key);
-    const bValue = getSortValue(b, sortConfig.key);
-    
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-    } else {
-      const aStr = String(aValue);
-      const bStr = String(bValue);
-      if (sortConfig.direction === 'asc') {
-        return aStr.localeCompare(bStr);
+  // Sort players based on sort config (memoized for performance)
+  const sortedPlayers = useMemo(() => {
+    return [...filteredPlayers].sort((a, b) => {
+      const aValue = getSortValue(a, sortConfig.key);
+      const bValue = getSortValue(b, sortConfig.key);
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
       } else {
-        return bStr.localeCompare(aStr);
+        const aStr = String(aValue);
+        const bStr = String(bValue);
+        if (sortConfig.direction === 'asc') {
+          return aStr.localeCompare(bStr);
+        } else {
+          return bStr.localeCompare(aStr);
+        }
       }
-    }
-  });
+    });
+  }, [filteredPlayers, sortConfig.key, sortConfig.direction, scoringMode, currentGameweek]);
 
   // Get unique teams and owners for filter dropdowns
   const teams = EPL_TEAMS.sort();
@@ -1401,12 +695,12 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
     switch(activeTab) {
       case 'players': 
         return null; // No stats cards for players tab
-      case 'matching': 
-        return <MatchingStats players={processedPlayers} integration={integration} />;
-      case 'optimizer': 
-        return <OptimizerStats scoringMode={scoringMode} currentGameweek={currentGameweek} />;
+      case 'matching':
+        return <MatchingStatsCard players={processedPlayers} integration={integration} />;
+      case 'optimizer':
+        return <OptimizerStatsCard scoringMode={scoringMode} currentGameweek={currentGameweek} />;
       case 'transfers':
-        return <TransferStats
+        return <TransferStatsCard
           players={processedPlayers}
           scoringMode={scoringMode}
           gameweekRange={transferGameweekRange}
@@ -1492,10 +786,10 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                       onChange={(e) => setFilters(prev => ({ ...prev, owner: e.target.value }))}
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white"
                     >
-                      <option value="all">All Owners</option>
-                      <option value="my_players_and_free_agents">My Players + FAs</option>
-                      <option value="ThatDerekGuy">My Players Only</option>
-                      <option value="Free Agent">Free Agents Only</option>
+                      <option value={FILTER_OPTIONS.ALL}>All Owners</option>
+                      <option value={FILTER_OPTIONS.MY_PLAYERS_AND_FAS}>My Players + FAs</option>
+                      <option value={USER_ID}>My Players Only</option>
+                      <option value={OWNERSHIP_STATUS.FREE_AGENT}>Free Agents Only</option>
                       {owners.map(owner => (
                         <option key={owner} value={owner}>{owner}</option>
                       ))}
@@ -1538,8 +832,8 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                 <div className={`text-sm text-gray-400`}>
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
                   <span className="ml-2 text-xs">
-                    (Free Agents: {processedPlayers.filter(p => !p.owned_by || p.owned_by === 'Free Agent').length}, 
-                     Owned: {processedPlayers.filter(p => p.owned_by && p.owned_by !== 'Free Agent').length})
+                    (Free Agents: {processedPlayers.filter(p => !p.owned_by || p.owned_by === OWNERSHIP_STATUS.FREE_AGENT).length},
+                     Owned: {processedPlayers.filter(p => p.owned_by && p.owned_by !== OWNERSHIP_STATUS.FREE_AGENT).length})
                   </span>
                 </div>
                 <div className="text-sm text-gray-500">
@@ -1669,13 +963,13 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                             {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || 'N/A'}
                           </td>
 <td className="px-6 py-4 whitespace-nowrap text-sm">
-  {player.owned_by && player.owned_by !== 'Free Agent' && player.owned_by !== '' ? (
+  {player.owned_by && player.owned_by !== OWNERSHIP_STATUS.FREE_AGENT && player.owned_by !== '' ? (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-      player.owned_by === 'ThatDerekGuy' 
+      player.owned_by === USER_ID
         ? 'bg-indigo-100 text-indigo-900 border border-indigo-400'  // Deep indigo for "My Player"
         : 'bg-orange-100 text-orange-900 border border-orange-400'   // Orange for other owners
     }`}>
-      {player.owned_by === 'ThatDerekGuy' ? '👤 My Player' : player.owned_by}
+      {player.owned_by === USER_ID ? '👤 My Player' : player.owned_by}
     </span>
   ) : (
     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
@@ -1739,8 +1033,8 @@ if (filters.team !== 'all' && player.team_abbr !== filters.team) {
                     onClick={() => {
                       setFilters({
                         position: [], // Clear to empty array
-                        team: 'all',
-                        owner: 'all',
+                        team: FILTER_OPTIONS.ALL,
+                        owner: FILTER_OPTIONS.ALL,
                         minPoints: 0,
                         search: ''
                       });

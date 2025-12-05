@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
 
 // V3 Sleeper scoring conversion ratios (same as v3ScoringService.js)
 const V3_CONVERSION_RATIOS = {
@@ -570,7 +571,7 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gam
                 onChange={(e) => {
                   const newValue = Math.max(currentGW, Math.min(38, parseInt(e.target.value) || currentGW));
                   if (newValue <= endGameweek) {
-                    setStartGameweek(newValue);
+                    onGameweekRangeChange({ start: newValue, end: endGameweek });
                   }
                 }}
                 className="w-16 text-center text-sm font-medium border rounded px-2 py-1 bg-gray-700 border-gray-600 text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
@@ -594,7 +595,7 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gam
                 value={endGameweek}
                 onChange={(e) => {
                   const newValue = Math.max(startGameweek, Math.min(38, parseInt(e.target.value) || endGameweek));
-                  setEndGameweek(newValue);
+                  onGameweekRangeChange({ start: startGameweek, end: newValue });
                 }}
                 className="w-16 text-center text-sm font-medium border rounded px-2 py-1 bg-gray-700 border-gray-600 text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                 min={startGameweek}
@@ -964,6 +965,26 @@ const ComparisonModal = ({ comparison, startGameweek, endGameweek, currentGamewe
       </div>
     </div>
   );
+};
+
+TransferTabContent.propTypes = {
+  players: PropTypes.arrayOf(PropTypes.object).isRequired,
+  currentGameweek: PropTypes.shape({
+    number: PropTypes.number.isRequired
+  }),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  gameweekRange: PropTypes.shape({
+    start: PropTypes.number,
+    end: PropTypes.number
+  }),
+  onGameweekRangeChange: PropTypes.func
+};
+
+TransferTabContent.defaultProps = {
+  scoringMode: 'ffh',
+  currentGameweek: { number: 1 },
+  gameweekRange: null,
+  onGameweekRangeChange: () => {}
 };
 
 export default TransferTabContent;

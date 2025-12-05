@@ -2,6 +2,7 @@
 // Enhanced Optimizer Tab Component with Sleeper position colors
 
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import MyPlayersTable from './MyPlayersTable.js';
 import v3ScoringService from '../services/v3ScoringService.js';
 
@@ -852,4 +853,16 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
       </div>
     </div>
   );
+};
+
+OptimizerTabContent.propTypes = {
+  players: PropTypes.arrayOf(PropTypes.object).isRequired,
+  currentGameweek: PropTypes.shape({
+    number: PropTypes.number.isRequired
+  }).isRequired,
+  scoringMode: PropTypes.oneOf(['ffh', 'v3'])
+};
+
+OptimizerTabContent.defaultProps = {
+  scoringMode: 'ffh'
 };

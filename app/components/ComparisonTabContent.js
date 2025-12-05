@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { getScoringValue } from '../services/v3ScoringService.js';
 
 const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ffh' }) => {
@@ -397,6 +398,20 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
       )}
     </div>
   );
+};
+
+ComparisonTabContent.propTypes = {
+  players: PropTypes.arrayOf(PropTypes.object),
+  currentGameweek: PropTypes.shape({
+    number: PropTypes.number.isRequired
+  }),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3'])
+};
+
+ComparisonTabContent.defaultProps = {
+  players: [],
+  scoringMode: 'ffh',
+  currentGameweek: { number: 1 }
 };
 
 export default ComparisonTabContent;

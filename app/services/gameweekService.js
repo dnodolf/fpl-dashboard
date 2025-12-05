@@ -68,15 +68,15 @@ async getCurrentGameweek() {
     
   } catch (error) {
     console.error('❌ Error in gameweek service:', error);
-    
-    // Ultimate fallback
+
+    // Ultimate fallback - should never be reached since getEnhancedFallback uses hardcoded schedule
     return {
-      number: 4,
+      number: 15,
       status: 'upcoming',
-      statusDisplay: '🏁 GW 4 (Upcoming)',
-      date: 'Sep 13',
-      name: 'Gameweek 4',
-      deadline: '2025-09-13T17:30:00Z',
+      statusDisplay: '🏁 GW 15 (Upcoming)',
+      date: 'Dec 6',
+      name: 'Gameweek 15',
+      deadline: '2025-12-06T21:00:00Z',
       source: 'fpl_api' // No warning
     };
   }
