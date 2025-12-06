@@ -30,7 +30,7 @@ const TEAM_DIFFICULTY = {
   'LUT': 1, 'BUR': 1, 'MUN': 4, 'WHU': 3, 'NFO': 2
 };
 
-const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gameweekRange, onGameweekRangeChange }) => {
+const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gameweekRange, onGameweekRangeChange, onPlayerClick }) => {
   // Calculate default gameweek range: current GW + next 4 (total of 5)
   const currentGW = currentGameweek?.number;
   const defaultStartGW = currentGW;
@@ -717,8 +717,13 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gam
                               {index + 1}
                             </div>
                             <div>
-                              <div className={`text-sm font-medium text-white`}>
-                                {player.web_name || player.name}
+                              <div className={`text-sm font-medium`}>
+                                <button
+                                  onClick={() => onPlayerClick && onPlayerClick(player)}
+                                  className="text-white hover:text-blue-400 underline decoration-transparent hover:decoration-blue-400 transition-all cursor-pointer text-left"
+                                >
+                                  {player.web_name || player.name}
+                                </button>
                               </div>
                               <div className={`text-xs text-gray-400`}>
                                 {player.team_abbr}
@@ -977,14 +982,16 @@ TransferTabContent.propTypes = {
     start: PropTypes.number,
     end: PropTypes.number
   }),
-  onGameweekRangeChange: PropTypes.func
+  onGameweekRangeChange: PropTypes.func,
+  onPlayerClick: PropTypes.func
 };
 
 TransferTabContent.defaultProps = {
   scoringMode: 'ffh',
   currentGameweek: { number: 1 },
   gameweekRange: null,
-  onGameweekRangeChange: () => {}
+  onGameweekRangeChange: () => {},
+  onPlayerClick: () => {}
 };
 
 export default TransferTabContent;

@@ -16,7 +16,7 @@ npm run lint        # Run ESLint checks
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v3.2 - V3 Sleeper Scoring with FPL Conversion
+**Current Version**: v3.4 - Enhanced Player Details & Comparison Visualizations
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -46,6 +46,7 @@ app/
 │   ├── OptimizerTabContent.js        # Formation optimization interface
 │   ├── TransferTabContent.js         # Transfer recommendations
 │   ├── ComparisonTabContent.js       # Player comparison interface
+│   ├── PlayerModal.js                # Detailed player modal with charts & fixtures
 │   ├── MyPlayersTable.js            # Player analytics table
 │   └── stats/                       # Statistics card components
 │       ├── MatchingStatsCard.js     # Player matching statistics
@@ -107,14 +108,39 @@ app/
   - **V3 Mode**: Sleeper-adjusted predictions with position-based conversion ratios
 - Interactive player comparison modals with detailed statistics
 
-### Player Comparison (NEW in v3.1)
+### Player Modal (NEW in v3.4)
+- **Detailed player view** accessible by clicking any player in the dashboard
+- **Header Stats**: Season total points, current GW prediction, season average, minutes prediction
+- **FFH/V3 Toggle**: Switch between scoring modes within the modal
+- **Next 5 Gameweeks Chart**: Bar chart showing predicted points for upcoming 5 GWs
+  - Dynamic Y-axis scaling based on max predicted points
+  - Half-width bars with point labels above each bar
+  - Opponent display showing home/away and team code
+- **Rest of Season Fixtures Table**: Complete fixture list for all remaining gameweeks
+  - GW number, opponent, difficulty rating (color-coded 1-5), predicted points
+  - Scrollable with sticky headers for easy navigation
+- **Season Stats**: Conditional display of goals, assists, minutes, clean sheets, cards, bonus
+- **Compare Button**: Quick navigation to Comparison tab with player pre-selected
+- **Responsive Design**: Adapts to different screen sizes with proper mobile support
+
+### Player Comparison (Enhanced in v3.4)
 - **Side-by-side comparison** of any two players with intelligent auto-suggestions
 - **Real-time search** with fuzzy matching by name, team, or position
 - **Smart suggestions dropdown** showing top 10 matches with player stats preview
+- **My Players Dropdown**: Quick selection from your team below search fields
 - **Comprehensive metrics** including ROS Points, Next 5 GW, PPG Predicted, V3 scoring
 - **Visual comparison** with color-coded better/worse indicators
+- **Next 5 GW Charts**: Side-by-side bar charts (Player 1 blue, Player 2 green)
+  - Dynamic Y-axis with grid lines
+  - Point predictions above each bar
+  - Opponent labels below X-axis
+- **Rest of Season Tables**: Side-by-side fixture tables showing all remaining gameweeks
+  - Scrollable with max-height and sticky headers
+  - Color-coded difficulty badges (1-5 scale)
+  - Predicted points for each fixture
 - **Clean interface** focused on prediction data without market noise
 - **News integration** with 📰 icons for player injury/status updates
+- **Pre-selection Support**: Navigate from PlayerModal via Compare button
 
 ## Environment Configuration
 
@@ -211,7 +237,7 @@ async function importServices() {
 
 ## Current Status
 
-**Production Ready**: v3.1 represents enhanced comparison and performance optimization with:
+**Production Ready**: v3.4 represents enhanced player details and comparison visualizations with:
 - ✅ 100% reliable gameweek system (hardcoded)
 - ✅ 98% player matching accuracy
 - ✅ 100% position accuracy (Sleeper authority)
@@ -219,11 +245,39 @@ async function importServices() {
 - ✅ Enhanced UI with intuitive gameweek controls
 - ✅ Streamlined transfer analysis with improved UX
 - ✅ Self-maintaining system (annual updates only)
-- ✅ Intelligent player comparison with auto-suggestions
+- ✅ Intelligent player comparison with auto-suggestions and visualizations
+- ✅ Detailed player modal with charts and fixture analysis
 - ✅ Optimized caching with compression and smart cleanup
 - ✅ Clean console logging with duplicate prevention
 
 ## Recent Technical Updates
+
+### v3.4 - Enhanced Player Details & Comparison Visualizations (December 2024)
+- **PlayerModal Component**: New comprehensive player detail modal (`app/components/PlayerModal.js`)
+  - Click any player to view detailed stats, predictions, and fixtures
+  - FFH/V3 scoring toggle within modal
+  - Next 5 Gameweeks bar chart with dynamic Y-axis scaling
+  - Rest of Season fixtures table with scrollable design and sticky headers
+  - Season stats conditionally rendered only when data available
+  - Compare button for quick navigation to Comparison tab with pre-selection
+  - PropTypes validation for type safety
+  - Follows React Hooks rules with proper hook ordering
+- **Enhanced Comparison Tab**: Added visual fixture analysis (`app/components/ComparisonTabContent.js`)
+  - Side-by-side Next 5 GW bar charts (Player 1 blue, Player 2 green)
+  - Side-by-side Rest of Season fixtures tables with color-coded difficulty
+  - My Players dropdown for quick selection from your team
+  - Pre-selection support when navigating from PlayerModal
+  - Maintains all existing comparison metrics and stats
+  - V3 conversion ratios applied to fixture predictions
+- **Cross-Component Integration**: Seamless navigation between features (`app/page.js`)
+  - handleCompare callback to navigate from modal to comparison
+  - comparisonPlayer1 state management for pre-selection
+  - onClearPreSelection cleanup to prevent state leakage
+- **Code Quality**:
+  - Added 421 lines of new functionality
+  - Proper error handling and null checks
+  - Consistent styling with existing dark theme
+  - Responsive design patterns throughout
 
 ### v3.3 - Performance Optimization & Code Quality (December 2024)
 - **React Performance Optimizations**: Added useMemo/useCallback hooks to prevent unnecessary re-renders
@@ -290,6 +344,19 @@ async function importServices() {
 - **Performance**: Cache compression and deduplication are essential for large datasets (1500+ players)
 - **Auto-suggestions**: Limit to 10 results and use fuzzy matching for best UX
 - **Logging**: Always implement deduplication for React development to prevent console spam
+- **React Hooks Rules**: CRITICAL - All hooks must be called unconditionally at component top level
+  - Place ALL useState, useMemo, useCallback, useEffect hooks BEFORE any conditional returns
+  - Use optional chaining (`player?.predictions`) to safely handle null props during hook execution
+  - Violation causes "Rendered more hooks than during the previous render" error
+- **Modal Design Patterns**:
+  - Bar charts work better than line charts for discrete gameweek predictions
+  - Use half-width bars (`w-1/2`) for cleaner visual appearance
+  - Dynamic Y-axis scaling: `Math.max(...data, 1)` prevents division by zero
+  - Sticky headers essential for scrollable tables: `position: sticky; top: 0`
+- **Cross-Component State**:
+  - Pass callbacks down for navigation (handleCompare)
+  - Use state lifting for pre-selection (comparisonPlayer1)
+  - Always provide cleanup handlers (onClearPreSelection) to prevent state leakage
 
 ---
 

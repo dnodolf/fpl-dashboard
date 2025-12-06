@@ -15,6 +15,7 @@ import { MatchingStatsCard } from './components/stats/MatchingStatsCard';
 import { OptimizerStatsCard } from './components/stats/OptimizerStatsCard';
 import { TransferStatsCard } from './components/stats/TransferStatsCard';
 import { UnmatchedPlayersTable } from './components/stats/UnmatchedPlayersTable';
+import { PlayerModal } from './components/PlayerModal';
 
 // ----------------- ERROR BOUNDARY COMPONENT -----------------
 const ErrorBoundary = ({ children }) => {
@@ -312,6 +313,13 @@ export default function FPLDashboard() {
   // Shared gameweek range state for transfers tab
   const [transferGameweekRange, setTransferGameweekRange] = useState(null);
 
+  // Player modal state
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Comparison tab pre-selection state
+  const [comparisonPlayer1, setComparisonPlayer1] = useState(null);
+
   // Current gameweek state - will be updated by loadGameweek()
   const [currentGameweek, setCurrentGameweek] = useState({
     number: 15, // Updated to reflect current Premier League season progress
@@ -439,6 +447,22 @@ export default function FPLDashboard() {
     }
     setSortConfig({ key, direction });
   }, [sortConfig.key, sortConfig.direction]);
+
+  // Player modal handlers
+  const handlePlayerClick = useCallback((player) => {
+    setSelectedPlayer(player);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedPlayer(null);
+  }, []);
+
+  const handleCompare = useCallback((player) => {
+    setComparisonPlayer1(player);
+    setActiveTab('comparison');
+  }, []);
 
   // Get sort value for a player and column (memoized for performance)
   const getSortValue = useCallback((player, key) => {
@@ -935,8 +959,13 @@ export default function FPLDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div>
-                                <div className={`text-sm font-medium text-white flex items-center gap-2`}>
-                                  {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
+                                <div className={`text-sm font-medium flex items-center gap-2`}>
+                                  <button
+                                    onClick={() => handlePlayerClick(player)}
+                                    className="text-white hover:text-blue-400 underline decoration-transparent hover:decoration-blue-400 transition-all cursor-pointer text-left"
+                                  >
+                                    {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
+                                  </button>
                                   {player.news && player.news.trim() !== '' && (
                                     <span
                                       className="text-orange-400 hover:text-orange-300 cursor-pointer transition-colors"
@@ -1071,6 +1100,7 @@ export default function FPLDashboard() {
               scoringMode={scoringMode}
               gameweekRange={transferGameweekRange}
               onGameweekRangeChange={setTransferGameweekRange}
+              onPlayerClick={handlePlayerClick}
             />
           )}
 
@@ -1080,10 +1110,23 @@ export default function FPLDashboard() {
               players={processedPlayers}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
+              onPlayerClick={handlePlayerClick}
+              preSelectedPlayer1={comparisonPlayer1}
+              onClearPreSelection={() => setComparisonPlayer1(null)}
             />
           )}
 
         </main>
+
+        {/* Player Detail Modal */}
+        <PlayerModal
+          player={selectedPlayer}
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          currentGameweek={currentGameweek}
+          scoringMode={scoringMode}
+          onCompare={handleCompare}
+        />
       </div>
     </ErrorBoundary>
   );
