@@ -51,7 +51,7 @@ class GameweekService {
 async getCurrentGameweek() {
   try {
     // Using hardcoded gameweek schedule - no API calls needed
-    
+
     // Go directly to our reliable hardcoded logic
     const gameweekData = this.getEnhancedFallback();
     
@@ -100,7 +100,7 @@ async getCurrentGameweek() {
       { gw: 12, start: '2025-11-22T20:30:00.000Z', end: '2025-11-25T04:00:00.000Z', deadline: '2025-11-22T18:30:00.000Z' },
       { gw: 13, start: '2025-11-29T23:00:00.000Z', end: '2025-12-01T00:30:00.000Z', deadline: '2025-11-29T21:00:00.000Z' },
       { gw: 14, start: '2025-12-04T04:00:00.000Z', end: '2025-12-04T04:00:00.000Z', deadline: '2025-12-04T02:00:00.000Z' },
-      { gw: 15, start: '2025-12-06T23:00:00.000Z', end: '2025-12-06T23:00:00.000Z', deadline: '2025-12-06T21:00:00.000Z' },
+      { gw: 15, start: '2025-12-06T12:30:00.000Z', end: '2025-12-08T23:00:00.000Z', deadline: '2025-12-06T11:30:00.000Z' },
       { gw: 16, start: '2025-12-13T23:00:00.000Z', end: '2025-12-13T23:00:00.000Z', deadline: '2025-12-13T21:00:00.000Z' },
       { gw: 17, start: '2025-12-20T23:00:00.000Z', end: '2025-12-20T23:00:00.000Z', deadline: '2025-12-20T21:00:00.000Z' },
       { gw: 18, start: '2025-12-27T23:00:00.000Z', end: '2025-12-27T23:00:00.000Z', deadline: '2025-12-27T21:00:00.000Z' },
@@ -146,7 +146,7 @@ getEnhancedFallback() {
   for (let i = 0; i < gameweekDates.length; i++) {
     const gw = gameweekDates[i];
     const startTime = new Date(gw.start).getTime();
-    const endTime = new Date(gw.end).getTime(); // Remove buffer that's causing GW5 to still show as live
+    const endTime = new Date(gw.end).getTime();
     const deadlineTime = new Date(gw.deadline).getTime();
 
     if (currentTime < startTime) {
@@ -171,7 +171,7 @@ getEnhancedFallback() {
       // Games in progress or recently finished
       const hoursSinceStart = (currentTime - startTime) / (1000 * 60 * 60);
       let estimatedFinished;
-      
+
       if (hoursSinceStart < 12) {
         estimatedFinished = 'some';
       } else if (hoursSinceStart < 48) {
@@ -179,7 +179,7 @@ getEnhancedFallback() {
       } else {
         estimatedFinished = 'all';
       }
-      
+
       const endDate = new Date(gw.end);
       currentGameweek = {
         number: gw.gw,

@@ -5,6 +5,7 @@ import v3ScoringService from './services/v3ScoringService';
 import { OptimizerTabContent } from './components/OptimizerTabContent';
 import TransferTabContent from './components/TransferTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
+import CheatSheetTabContent from './components/CheatSheetTabContent';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { EPL_TEAMS, TEAM_MAPPINGS, TEAM_DISPLAY_NAMES, isEPLPlayer } from './constants/teams';
 import CacheManager, { getDataFreshnessStatus, formatCacheAge } from './utils/cacheManager';
@@ -231,10 +232,23 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             <h1 className={`text-2xl font-bold text-white`}>⚽ Fantasy FC Playbook</h1>
            
             {/* Data Freshness Indicator */}
-            <div className="flex items-center gap-2 text-sm">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${freshnessStatus.color}-100 text-${freshnessStatus.color}-800`}>
-                🕒 {freshnessStatus.message}
-              </span>
+            <div className="flex flex-col gap-1 text-sm">
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${freshnessStatus.color}-100 text-${freshnessStatus.color}-800`}>
+                  🕒 {freshnessStatus.message}
+                </span>
+              </div>
+              {lastUpdated && (
+                <div className="text-xs text-gray-400">
+                  Last data pull: {new Date(lastUpdated).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })} (FFH + Sleeper)
+                </div>
+              )}
             </div>
           </div>
 
@@ -275,9 +289,10 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
           {[
             { id: 'players', label: 'Players' },
             { id: 'matching', label: 'Matching' },
-            { id: 'optimizer', label: 'Optimizer' },
+            { id: 'optimizer', label: 'Start/Sit' },
             { id: 'transfers', label: 'Transfers' },
-            { id: 'comparison', label: 'Comparison' }
+            { id: 'comparison', label: 'Comparison' },
+            { id: 'cheatsheet', label: 'Cheat Sheet' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -320,37 +335,13 @@ export default function FPLDashboard() {
   // Comparison tab pre-selection state
   const [comparisonPlayer1, setComparisonPlayer1] = useState(null);
 
-  // Current gameweek state - will be updated by loadGameweek()
-  const [currentGameweek, setCurrentGameweek] = useState({
-    number: 15, // Updated to reflect current Premier League season progress
-    status: 'upcoming',
-    statusDisplay: '🏁 GW 15 (Upcoming)',
-    date: 'Dec 6',
-    fullDate: '2025-12-06',
-    source: 'fpl_api'
-  });
-  
+  // Use gameweek hook for current gameweek data
+  const currentGameweek = useGameweek();
+
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration } = usePlayerData();
-  
+
   // Processed players with scoring mode applied
   const [processedPlayers, setProcessedPlayers] = useState([]);
-
-  // Load gameweek data
-  useEffect(() => {
-    const loadGameweek = async () => {
-      try {
-        const gameweek = await getCurrentGameweek();
-        setCurrentGameweek(gameweek);
-        
-        console.log(`📅 Dashboard: Loaded GW${gameweek.number} (${gameweek.status})`);
-      } catch (error) {
-        console.error('Failed to load gameweek:', error);
-        // Keep the fallback currentGameweek state
-      }
-    };
-
-    loadGameweek();
-  }, []);
 
   // Process players when scoring mode or players change
   // Note: V3 scoring is already applied server-side in the API
@@ -1113,6 +1104,16 @@ export default function FPLDashboard() {
               onPlayerClick={handlePlayerClick}
               preSelectedPlayer1={comparisonPlayer1}
               onClearPreSelection={() => setComparisonPlayer1(null)}
+            />
+          )}
+
+          {/* Cheat Sheet - Quick reference rankings */}
+          {activeTab === 'cheatsheet' && (
+            <CheatSheetTabContent
+              players={processedPlayers}
+              scoringMode={scoringMode}
+              currentGameweek={currentGameweek}
+              onPlayerClick={handlePlayerClick}
             />
           )}
 

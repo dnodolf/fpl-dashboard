@@ -25,7 +25,14 @@ const convertToV3Points = (ffhPoints, position) => {
   return ffhPoints * ratio;
 };
 
-export function PlayerModal({ player, isOpen, onClose, currentGameweek, scoringMode: parentScoringMode = 'ffh', onCompare }) {
+export function PlayerModal({
+  player = null,
+  isOpen,
+  onClose,
+  currentGameweek = { number: 15 },
+  scoringMode: parentScoringMode = 'ffh',
+  onCompare = null
+}) {
   const [localScoringMode, setLocalScoringMode] = useState(parentScoringMode);
 
   // Calculate key stats - all hooks must be called before any conditional returns
@@ -617,11 +624,4 @@ PlayerModal.propTypes = {
   }),
   scoringMode: PropTypes.oneOf(['ffh', 'v3']),
   onCompare: PropTypes.func
-};
-
-PlayerModal.defaultProps = {
-  player: null,
-  scoringMode: 'ffh',
-  currentGameweek: { number: 15 },
-  onCompare: null
 };
