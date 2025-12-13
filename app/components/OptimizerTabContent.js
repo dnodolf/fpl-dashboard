@@ -763,7 +763,22 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
 
   return (
     <div className="space-y-6">
-      
+
+      {/* Gameweek Header - Prominent Display */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-center border border-blue-500">
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-4xl">⚽</span>
+          <div>
+            <h2 className="text-3xl font-bold text-white">
+              Gameweek {currentGameweek?.number || 'N/A'}
+            </h2>
+            <p className="text-blue-100 text-sm mt-1">
+              Start/Sit Recommendations
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Lineup Comparison - Main Focus */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
