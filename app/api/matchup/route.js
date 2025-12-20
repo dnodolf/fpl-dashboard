@@ -23,7 +23,22 @@ export async function POST(request) {
     console.log(`🏆 Matchup API: Fetching matchup for user ${userId}, week ${week}, scoring: ${scoringMode}`);
 
     // Get matchup data from Sleeper
-    const matchupData = await sleeperApiService.getUserMatchup(userId, week);
+    let matchupData;
+    try {
+      matchupData = await sleeperApiService.getUserMatchup(userId, week);
+    } catch (matchupError) {
+      console.error('Error getting matchup data:', matchupError.message);
+      // Return a friendly error if matchup data doesn't exist
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No matchup data available',
+          message: `Week ${week} matchup data is not available. The season may not have started yet, or this week's matchups haven't been scheduled.`,
+          details: matchupError.message
+        },
+        { status: 404 }
+      );
+    }
 
     // Get all players data to enrich the matchup
     const sleeperPlayers = await sleeperApiService.getPlayers();

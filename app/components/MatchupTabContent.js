@@ -156,14 +156,14 @@ const MatchupTabContent = ({ currentGameweek, scoringMode = 'ffh' }) => {
           })
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch matchup: ${response.status}`);
-        }
-
         const data = await response.json();
 
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to load matchup');
+        if (!response.ok || !data.success) {
+          // Handle 404 (no matchup data) differently from other errors
+          if (response.status === 404) {
+            throw new Error(data.message || 'No matchup data available for this week');
+          }
+          throw new Error(data.error || `Failed to fetch matchup: ${response.status}`);
         }
 
         setMatchupData(data);
@@ -188,11 +188,23 @@ const MatchupTabContent = ({ currentGameweek, scoringMode = 'ffh' }) => {
   }
 
   if (error) {
+    // Check if it's a "no data" error vs a real error
+    const isNoDataError = error.includes('not available') || error.includes('not have started');
+
     return (
       <div className="rounded-lg border p-6 text-center bg-gray-800 border-gray-700">
-        <div className="text-red-500 text-4xl mb-2">❌</div>
-        <h3 className="text-lg font-medium mb-2 text-white">Failed to Load Matchup</h3>
+        <div className={`${isNoDataError ? 'text-yellow-500' : 'text-red-500'} text-4xl mb-2`}>
+          {isNoDataError ? '📅' : '❌'}
+        </div>
+        <h3 className="text-lg font-medium mb-2 text-white">
+          {isNoDataError ? 'No Matchup Data Available' : 'Failed to Load Matchup'}
+        </h3>
         <p className="mb-4 text-gray-400">{error}</p>
+        {isNoDataError && (
+          <p className="text-sm text-gray-500">
+            Matchup data will be available once the Premier League season begins and matchups are scheduled in your Sleeper league.
+          </p>
+        )}
       </div>
     );
   }
