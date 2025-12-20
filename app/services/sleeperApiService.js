@@ -88,6 +88,73 @@ class SleeperApiService {
     }
   }
 
+  // Get matchups for a specific week
+  async getMatchups(week) {
+    try {
+      const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/matchups/${week}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching matchups for week ${week}:`, error);
+      throw error;
+    }
+  }
+
+  // Get user's matchup for a specific week
+  async getUserMatchup(userId, week) {
+    try {
+      const [matchups, rosters] = await Promise.all([
+        this.getMatchups(week),
+        this.getRosters()
+      ]);
+
+      // Find user's roster
+      const userRoster = rosters.find(r => r.owner_id === userId);
+      if (!userRoster) {
+        throw new Error(`No roster found for user ${userId}`);
+      }
+
+      // Find user's matchup by matchup_id
+      const userMatchupData = matchups.find(m => m.roster_id === userRoster.roster_id);
+      if (!userMatchupData) {
+        throw new Error(`No matchup found for roster ${userRoster.roster_id} in week ${week}`);
+      }
+
+      // Find opponent's matchup (same matchup_id but different roster_id)
+      const opponentMatchupData = matchups.find(
+        m => m.matchup_id === userMatchupData.matchup_id && m.roster_id !== userRoster.roster_id
+      );
+
+      if (!opponentMatchupData) {
+        throw new Error(`No opponent found for matchup ${userMatchupData.matchup_id}`);
+      }
+
+      // Find opponent's roster
+      const opponentRoster = rosters.find(r => r.roster_id === opponentMatchupData.roster_id);
+
+      return {
+        week,
+        userRoster: {
+          ...userRoster,
+          matchupData: userMatchupData,
+          points: userMatchupData.points || 0,
+          starters: userMatchupData.starters || [],
+          players: userMatchupData.players || []
+        },
+        opponentRoster: {
+          ...opponentRoster,
+          matchupData: opponentMatchupData,
+          points: opponentMatchupData.points || 0,
+          starters: opponentMatchupData.starters || [],
+          players: opponentMatchupData.players || []
+        }
+      };
+    } catch (error) {
+      console.error(`Error fetching user matchup for week ${week}:`, error);
+      throw error;
+    }
+  }
+
   // Transform Sleeper player data
   transformSleeperData(sleeperPlayers, ownershipMap = {}) {
     return Object.entries(sleeperPlayers).map(([playerId, player]) => ({
