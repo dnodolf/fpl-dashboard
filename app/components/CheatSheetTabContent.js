@@ -217,7 +217,7 @@ export default function CheatSheetTabContent({
               onChange={(e) => setTimeframe(e.target.value)}
               className="bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm focus:outline-none focus:border-blue-500"
             >
-              <option value="next1">Next Week</option>
+              <option value="next1">Next Week (GW {currentGameweek?.number || '?'})</option>
               <option value="next5">Next 5 GWs</option>
               <option value="ros">Rest of Season</option>
               <option value="custom">Custom</option>
