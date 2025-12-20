@@ -285,7 +285,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1">
+        <div className="flex space-x-1 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           {[
             { id: 'players', label: 'Players' },
             { id: 'matching', label: 'Matching' },
@@ -297,7 +297,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+              className={`px-4 py-2 font-medium rounded-lg transition-colors whitespace-nowrap flex-shrink-0 ${
                 activeTab === tab.id
                   ? 'bg-blue-500 text-white'
                   : 'text-gray-300 hover:text-white hover:bg-gray-700'
