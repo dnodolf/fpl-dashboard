@@ -127,7 +127,8 @@ export default function CheatSheetTabContent({
   currentGameweek = { number: 15 },
   onPlayerClick
 }) {
-  const [timeframe, setTimeframe] = useState('ros'); // 'ros' or 'next5'
+  const [timeframe, setTimeframe] = useState('ros'); // 'next1', 'next5', 'ros', 'custom'
+  const [customGames, setCustomGames] = useState(10);
   const [hideOthers, setHideOthers] = useState(true);
 
   // Process and filter players
@@ -144,20 +145,29 @@ export default function CheatSheetTabContent({
           ? (player.v3_season_total || 0)
           : (player.predicted_points || 0);
       } else {
-        // Next 5 gameweeks
+        // Next N gameweeks (1, 5, or custom)
         const currentGW = currentGameweek?.number || 15;
         const predictions = player.predictions || [];
-        const next5 = predictions
-          .filter(p => p.gw >= currentGW && p.gw < currentGW + 5)
-          .slice(0, 5);
+
+        // Determine how many games to look at
+        let gamesToConsider = 5;
+        if (timeframe === 'next1') {
+          gamesToConsider = 1;
+        } else if (timeframe === 'custom') {
+          gamesToConsider = customGames;
+        }
+
+        const nextN = predictions
+          .filter(p => p.gw >= currentGW && p.gw < currentGW + gamesToConsider)
+          .slice(0, gamesToConsider);
 
         if (scoringMode === 'v3') {
           // Apply V3 conversion to each gameweek
           const v3Ratios = { GKP: 0.90, DEF: 1.15, MID: 1.05, FWD: 0.97 };
           const ratio = v3Ratios[player.position] || 1.0;
-          displayPoints = next5.reduce((sum, p) => sum + (p.predicted_pts || 0) * ratio, 0);
+          displayPoints = nextN.reduce((sum, p) => sum + (p.predicted_pts || 0) * ratio, 0);
         } else {
-          displayPoints = next5.reduce((sum, p) => sum + (p.predicted_pts || 0), 0);
+          displayPoints = nextN.reduce((sum, p) => sum + (p.predicted_pts || 0), 0);
         }
       }
 
@@ -192,13 +202,13 @@ export default function CheatSheetTabContent({
     });
 
     return grouped;
-  }, [players, timeframe, hideOthers, scoringMode, currentGameweek]);
+  }, [players, timeframe, customGames, hideOthers, scoringMode, currentGameweek]);
 
   return (
     <div className="space-y-4">
       {/* Controls */}
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
           {/* Timeframe selector */}
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-400">Timeframe:</label>
@@ -207,13 +217,31 @@ export default function CheatSheetTabContent({
               onChange={(e) => setTimeframe(e.target.value)}
               className="bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm focus:outline-none focus:border-blue-500"
             >
+              <option value="next1">Next Week</option>
+              <option value="next5">Next 5 GWs</option>
               <option value="ros">Rest of Season</option>
-              <option value="next5">Next 5 Gameweeks</option>
+              <option value="custom">Custom</option>
             </select>
           </div>
 
+          {/* Custom games input - only show when Custom is selected */}
+          {timeframe === 'custom' && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-400">Next</label>
+              <input
+                type="number"
+                min="1"
+                max="38"
+                value={customGames}
+                onChange={(e) => setCustomGames(Math.max(1, Math.min(38, parseInt(e.target.value) || 1)))}
+                className="bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm w-16 focus:outline-none focus:border-blue-500"
+              />
+              <label className="text-sm text-gray-400">games</label>
+            </div>
+          )}
+
           {/* Hide Others toggle */}
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2 sm:ml-auto">
             <label className="text-sm text-gray-400">Hide Others</label>
             <button
               onClick={() => setHideOthers(!hideOthers)}
