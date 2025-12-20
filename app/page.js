@@ -226,14 +226,14 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
 
   return (
     <header className={`bg-gray-800 border-gray-700 border-b sticky top-0 z-50`}>
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
         {/* Top Row: Title, Gameweek, Update Button */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <h1 className={`text-2xl font-bold text-white`}>⚽ Fantasy FC Playbook</h1>
-           
-            {/* Data Freshness Indicator */}
-            <div className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <h1 className={`text-lg sm:text-2xl font-bold text-white whitespace-nowrap`}>⚽ Fantasy FC Playbook</h1>
+
+            {/* Data Freshness Indicator - Hidden on mobile */}
+            <div className="hidden sm:flex flex-col gap-1 text-sm">
               <div className="flex items-center gap-2">
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${freshnessStatus.color}-100 text-${freshnessStatus.color}-800`}>
                   🕒 {freshnessStatus.message}
@@ -253,18 +253,18 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
             {/* Current Gameweek with Enhanced Display */}
             <GameweekDisplay gameweek={currentGameweek} />
 
             {/* Scoring Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-300">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <span className="text-xs sm:text-sm text-gray-300 hidden sm:inline">
                 Scoring:
               </span>
               <button
                 onClick={() => setScoringMode(scoringMode === 'ffh' ? 'v3' : 'ffh')}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   scoringMode === 'v3'
                     ? 'bg-green-500 text-white hover:bg-green-600'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -278,9 +278,9 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             {/* Update Data Button */}
             <button
               onClick={() => updateData('manual', true, false)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 sm:gap-2 whitespace-nowrap"
             >
-              🔄 Update Data
+              🔄 <span className="hidden sm:inline">Update Data</span>
             </button>
           </div>
         </div>

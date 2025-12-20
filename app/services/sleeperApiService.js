@@ -108,8 +108,10 @@ class SleeperApiService {
         this.getRosters()
       ]);
 
-      // Find user's roster
-      const userRoster = rosters.find(r => r.owner_id === userId);
+      // Find user's roster (support both owner_id and displayName)
+      const userRoster = rosters.find(r =>
+        r.owner_id === userId || r.displayName === userId
+      );
       if (!userRoster) {
         throw new Error(`No roster found for user ${userId}`);
       }

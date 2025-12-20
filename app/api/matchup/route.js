@@ -150,11 +150,18 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('❌ Matchup API Error:', error);
+    console.error('Error stack:', error.stack);
     return NextResponse.json(
       {
         success: false,
         error: error.message || 'Failed to fetch matchup data',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details: error.stack,
+        debug: {
+          userId,
+          week,
+          scoringMode,
+          errorType: error.constructor.name
+        }
       },
       { status: 500 }
     );
