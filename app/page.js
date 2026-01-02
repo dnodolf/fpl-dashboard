@@ -7,6 +7,7 @@ import TransferTabContent from './components/TransferTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
 import CheatSheetTabContent from './components/CheatSheetTabContent';
 import MatchupTabContent from './components/MatchupTabContent';
+import LeagueStandings from './components/LeagueStandings';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { EPL_TEAMS, TEAM_MAPPINGS, TEAM_DISPLAY_NAMES, isEPLPlayer } from './constants/teams';
 import CacheManager, { getDataFreshnessStatus, formatCacheAge } from './utils/cacheManager';
@@ -743,9 +744,14 @@ export default function FPLDashboard() {
           setScoringMode={setScoringMode}
         />
 
+        {/* League Standings Widget */}
+        <div className="max-w-7xl mx-auto px-4 pt-4">
+          <LeagueStandings currentUserId={USER_ID} />
+        </div>
+
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
-          
+
           {/* Tab-Specific Stats Cards */}
           {renderStatsCards()}
 
