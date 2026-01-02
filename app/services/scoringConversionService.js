@@ -94,8 +94,20 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     });
 
     // Get current gameweek prediction - PURE FFH DATA
-    const currentGwPrediction = ffhGwPredictions[currentGameweek] || ffhSeasonAvg || 0;
-    
+    let currentGwPrediction = ffhGwPredictions[currentGameweek] || ffhSeasonAvg || 0;
+
+    // Check if player is available for next round
+    const chanceOfPlaying = ffhData.chance_of_playing_next_round ??
+                           ffhData.chance_of_playing_this_round ??
+                           ffhData.chance_next_round ??
+                           100; // Default to 100% if not specified
+
+    // Zero out current gameweek prediction if player isn't playing
+    if (chanceOfPlaying !== null && chanceOfPlaying !== undefined && chanceOfPlaying < 25) {
+      console.log(`⚠️ ${sleeperPlayer.full_name || ffhName}: Not playing (${chanceOfPlaying}% chance) - zeroing GW${currentGameweek} prediction`);
+      currentGwPrediction = 0;
+    }
+
     // FIXED: Return enhanced player with ALL data properly merged
     return {
       // PRESERVE all original Sleeper data
@@ -121,7 +133,9 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       // PURE FFH DATA - Preserve original fields for direct mapping
       predictions: ffhData.predictions || [],
       season_prediction_avg: ffhData.season_prediction_avg || 0,
-      news: ffhData.player?.news || '',
+      news: ffhData.player?.news || ffhData.news || '',
+      chance_next_round: chanceOfPlaying,
+      chance_of_playing_next_round: chanceOfPlaying,
 
       // Main prediction fields (PURE FFH DATA - no Sleeper conversion)
       current_gw_prediction: Math.round(currentGwPrediction * 100) / 100,
