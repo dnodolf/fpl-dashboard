@@ -226,6 +226,16 @@ const getFixtureDifficultyColorDark = (difficulty) => {
   }
 };
 
+  // Calculate start percentage based on chance of playing
+  const calculateStartPercentage = (player) => {
+    // Use FFH's chance_of_playing_next_round field
+    const chanceOfPlaying = player.chance_next_round ??
+                           player.chance_of_playing_next_round ??
+                           100; // Default to 100% if not specified
+
+    return chanceOfPlaying;
+  };
+
   // Create sortable data with extracted values
   const playersWithExtractedData = filteredPlayers.map(player => ({
     ...player,
@@ -233,6 +243,7 @@ const getFixtureDifficultyColorDark = (difficulty) => {
     predicted_minutes: getPlayerPredictedMinutes(player),
     ppg_value: getPlayerPPG(player),
     fixture_difficulty_value: getFixtureDifficulty(player),
+    start_percentage: calculateStartPercentage(player),
     // Extract THIS WEEK matchup and START/BENCH recommendation (V3 only)
     this_week_opponent: player.v3_this_week_opponent || 'TBD',
     this_week_is_home: player.v3_this_week_is_home !== undefined ? player.v3_this_week_is_home : true,
@@ -418,10 +429,10 @@ const getSleeperPositionBadgeColor = (position) => {
                   THIS WEEK 🔥 {renderSortIcon('this_week_opponent')}
                 </th>
                 <th
-                  onClick={() => handleSort('start_recommendation')}
+                  onClick={() => handleSort('start_percentage')}
                   className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
-                  START/BENCH {renderSortIcon('start_recommendation')}
+                  START % {renderSortIcon('start_percentage')}
                 </th>
               </tr>
             </thead>
@@ -515,16 +526,18 @@ const getSleeperPositionBadgeColor = (position) => {
                       </div>
                     </td>
 
-                    {/* START/BENCH Recommendation - NEW */}
+                    {/* START % - Chance of playing */}
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border-2 ${
-                        player.start_recommendation === 'MUST_START' ? 'bg-green-900 border-green-500 text-green-200' :
-                        player.start_recommendation === 'SAFE_START' ? 'bg-blue-900 border-blue-500 text-blue-200' :
-                        player.start_recommendation === 'FLEX' ? 'bg-yellow-900 border-yellow-500 text-yellow-200' :
-                        player.start_recommendation === 'BENCH' ? 'bg-red-900 border-red-500 text-red-200' :
-                        'bg-gray-800 border-gray-600 text-gray-400'
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold ${
+                        player.start_percentage === null || player.start_percentage === undefined ? 'text-gray-400' :
+                        player.start_percentage >= 75 ? 'text-green-400' :
+                        player.start_percentage >= 50 ? 'text-yellow-400' :
+                        player.start_percentage >= 25 ? 'text-orange-400' :
+                        'text-red-400'
                       }`}>
-                        {player.start_label}
+                        {player.start_percentage !== null && player.start_percentage !== undefined
+                          ? `${player.start_percentage}%`
+                          : '100%'}
                       </span>
                     </td>
                   </tr>
