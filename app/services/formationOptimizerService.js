@@ -22,11 +22,21 @@ export class FormationOptimizerService {
    * Get player's predicted points - enhanced with multiple fallback strategies including v3 scoring
    */
   getPlayerPoints(player) {
+    // CRITICAL: Check player availability first - if unavailable, return 0
+    const chanceOfPlaying = player.chance_next_round ??
+                           player.chance_of_playing_next_round ??
+                           100;
+
+    if (chanceOfPlaying !== null && chanceOfPlaying !== undefined && chanceOfPlaying < 25) {
+      // Player is out/suspended - don't use them regardless of predictions
+      return 0;
+    }
+
     // Priority 0: V3 current gameweek prediction (if available)
     if (player.v3_current_gw && player.v3_current_gw > 0) {
       return player.v3_current_gw;
     }
-    
+
     // Priority 1: Use current gameweek Sleeper prediction
     if (player.current_gw_prediction && player.current_gw_prediction > 0) {
       return player.current_gw_prediction;
