@@ -7,6 +7,7 @@ import TransferTabContent from './components/TransferTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
 import CheatSheetTabContent from './components/CheatSheetTabContent';
 import MatchupTabContent from './components/MatchupTabContent';
+import HomeTabContent from './components/HomeTabContent';
 import LeagueStandings from './components/LeagueStandings';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { EPL_TEAMS, TEAM_MAPPINGS, TEAM_DISPLAY_NAMES, isEPLPlayer } from './constants/teams';
@@ -289,6 +290,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         {/* Navigation Tabs */}
         <div className="flex space-x-1 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           {[
+            { id: 'home', label: 'Home' },
             { id: 'players', label: 'Players' },
             { id: 'matching', label: 'Matching' },
             { id: 'optimizer', label: 'Start/Sit' },
@@ -317,7 +319,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
 
 // ----------------- MAIN DASHBOARD COMPONENT -----------------
 export default function FPLDashboard() {
-  const [activeTab, setActiveTab] = useState('players');
+  const [activeTab, setActiveTab] = useState('home');
   const [filters, setFilters] = useState({
     position: [], // Changed to array for multi-select
     team: FILTER_OPTIONS.ALL,
@@ -744,11 +746,6 @@ export default function FPLDashboard() {
           setScoringMode={setScoringMode}
         />
 
-        {/* League Standings Widget */}
-        <div className="max-w-7xl mx-auto px-4 pt-4">
-          <LeagueStandings currentUserId={USER_ID} />
-        </div>
-
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
 
@@ -756,6 +753,14 @@ export default function FPLDashboard() {
           {renderStatsCards()}
 
           {/* Content based on active tab */}
+          {activeTab === 'home' && (
+            <HomeTabContent
+              players={processedPlayers}
+              currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
+            />
+          )}
+
           {activeTab === 'players' && (
             <>
               {/* Filters */}
