@@ -6,7 +6,6 @@ import { OptimizerTabContent } from './components/OptimizerTabContent';
 import TransferTabContent from './components/TransferTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
 import CheatSheetTabContent from './components/CheatSheetTabContent';
-import MatchupTabContent from './components/MatchupTabContent';
 import HomeTabContent from './components/HomeTabContent';
 import LeagueStandings from './components/LeagueStandings';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -294,7 +293,6 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             { id: 'players', label: 'Players' },
             { id: 'matching', label: 'Matching' },
             { id: 'optimizer', label: 'Start/Sit' },
-            { id: 'matchup', label: 'Matchup' },
             { id: 'transfers', label: 'Transfers' },
             { id: 'comparison', label: 'Comparison' },
             { id: 'cheatsheet', label: 'Cheat Sheet' }
@@ -1117,14 +1115,6 @@ export default function FPLDashboard() {
               onPlayerClick={handlePlayerClick}
               preSelectedPlayer1={comparisonPlayer1}
               onClearPreSelection={() => setComparisonPlayer1(null)}
-            />
-          )}
-
-          {/* Matchup - Head-to-head comparison */}
-          {activeTab === 'matchup' && (
-            <MatchupTabContent
-              currentGameweek={currentGameweek}
-              scoringMode={scoringMode}
             />
           )}
 
