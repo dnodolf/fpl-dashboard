@@ -39,11 +39,20 @@ export async function GET() {
 
     console.log(`✅ Standings API: Retrieved ${standings.length} teams`);
 
-    return NextResponse.json({
-      success: true,
-      standings,
-      count: standings.length
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        standings,
+        count: standings.length
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
+    );
 
   } catch (error) {
     console.error('❌ Standings API Error:', error);

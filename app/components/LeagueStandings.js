@@ -16,7 +16,11 @@ const LeagueStandings = ({ currentUserId = 'ThatDerekGuy' }) => {
         setLoading(true);
         const response = await fetch('/api/standings', {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
         });
 
         if (!response.ok) {
@@ -34,7 +38,7 @@ const LeagueStandings = ({ currentUserId = 'ThatDerekGuy' }) => {
     };
 
     fetchStandings();
-  }, []);
+  }, []); // Fetches on mount - will get fresh data from Sleeper API
 
   if (loading) {
     return (
