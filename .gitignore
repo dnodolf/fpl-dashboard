@@ -9,3 +9,9 @@ node_modules/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Development temp files
+temp/
+
+# Claude Code plans
+.claude/plans/
