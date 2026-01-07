@@ -1,0 +1,532 @@
+{
+  "league_id": "1240184286171107328",
+  "season": "2025-26",
+  "data_source": "Sleeper Screenshots (IMG_0333.PNG - IMG_0372.PNG)",
+  "owner": "ThatDerekGuy",
+  "weeks": [
+    {
+      "week": 1,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 4 },
+        { "name": "Fernandez", "position": "DEF", "points": 0.75 },
+        { "name": "Kudus", "position": "MID", "points": 8.25 },
+        { "name": "Davidson", "position": "DEF", "points": 3.25 },
+        { "name": "Fernandes", "position": "MID", "points": 0.5 },
+        { "name": "Mitoma", "position": "FWD", "points": 1.5 },
+        { "name": "Romero", "position": "DEF", "points": 8 },
+        { "name": "Cacicedo", "position": "MID", "points": 9 },
+        { "name": "Mbeumo", "position": "FWD", "points": 10.5 },
+        { "name": "Andersen", "position": "DEF", "points": 3.75 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Robinson", "position": "DEF", "points": 0 },
+        { "name": "Havertz", "position": "MID", "points": 1.25 },
+        { "name": "Babos", "position": "FWD", "points": 5 },
+        { "name": "Hunt", "position": "DEF", "points": 10 },
+        { "name": "Mbete", "position": "MID", "points": 10 },
+        { "name": "Strand Larsen", "position": "FWD", "points": 5.25 },
+        { "name": "Alexandar", "position": "FWD", "points": 8 },
+        { "name": "Lamptey", "position": "DEF", "points": 5.5 }
+      ]
+    },
+    {
+      "week": 2,
+      "starters": [
+        { "name": "Ederson", "position": "GKP", "points": 1 },
+        { "name": "Fernandez", "position": "DEF", "points": 4.75 },
+        { "name": "Hunt", "position": "DEF", "points": 1.5 },
+        { "name": "Davidson", "position": "DEF", "points": 1 },
+        { "name": "Mbeumo", "position": "FWD", "points": 13 },
+        { "name": "Kudus", "position": "MID", "points": 4.75 },
+        { "name": "Romero", "position": "DEF", "points": 1.75 },
+        { "name": "Fernandes", "position": "MID", "points": 10.75 },
+        { "name": "Mitoma", "position": "FWD", "points": 4.5 },
+        { "name": "Cacicedo", "position": "MID", "points": 1.75 }
+      ],
+      "bench": [
+        { "name": "Mambo", "position": "GKP", "points": 0 },
+        { "name": "Robinson", "position": "DEF", "points": 11.75 },
+        { "name": "Havertz", "position": "MID", "points": 7.75 },
+        { "name": "Babos", "position": "FWD", "points": 5 },
+        { "name": "Andersen", "position": "DEF", "points": 2.25 },
+        { "name": "Mbete", "position": "MID", "points": 3.25 },
+        { "name": "Strand Larsen", "position": "FWD", "points": 6.75 },
+        { "name": "Alexandar", "position": "FWD", "points": 1 },
+        { "name": "Lamptey", "position": "DEF", "points": 4.75 }
+      ]
+    },
+    {
+      "week": 3,
+      "starters": [
+        { "name": "Ederson", "position": "GKP", "points": 5 },
+        { "name": "Fernandez", "position": "DEF", "points": 4.75 },
+        { "name": "Kudus", "position": "MID", "points": 9.5 },
+        { "name": "Davidson", "position": "DEF", "points": 1.5 },
+        { "name": "Fernandes", "position": "MID", "points": 7.75 },
+        { "name": "Mbeumo", "position": "FWD", "points": 17.25 },
+        { "name": "Romero", "position": "DEF", "points": 6.5 },
+        { "name": "Cacicedo", "position": "MID", "points": 6.5 },
+        { "name": "Robinson", "position": "DEF", "points": 2 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Mambo", "position": "GKP", "points": 4 },
+        { "name": "Hunt", "position": "DEF", "points": 1.5 },
+        { "name": "Havertz", "position": "MID", "points": 5 },
+        { "name": "Babos", "position": "FWD", "points": 0.5 },
+        { "name": "Andersen", "position": "DEF", "points": 0 },
+        { "name": "Mbete", "position": "MID", "points": 8 },
+        { "name": "Strand Larsen", "position": "FWD", "points": 3.25 },
+        { "name": "Mitoma", "position": "FWD", "points": -1 },
+        { "name": "Alexandar", "position": "FWD", "points": 1 }
+      ]
+    },
+    {
+      "week": 4,
+      "starters": [
+        { "name": "Ederson", "position": "GKP", "points": 5 },
+        { "name": "Fernandez", "position": "DEF", "points": 0.75 },
+        { "name": "Kudus", "position": "MID", "points": 9 },
+        { "name": "Robinson", "position": "DEF", "points": 2 },
+        { "name": "Fernandes", "position": "MID", "points": 17.5 },
+        { "name": "Mbeumo", "position": "FWD", "points": 2 },
+        { "name": "Romero", "position": "DEF", "points": 9.5 },
+        { "name": "Cacicedo", "position": "MID", "points": 6.5 },
+        { "name": "Andersen", "position": "DEF", "points": 6.25 },
+        { "name": "Lamptey", "position": "DEF", "points": 2 }
+      ],
+      "bench": [
+        { "name": "Mambo", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 7.5 },
+        { "name": "Havertz", "position": "MID", "points": 1.5 },
+        { "name": "Babos", "position": "FWD", "points": 5.5 },
+        { "name": "Davidson", "position": "DEF", "points": 0.25 },
+        { "name": "Mbete", "position": "MID", "points": 11 },
+        { "name": "Strand Larsen", "position": "FWD", "points": -1 },
+        { "name": "Mitoma", "position": "FWD", "points": 1 },
+        { "name": "Alexandar", "position": "FWD", "points": 3 }
+      ]
+    },
+    {
+      "week": 5,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 9.5 },
+        { "name": "Porro", "position": "DEF", "points": 14.25 },
+        { "name": "Varga", "position": "MID", "points": 7.75 },
+        { "name": "Fernandes", "position": "MID", "points": 14.75 },
+        { "name": "Kudus", "position": "MID", "points": 7.5 },
+        { "name": "Andersen", "position": "DEF", "points": 3.25 },
+        { "name": "Romero", "position": "DEF", "points": 2.25 },
+        { "name": "Cacicedo", "position": "MID", "points": 3.75 },
+        { "name": "Robinson", "position": "DEF", "points": 5 },
+        { "name": "Lamptey", "position": "DEF", "points": 2 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 3.5 },
+        { "name": "Havertz", "position": "MID", "points": 3.25 },
+        { "name": "Babos", "position": "FWD", "points": 0 },
+        { "name": "Fernandez", "position": "DEF", "points": 3.5 },
+        { "name": "Mbete", "position": "MID", "points": 4.75 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0.5 },
+        { "name": "Alexandar", "position": "FWD", "points": 3 }
+      ]
+    },
+    {
+      "week": 6,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 0.5 },
+        { "name": "Porro", "position": "DEF", "points": 4.75 },
+        { "name": "Kudus", "position": "MID", "points": 10.75 },
+        { "name": "Fernandes", "position": "MID", "points": 8.25 },
+        { "name": "Varga", "position": "MID", "points": 8.25 },
+        { "name": "Romero", "position": "DEF", "points": 18 },
+        { "name": "Cacicedo", "position": "MID", "points": 6.5 },
+        { "name": "Richards", "position": "DEF", "points": 9.5 },
+        { "name": "van Hecke", "position": "DEF", "points": 7 },
+        { "name": "Andersen", "position": "DEF", "points": 0.25 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 1.25 },
+        { "name": "Havertz", "position": "MID", "points": 3 },
+        { "name": "Cook", "position": "FWD", "points": 0.25 },
+        { "name": "Fernandez", "position": "DEF", "points": 3.5 },
+        { "name": "Mbete", "position": "MID", "points": 0.75 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0 },
+        { "name": "Alexandar", "position": "FWD", "points": 0 }
+      ]
+    },
+    {
+      "week": 7,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 5 },
+        { "name": "Porro", "position": "DEF", "points": 4.75 },
+        { "name": "Kudus", "position": "MID", "points": 3.5 },
+        { "name": "Longstaff", "position": "MID", "points": 2 },
+        { "name": "Varga", "position": "MID", "points": 3.5 },
+        { "name": "Romero", "position": "DEF", "points": 1.75 },
+        { "name": "Cacicedo", "position": "MID", "points": 9 },
+        { "name": "Richards", "position": "DEF", "points": 7.5 },
+        { "name": "van Hecke", "position": "DEF", "points": 1.75 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 4.25 },
+        { "name": "Fernandes", "position": "MID", "points": 1.25 },
+        { "name": "Cook", "position": "FWD", "points": 3.5 },
+        { "name": "Fernandez", "position": "DEF", "points": 1.25 },
+        { "name": "Mbete", "position": "MID", "points": 0.25 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0.75 },
+        { "name": "Alexandar", "position": "FWD", "points": 0 }
+      ]
+    },
+    {
+      "week": 8,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 9.5 },
+        { "name": "Porro", "position": "DEF", "points": 3.5 },
+        { "name": "Kudus", "position": "MID", "points": 3.5 },
+        { "name": "Fernandes", "position": "MID", "points": 16 },
+        { "name": "Varga", "position": "MID", "points": 2.5 },
+        { "name": "Romero", "position": "DEF", "points": 5.5 },
+        { "name": "Cacicedo", "position": "MID", "points": 3.5 },
+        { "name": "Richards", "position": "DEF", "points": 6 },
+        { "name": "van Hecke", "position": "DEF", "points": 2 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 0 },
+        { "name": "Robinson", "position": "DEF", "points": 1.5 },
+        { "name": "Havertz", "position": "MID", "points": 0.25 },
+        { "name": "Fernandez", "position": "DEF", "points": 0 },
+        { "name": "Mbete", "position": "MID", "points": 3 },
+        { "name": "Perrotta", "position": "MID", "points": 0.5 },
+        { "name": "Mbeumo", "position": "FWD", "points": 5 },
+        { "name": "Alexandar", "position": "FWD", "points": 11 },
+        { "name": "Cook", "position": "FWD", "points": 0.25 }
+      ]
+    },
+    {
+      "week": 9,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 3.25 },
+        { "name": "Porro", "position": "DEF", "points": 10.75 },
+        { "name": "Kudus", "position": "MID", "points": 9.5 },
+        { "name": "Fernandes", "position": "MID", "points": 8.25 },
+        { "name": "Richards", "position": "DEF", "points": 8.75 },
+        { "name": "Romero", "position": "DEF", "points": 2.25 },
+        { "name": "Cacicedo", "position": "MID", "points": 1.75 },
+        { "name": "Andersen", "position": "DEF", "points": 8 },
+        { "name": "van Hecke", "position": "DEF", "points": 15.5 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 0.5 },
+        { "name": "Havertz", "position": "MID", "points": 5.5 },
+        { "name": "Cook", "position": "FWD", "points": 1.25 },
+        { "name": "Fernandez", "position": "DEF", "points": 3.5 },
+        { "name": "Mbete", "position": "MID", "points": 5.5 },
+        { "name": "Perrotta", "position": "MID", "points": 1.25 },
+        { "name": "Mbeumo", "position": "FWD", "points": 4.25 },
+        { "name": "Alexandar", "position": "FWD", "points": 0.5 }
+      ]
+    },
+    {
+      "week": 10,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 4 },
+        { "name": "Porro", "position": "DEF", "points": 4.75 },
+        { "name": "Kudus", "position": "MID", "points": 10.5 },
+        { "name": "Fernandes", "position": "MID", "points": 7.5 },
+        { "name": "Richards", "position": "DEF", "points": 2 },
+        { "name": "Romero", "position": "DEF", "points": 7.5 },
+        { "name": "Cacicedo", "position": "MID", "points": 9.5 },
+        { "name": "Andersen", "position": "DEF", "points": 3.5 },
+        { "name": "van Hecke", "position": "DEF", "points": 7 },
+        { "name": "Lamptey", "position": "DEF", "points": 0.25 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 0 },
+        { "name": "Havertz", "position": "MID", "points": 6.5 },
+        { "name": "Cook", "position": "FWD", "points": 2 },
+        { "name": "Fernandez", "position": "DEF", "points": 3.25 },
+        { "name": "Mbete", "position": "MID", "points": 3 },
+        { "name": "Perrotta", "position": "MID", "points": 0.25 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0.75 },
+        { "name": "Alexandar", "position": "FWD", "points": 0 }
+      ]
+    },
+    {
+      "week": 11,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 5 },
+        { "name": "Fernandez", "position": "DEF", "points": 4.75 },
+        { "name": "Kudus", "position": "MID", "points": 10.5 },
+        { "name": "Benlahou", "position": "MID", "points": 0.25 },
+        { "name": "Onana", "position": "MID", "points": 4.75 },
+        { "name": "Romero", "position": "DEF", "points": 6.5 },
+        { "name": "Cacicedo", "position": "MID", "points": 6.5 },
+        { "name": "Richards", "position": "DEF", "points": 9.5 },
+        { "name": "van Hecke", "position": "DEF", "points": 2 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 10 },
+        { "name": "Havertz", "position": "MID", "points": 1.25 },
+        { "name": "Cook", "position": "FWD", "points": 5 },
+        { "name": "Babos", "position": "FWD", "points": 3.5 },
+        { "name": "Mbete", "position": "MID", "points": 3 },
+        { "name": "Perrotta", "position": "MID", "points": 0.25 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0 },
+        { "name": "Alexandar", "position": "FWD", "points": 6.75 }
+      ]
+    },
+    {
+      "week": 12,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 1 },
+        { "name": "Fernandez", "position": "DEF", "points": 3.5 },
+        { "name": "Kudus", "position": "MID", "points": 2.5 },
+        { "name": "Benlahou", "position": "MID", "points": 0.75 },
+        { "name": "Onana", "position": "MID", "points": 6 },
+        { "name": "Romero", "position": "DEF", "points": 2.75 },
+        { "name": "Cacicedo", "position": "MID", "points": 3.5 },
+        { "name": "Richards", "position": "DEF", "points": 6 },
+        { "name": "van Hecke", "position": "DEF", "points": 2 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 5.5 },
+        { "name": "Havertz", "position": "MID", "points": 4.5 },
+        { "name": "Cook", "position": "FWD", "points": 1.25 },
+        { "name": "Babos", "position": "FWD", "points": 0.25 },
+        { "name": "Mbete", "position": "MID", "points": 11 },
+        { "name": "Perrotta", "position": "MID", "points": -1 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0.75 },
+        { "name": "Alexandar", "position": "FWD", "points": 0.25 }
+      ]
+    },
+    {
+      "week": 13,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 9.5 },
+        { "name": "Porro", "position": "DEF", "points": 14.25 },
+        { "name": "Kudus", "position": "MID", "points": 7.5 },
+        { "name": "Fernandes", "position": "MID", "points": 14.75 },
+        { "name": "Onana", "position": "MID", "points": 7.5 },
+        { "name": "Romero", "position": "DEF", "points": 3.25 },
+        { "name": "Cacicedo", "position": "MID", "points": 2.25 },
+        { "name": "Andersen", "position": "DEF", "points": 3.75 },
+        { "name": "Richards", "position": "DEF", "points": 5 },
+        { "name": "van Hecke", "position": "DEF", "points": 5 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 3.5 },
+        { "name": "Havertz", "position": "MID", "points": 3.25 },
+        { "name": "Cook", "position": "FWD", "points": 0 },
+        { "name": "Fernandez", "position": "DEF", "points": 3.5 },
+        { "name": "Mbete", "position": "MID", "points": 4.75 },
+        { "name": "Perrotta", "position": "MID", "points": 3.5 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0.5 },
+        { "name": "Alexandar", "position": "FWD", "points": 0 }
+      ]
+    },
+    {
+      "week": 14,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 3.25 },
+        { "name": "Porro", "position": "DEF", "points": 10.75 },
+        { "name": "Kudus", "position": "MID", "points": 8.25 },
+        { "name": "Fernandes", "position": "MID", "points": 8.75 },
+        { "name": "Richards", "position": "DEF", "points": 1.75 },
+        { "name": "Romero", "position": "DEF", "points": 18 },
+        { "name": "Cacicedo", "position": "MID", "points": 8 },
+        { "name": "Andersen", "position": "DEF", "points": 8 },
+        { "name": "van Hecke", "position": "DEF", "points": 15.5 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 0.5 },
+        { "name": "Havertz", "position": "MID", "points": 3.5 },
+        { "name": "Cook", "position": "FWD", "points": 5.5 },
+        { "name": "Fernandez", "position": "DEF", "points": 1.25 },
+        { "name": "Onana", "position": "MID", "points": 4.25 },
+        { "name": "Perrotta", "position": "MID", "points": 0.5 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0 },
+        { "name": "Alexandar", "position": "FWD", "points": 0.75 }
+      ]
+    },
+    {
+      "week": 15,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 1.75 },
+        { "name": "Porro", "position": "DEF", "points": 10.75 },
+        { "name": "Kudus", "position": "MID", "points": 0.75 },
+        { "name": "Fernandes", "position": "MID", "points": 10 },
+        { "name": "Onana", "position": "MID", "points": 7.5 },
+        { "name": "Romero", "position": "DEF", "points": 8 },
+        { "name": "Cacicedo", "position": "MID", "points": 7.5 },
+        { "name": "Andersen", "position": "DEF", "points": 3.5 },
+        { "name": "Richards", "position": "DEF", "points": 3.25 },
+        { "name": "van Hecke", "position": "DEF", "points": 6.75 }
+      ],
+      "bench": [
+        { "name": "Ederson", "position": "GKP", "points": 1 },
+        { "name": "Hunt", "position": "DEF", "points": 5.5 },
+        { "name": "Havertz", "position": "MID", "points": 0 },
+        { "name": "Cook", "position": "FWD", "points": 2.25 },
+        { "name": "Fernandez", "position": "DEF", "points": 1.75 },
+        { "name": "Mbete", "position": "MID", "points": 2 },
+        { "name": "Perrotta", "position": "MID", "points": 0 },
+        { "name": "Mbeumo", "position": "FWD", "points": 1.75 },
+        { "name": "Alexandar", "position": "FWD", "points": 0 }
+      ]
+    },
+    {
+      "week": 16,
+      "starters": [
+        { "name": "Berry", "position": "FWD", "points": 0.75 },
+        { "name": "Porro", "position": "DEF", "points": 8.75 },
+        { "name": "Kudus", "position": "MID", "points": 15 },
+        { "name": "Fernandes", "position": "MID", "points": 16 },
+        { "name": "Onana", "position": "MID", "points": 4.75 },
+        { "name": "Romero", "position": "DEF", "points": 2.75 },
+        { "name": "Cacicedo", "position": "MID", "points": 6.5 },
+        { "name": "Andersen", "position": "DEF", "points": 2.25 },
+        { "name": "Richards", "position": "DEF", "points": 2.25 },
+        { "name": "Lamptey", "position": "DEF", "points": 1.5 }
+      ],
+      "bench": [
+        { "name": "Watson", "position": "GKP", "points": 0 },
+        { "name": "Hunt", "position": "DEF", "points": 4.5 },
+        { "name": "Havertz", "position": "MID", "points": 6 },
+        { "name": "Nmecha", "position": "FWD", "points": 4.5 },
+        { "name": "Fernandez", "position": "DEF", "points": 1.5 },
+        { "name": "Mbete", "position": "MID", "points": 0 },
+        { "name": "Perrotta", "position": "MID", "points": 4 },
+        { "name": "Mbeumo", "position": "FWD", "points": 1.25 },
+        { "name": "Alexandar", "position": "FWD", "points": 6.75 }
+      ]
+    },
+    {
+      "week": 17,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 2.5 },
+        { "name": "Porro", "position": "DEF", "points": -1.5 },
+        { "name": "Kudus", "position": "MID", "points": 4.5 },
+        { "name": "Fernandes", "position": "MID", "points": 1.5 },
+        { "name": "Onana", "position": "MID", "points": 6.5 },
+        { "name": "Romero", "position": "DEF", "points": 2.25 },
+        { "name": "Cacicedo", "position": "MID", "points": 4.5 },
+        { "name": "Andersen", "position": "DEF", "points": 6.5 },
+        { "name": "Richards", "position": "DEF", "points": 1 },
+        { "name": "Mavropanos", "position": "DEF", "points": 1 }
+      ],
+      "bench": [
+        { "name": "Berry", "position": "FWD", "points": 1.75 },
+        { "name": "Hunt", "position": "DEF", "points": 0.5 },
+        { "name": "Havertz", "position": "MID", "points": 2.5 },
+        { "name": "Nmecha", "position": "FWD", "points": 5 },
+        { "name": "Andy K", "position": "MID", "points": 1.75 },
+        { "name": "Mbete", "position": "MID", "points": 6 },
+        { "name": "Perrotta", "position": "MID", "points": 4.75 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0.5 },
+        { "name": "Alexandar", "position": "FWD", "points": 0.75 }
+      ]
+    },
+    {
+      "week": 18,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 3.5 },
+        { "name": "Mambo", "position": "FWD", "points": 0 },
+        { "name": "Kudus", "position": "MID", "points": 3.5 },
+        { "name": "Onana", "position": "MID", "points": 2.75 },
+        { "name": "Andy K", "position": "MID", "points": 4.25 },
+        { "name": "Andersen", "position": "DEF", "points": 4.5 },
+        { "name": "Cacicedo", "position": "MID", "points": 3.25 },
+        { "name": "Striker", "position": "FWD", "points": 4.25 },
+        { "name": "Romero", "position": "DEF", "points": 10.5 }
+      ],
+      "bench": [
+        { "name": "Bruno Lage", "position": "FWD", "points": -0.5 },
+        { "name": "Hunt", "position": "DEF", "points": 3 },
+        { "name": "Berry", "position": "FWD", "points": 0 },
+        { "name": "Fernandes", "position": "MID", "points": 0 },
+        { "name": "Mavropanos", "position": "DEF", "points": 0 },
+        { "name": "Richards", "position": "DEF", "points": 0 },
+        { "name": "van den Berg", "position": "DEF", "points": 1.5 },
+        { "name": "Mbeumo", "position": "FWD", "points": 5.5 },
+        { "name": "Cook", "position": "FWD", "points": 0 },
+        { "name": "Mbete", "position": "MID", "points": 2.5 },
+        { "name": "Porro", "position": "DEF", "points": 0.5 },
+        { "name": "Perrotta", "position": "MID", "points": 8.75 },
+        { "name": "Alexandar", "position": "FWD", "points": 4.5 }
+      ]
+    },
+    {
+      "week": 19,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 6.5 },
+        { "name": "Mambo", "position": "FWD", "points": 1 },
+        { "name": "Bruno Lage", "position": "FWD", "points": 1 },
+        { "name": "Kudus", "position": "MID", "points": 3.25 },
+        { "name": "Onana", "position": "MID", "points": 5.25 },
+        { "name": "Andy K", "position": "MID", "points": 9 },
+        { "name": "Andersen", "position": "DEF", "points": 13.5 },
+        { "name": "Porro", "position": "DEF", "points": 4.75 },
+        { "name": "Cacicedo", "position": "MID", "points": 9 },
+        { "name": "Romero", "position": "DEF", "points": 13.5 }
+      ],
+      "bench": [
+        { "name": "Hunt", "position": "DEF", "points": 6.5 },
+        { "name": "Berry", "position": "FWD", "points": 9 },
+        { "name": "Fernandes", "position": "MID", "points": 5 },
+        { "name": "Mavropanos", "position": "DEF", "points": 4 },
+        { "name": "Richards", "position": "DEF", "points": 2.5 },
+        { "name": "van den Berg", "position": "DEF", "points": 6.5 },
+        { "name": "Mbeumo", "position": "FWD", "points": 0 },
+        { "name": "Cook", "position": "FWD", "points": 5 },
+        { "name": "Mbete", "position": "MID", "points": 4 },
+        { "name": "Perrotta", "position": "MID", "points": 2.5 },
+        { "name": "Alexandar", "position": "FWD", "points": 9 }
+      ]
+    },
+    {
+      "week": 20,
+      "starters": [
+        { "name": "Mambo", "position": "GKP", "points": 1 },
+        { "name": "Kudus", "position": "MID", "points": -0.25 },
+        { "name": "Bonanner", "position": "MID", "points": 3 },
+        { "name": "Onana", "position": "MID", "points": 11.25 },
+        { "name": "Andersen", "position": "DEF", "points": 0 },
+        { "name": "Richards", "position": "DEF", "points": 2.5 },
+        { "name": "van Hecke", "position": "DEF", "points": 11.25 },
+        { "name": "Cacicedo", "position": "DEF", "points": 2.75 },
+        { "name": "Romero", "position": "DEF", "points": 2.75 },
+        { "name": "Striker", "position": "FWD", "points": 11.25 }
+      ],
+      "bench": [
+        { "name": "Bruno Lage", "position": "FWD", "points": 1.75 },
+        { "name": "Hunt", "position": "DEF", "points": 1 },
+        { "name": "Fernandes", "position": "MID", "points": 1 },
+        { "name": "Mavropanos", "position": "DEF", "points": 4.5 },
+        { "name": "Mbete", "position": "MID", "points": 9.75 },
+        { "name": "van den Berg", "position": "DEF", "points": 1 },
+        { "name": "Richards", "position": "DEF", "points": 5.5 },
+        { "name": "Cook", "position": "FWD", "points": 2.5 },
+        { "name": "Perrotta", "position": "MID", "points": 8.75 },
+        { "name": "Alexandar", "position": "FWD", "points": 9.75 }
+      ]
+    }
+  ]
+}
