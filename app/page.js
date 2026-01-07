@@ -258,21 +258,46 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             {/* Current Gameweek with Enhanced Display */}
             <GameweekDisplay gameweek={currentGameweek} />
 
-            {/* Scoring Mode Toggle */}
+            {/* Scoring Mode Toggle - 3 Options: FFH / V3 / V4 */}
             <div className="flex items-center gap-1 sm:gap-2">
               <span className="text-xs sm:text-sm text-gray-300 hidden sm:inline">
                 Scoring:
               </span>
-              <button
-                onClick={() => setScoringMode(scoringMode === 'ffh' ? 'v3' : 'ffh')}
-                className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                  scoringMode === 'v3'
-                    ? 'bg-green-500 text-white hover:bg-green-600'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-              >
-                {scoringMode === 'v3' ? '🚀 V3' : '📊 FFH'}
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setScoringMode('ffh')}
+                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    scoringMode === 'ffh'
+                      ? 'bg-blue-500 text-white hover:bg-blue-600'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                  title="Fantasy Football Hub (FPL scoring)"
+                >
+                  📊 FFH
+                </button>
+                <button
+                  onClick={() => setScoringMode('v3')}
+                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    scoringMode === 'v3'
+                      ? 'bg-green-500 text-white hover:bg-green-600'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                  title="V3 Sleeper conversion (position-based ratios)"
+                >
+                  🚀 V3
+                </button>
+                <button
+                  onClick={() => setScoringMode('v4')}
+                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    scoringMode === 'v4'
+                      ? 'bg-purple-500 text-white hover:bg-purple-600'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                  title="V4 Ensemble (ML-enhanced predictions)"
+                >
+                  🤖 V4
+                </button>
+              </div>
             </div>
 
 
