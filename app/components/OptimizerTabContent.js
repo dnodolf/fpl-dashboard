@@ -229,7 +229,9 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           {(() => {
             // Use explicit field-based logic to match FormationVisualization
             let points = 0;
-            if (scoringMode === 'v3') {
+            if (scoringMode === 'v4') {
+              points = player.v4_current_gw || player.v3_current_gw || player.current_gw_prediction || 0;
+            } else if (scoringMode === 'v3') {
               points = player.v3_current_gw || 0;
             } else {
               points = player.current_gw_prediction || 0;
@@ -252,7 +254,9 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   // Recalculate total points based on current scoring mode - be very specific about which field to use
   const totalPoints = lineup.players ? lineup.players.reduce((sum, player) => {
     let points = 0;
-    if (scoringMode === 'v3') {
+    if (scoringMode === 'v4') {
+      points = player.v4_current_gw || player.v3_current_gw || player.current_gw_prediction || 0;
+    } else if (scoringMode === 'v3') {
       points = player.v3_current_gw || 0;
     } else {
       points = player.current_gw_prediction || 0;
