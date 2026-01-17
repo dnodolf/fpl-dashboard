@@ -7,7 +7,6 @@ import v3ScoringService from '../../services/v3ScoringService.js';
 import { extractAllGameweekPredictions, extractAllGameweekMinutes } from '../../utils/ffhDataUtils.js';
 import { fetchSleeperScoringSettings } from '../../services/scoringConversionService.js';
 import { cacheService } from '../../services/cacheService.js';
-import { enhanceWithV4Scoring, initializeV4Models } from '../../services/v4ScoringService.js';
 
 async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) {
   try {
@@ -42,58 +41,6 @@ async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) 
         v3Enhanced: 0,
         v3Coverage: 0,
         averageImprovement: 0
-      }
-    };
-  }
-}
-
-async function enhancePlayersWithV4Predictions(matchedPlayers, currentGameweek) {
-  try {
-    console.log(`🚀 V4 Ensemble Model: Applying ML-enhanced predictions to ${matchedPlayers.length} players`);
-
-    // Initialize V4 models if not already done
-    await initializeV4Models();
-
-    // Build context for V4 predictions
-    const context = {
-      currentGameweek: currentGameweek.number,
-      remainingGameweeks: 38 - currentGameweek.number
-    };
-
-    // Apply V4 scoring (adds v4_* fields to each player)
-    const enhancedPlayers = await enhanceWithV4Scoring(matchedPlayers, context);
-
-    // Calculate stats
-    const playersWithV4 = enhancedPlayers.filter(p => p.v4_season_total > 0);
-    const avgConfidence = playersWithV4.length > 0
-      ? Math.round(playersWithV4.reduce((sum, p) => sum + (p.v4_confidence || 0), 0) / playersWithV4.length)
-      : 0;
-
-    const v4Stats = {
-      totalPlayers: enhancedPlayers.length,
-      v4Enhanced: playersWithV4.length,
-      v4Coverage: Math.round((playersWithV4.length / enhancedPlayers.length) * 100),
-      averageConfidence: avgConfidence
-    };
-
-    console.log(`📊 V4 Ensemble Summary: ${playersWithV4.length}/${enhancedPlayers.length} players with V4 predictions (avg confidence: ${avgConfidence}%)`);
-
-    return {
-      players: enhancedPlayers,
-      v4Stats: v4Stats
-    };
-
-  } catch (error) {
-    console.error('❌ V4 enhancement failed:', error);
-    // Return players without V4 enhancement (V3 still available)
-    return {
-      players: matchedPlayers,
-      v4Stats: {
-        totalPlayers: matchedPlayers.length,
-        v4Enhanced: 0,
-        v4Coverage: 0,
-        averageConfidence: 0,
-        error: error.message
       }
     };
   }
@@ -475,21 +422,17 @@ export async function POST(request) {
 
     // Enhanced player processing with V4 predictions
     console.log('🚀 Starting V4 ensemble enhancement...');
-    const v4EnhancedResult = await enhancePlayersWithV4Predictions(v3EnhancedResult.players, currentGameweek);
-
-const finalPlayers = v4EnhancedResult.players;
+const finalPlayers = v3EnhancedResult.players;
 const v3Statistics = v3EnhancedResult.v3Stats;
-const v4Statistics = v4EnhancedResult.v4Stats;
 
 console.log(`✅ Pipeline: V3 scoring applied to ${v3Statistics.v3Enhanced}/${v3Statistics.totalPlayers} players`);
-console.log(`✅ Pipeline: V4 ensemble applied to ${v4Statistics.v4Enhanced}/${v4Statistics.totalPlayers} players (confidence: ${v4Statistics.averageConfidence}%)`);
 
 // Calculate matching statistics from V3 enhanced players
 const playersWithPredictions = finalPlayers.filter(p => p.predicted_points > 0);
 const playersWithOpta = finalPlayers.filter(p => p.opta_id);
 const matchedPlayers = finalPlayers.filter(p => p.ffh_matched !== false);
 
-// Create response data with V3 and V4 integration
+// Create response data with V3 integration
 const responseData = {
   success: true,
   players: finalPlayers,
@@ -505,15 +448,6 @@ const responseData = {
     biggestWinners: v3Statistics.biggestWinners,
     positionBreakdown: v3Statistics.positionBreakdown,
     enhancementStatus: v3Statistics.error ? 'error' : 'success'
-  },
-
-  // V4 Enhancement Statistics
-  v4Enhancement: {
-    enabled: true,
-    coverage: v4Statistics.v4Coverage + '%',
-    averageConfidence: v4Statistics.averageConfidence + '%',
-    totalPlayersEnhanced: v4Statistics.v4Enhanced,
-    enhancementStatus: v4Statistics.error ? 'error' : 'success'
   },
   
   stats: {

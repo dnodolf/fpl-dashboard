@@ -1,6 +1,8 @@
 /**
- * Script to collect FFH historical predictions vs actuals for GW 1-20 (2025 season)
+ * Script to collect FFH historical predictions vs actuals for entire season (2025 season)
  * This data will be combined with Sleeper actuals to train the V4 model
+ *
+ * Future-proofed: Fetches all 38 gameweeks automatically
  */
 
 const fs = require('fs');
@@ -30,8 +32,8 @@ async function collectFFHHistoricalData() {
       throw new Error('FFH credentials not found in .env.local file');
     }
 
-    // Fetch all players with GW 1-20 data
-    const url = `${FFH_API_URL}?orderBy=points&focus=range&positions=1,2,3,4&min_cost=0&max_cost=99999&search_term=&gw_start=1&gw_end=20&first=0&last=99999&use_predicted_fixtures=false&selected_players=`;
+    // Fetch all players with full season data (GW 1-38)
+    const url = `${FFH_API_URL}?orderBy=points&focus=range&positions=1,2,3,4&min_cost=0&max_cost=99999&search_term=&gw_start=1&gw_end=38&first=0&last=99999&use_predicted_fixtures=false&selected_players=`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -66,8 +68,8 @@ async function collectFFHHistoricalData() {
       source: 'FFH API',
       fetch_date: new Date().toISOString(),
       season: '2025-26',
-      gameweeks: '1-20',
-      description: 'FFH predictions vs FPL actuals for GW 1-20. This will be combined with Sleeper actuals to train V4 model.',
+      gameweeks: '1-38',
+      description: 'FFH predictions vs FPL actuals for entire season. This will be combined with Sleeper actuals to train V4 model.',
       players: []
     };
 
@@ -86,7 +88,7 @@ async function collectFFHHistoricalData() {
       // Process each gameweek result
       if (player.results && Array.isArray(player.results)) {
         for (const result of player.results) {
-          if (result.season === 2025 && result.gw >= 1 && result.gw <= 20) {
+          if (result.season === 2025 && result.gw >= 1 && result.gw <= 38) {
             const gwData = {
               gw: result.gw,
               // FFH Predictions (FPL-based)

@@ -1,5 +1,7 @@
 /**
- * Merge FFH historical data with Sleeper actuals to create V4 training dataset
+ * Merge FFH historical data with Sleeper actuals to create training dataset
+ * Used for validating and optimizing V3 scoring multipliers
+ *
  * Combines:
  * 1. FFH predictions (FPL-based)
  * 2. FPL actuals (from FFH)
@@ -44,13 +46,13 @@ function mergeTrainingData() {
     console.log(`✅ Loaded ${ffhData.players.length} FFH players`);
     console.log(`✅ Loaded ${sleeperRecords.length} Sleeper records from CSV\n`);
 
-    // Create V4 training dataset
+    // Create training dataset for V3 optimization
     const trainingData = {
       source: 'Merged FFH + Sleeper',
       created: new Date().toISOString(),
       season: '2025-26',
-      gameweeks: '1-20',
-      description: 'Combined FFH predictions, FPL actuals, and Sleeper actuals for V4 model training',
+      gameweeks: '1-21',
+      description: 'Combined FFH predictions, FPL actuals, and Sleeper actuals for V3 validation and optimization',
       records: []
     };
 
@@ -193,7 +195,7 @@ function mergeTrainingData() {
     });
 
     console.log('\n✅ Training data merge complete!');
-    console.log('📝 Next step: Build V4 statistical model and ML training pipeline');
+    console.log('📝 Next step: Run scripts/optimizeV3Multipliers.js to test different multiplier values');
 
     return trainingData;
 

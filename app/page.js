@@ -258,7 +258,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             {/* Current Gameweek with Enhanced Display */}
             <GameweekDisplay gameweek={currentGameweek} />
 
-            {/* Scoring Mode Toggle - 3 Options: FFH / V3 / V4 */}
+            {/* Scoring Mode Toggle - 2 Options: FFH / V3 */}
             <div className="flex items-center gap-1 sm:gap-2">
               <span className="text-xs sm:text-sm text-gray-300 hidden sm:inline">
                 Scoring:
@@ -282,20 +282,9 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                       ? 'bg-green-500 text-white hover:bg-green-600'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
-                  title="V3 Sleeper conversion (position-based ratios)"
+                  title="V3 Sleeper conversion (optimal position-based ratios)"
                 >
                   🚀 V3
-                </button>
-                <button
-                  onClick={() => setScoringMode('v4')}
-                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                    scoringMode === 'v4'
-                      ? 'bg-purple-500 text-white hover:bg-purple-600'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="V4 Ensemble (ML-enhanced predictions)"
-                >
-                  🤖 V4
                 </button>
               </div>
             </div>
@@ -581,8 +570,6 @@ export default function FPLDashboard() {
       case 'predicted_ppg':
         // Use Sleeper season average (predicted PPG after conversion)
         return player.sleeper_season_avg || 0;
-      case 'v4_confidence':
-        return player.v4_confidence || 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -980,19 +967,6 @@ export default function FPLDashboard() {
                             PPG (Predicted) {renderSortIcon('predicted_ppg')}
                           </div>
                         </th>
-                        {scoringMode === 'v4' && (
-                          <th
-                            className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
-                              'text-gray-300 hover:bg-gray-600'
-                            }`}
-                            onClick={() => handleSort('v4_confidence')}
-                            title="V4 Model Confidence (0-100%)"
-                          >
-                            <div className="flex items-center">
-                              🎯 Confidence {renderSortIcon('v4_confidence')}
-                            </div>
-                          </th>
-                        )}
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${'bg-gray-800 divide-gray-700'}`}>
@@ -1089,20 +1063,6 @@ export default function FPLDashboard() {
                               return predictedPpg.toFixed(1);
                             })()}
                           </td>
-                          {scoringMode === 'v4' && (
-                            <td className={`px-6 py-4 whitespace-nowrap text-sm`}>
-                              {(() => {
-                                const confidence = player.v4_confidence || 0;
-                                const confidenceColor = confidence >= 80 ? 'text-green-400' : confidence >= 60 ? 'text-yellow-400' : 'text-red-400';
-                                const confidenceBg = confidence >= 80 ? 'bg-green-900/30' : confidence >= 60 ? 'bg-yellow-900/30' : 'bg-red-900/30';
-                                return (
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${confidenceColor} ${confidenceBg}`} title={`Model confidence: ${confidence}%`}>
-                                    {confidence}%
-                                  </span>
-                                );
-                              })()}
-                            </td>
-                          )}
                         </tr>
                       ))}
                     </tbody>
