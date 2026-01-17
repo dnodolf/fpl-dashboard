@@ -39,10 +39,12 @@ class MLCorrectionModel {
     try {
       // Build simple ensemble of decision rules
       // Each rule learns a specific bias pattern
+      // NOTE: Decision trees are currently hardcoded based on training analysis (GW 1-20)
+      // In future, could implement dynamic learning from trainingData
       this.trees = this.buildDecisionTrees(trainingData);
       this.trained = true;
 
-      console.log(`[V4 ML Model] Training complete. Built ${this.trees.length} decision rules.`);
+      console.log(`[V4 ML Model] ✅ Training complete. Built ${this.trees.length} decision rules (cached).`);
     } catch (error) {
       console.error('[V4 ML Model] Training error:', error);
       this.trained = false;
@@ -314,9 +316,17 @@ export function getMLModel() {
 /**
  * Train the ML model on historical data
  * Call this once at startup with training data
+ * Skips training if model is already trained (performance optimization)
  */
 export async function trainMLModel(trainingData) {
   const model = getMLModel();
+
+  // Skip training if already trained (hot path optimization)
+  if (model.trained) {
+    console.log('[V4 ML Model] ⚡ Using cached trained model (no retraining needed)');
+    return model;
+  }
+
   await model.train(trainingData);
   return model;
 }

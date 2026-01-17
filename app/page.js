@@ -581,6 +581,8 @@ export default function FPLDashboard() {
       case 'predicted_ppg':
         // Use Sleeper season average (predicted PPG after conversion)
         return player.sleeper_season_avg || 0;
+      case 'v4_confidence':
+        return player.v4_confidence || 0;
       case 'owned_by':
         return player.owned_by || 'Free Agent';
       default:
@@ -968,7 +970,7 @@ export default function FPLDashboard() {
                             Avg Mins (Next 5) {renderSortIcon('avg_minutes_next5')}
                           </div>
                         </th>
-                        <th 
+                        <th
                           className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
                             'text-gray-300 hover:bg-gray-600'
                           }`}
@@ -978,6 +980,19 @@ export default function FPLDashboard() {
                             PPG (Predicted) {renderSortIcon('predicted_ppg')}
                           </div>
                         </th>
+                        {scoringMode === 'v4' && (
+                          <th
+                            className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 ${
+                              'text-gray-300 hover:bg-gray-600'
+                            }`}
+                            onClick={() => handleSort('v4_confidence')}
+                            title="V4 Model Confidence (0-100%)"
+                          >
+                            <div className="flex items-center">
+                              🎯 Confidence {renderSortIcon('v4_confidence')}
+                            </div>
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${'bg-gray-800 divide-gray-700'}`}>
@@ -1074,6 +1089,20 @@ export default function FPLDashboard() {
                               return predictedPpg.toFixed(1);
                             })()}
                           </td>
+                          {scoringMode === 'v4' && (
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm`}>
+                              {(() => {
+                                const confidence = player.v4_confidence || 0;
+                                const confidenceColor = confidence >= 80 ? 'text-green-400' : confidence >= 60 ? 'text-yellow-400' : 'text-red-400';
+                                const confidenceBg = confidence >= 80 ? 'bg-green-900/30' : confidence >= 60 ? 'bg-yellow-900/30' : 'bg-red-900/30';
+                                return (
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${confidenceColor} ${confidenceBg}`} title={`Model confidence: ${confidence}%`}>
+                                    {confidence}%
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
