@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { getScoringValue } from '../services/v3ScoringService.js';
 import { TOTAL_GAMEWEEKS } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
+import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 
 // Get fixture difficulty color
 const getDifficultyColor = (difficulty) => {
@@ -113,23 +114,10 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
       team: player.team_abbr || player.team || 'Unknown',
       position: player.position || 'Unknown',
 
-      // Core Stats
+      // Core Stats (using centralized utilities for consistency)
       rosPoints: getScoringValue(player, 'season_total', scoringMode),
-      next5GW: (() => {
-        if (player.predictions && Array.isArray(player.predictions)) {
-          const first5 = player.predictions.slice(0, 5);
-          return first5.reduce((sum, pred) => sum + (pred.predicted_pts || 0), 0);
-        }
-        return 0;
-      })(),
-      avgMinsNext5: (() => {
-        if (player.predictions && Array.isArray(player.predictions)) {
-          const first5 = player.predictions.slice(0, 5);
-          const totalMins = first5.reduce((sum, pred) => sum + (pred.xmins || 0), 0);
-          return first5.length > 0 ? (totalMins / first5.length) : 0;
-        }
-        return 0;
-      })(),
+      next5GW: getNextNGameweeksTotal(player, scoringMode, currentGameweek, 5),
+      avgMinsNext5: getAvgMinutesNextN(player, currentGameweek, 5),
       ppgPredicted: getScoringValue(player, 'season_avg', scoringMode),
       currentGW: getScoringValue(player, 'current_gw', scoringMode),
 

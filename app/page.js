@@ -13,12 +13,13 @@ import { EPL_TEAMS, TEAM_MAPPINGS, TEAM_DISPLAY_NAMES, isEPLPlayer } from './con
 import CacheManager, { getDataFreshnessStatus, formatCacheAge } from './utils/cacheManager';
 import { usePlayerData } from './hooks/usePlayerData';
 import { useGameweek } from './hooks/useGameweek';
-import { USER_ID, TOTAL_GAMEWEEKS, NEXT_N_GAMEWEEKS, OWNERSHIP_STATUS, FILTER_OPTIONS } from './config/constants';
+import { USER_ID, TOTAL_GAMEWEEKS, OWNERSHIP_STATUS, FILTER_OPTIONS } from './config/constants';
 import { MatchingStatsCard } from './components/stats/MatchingStatsCard';
 import { OptimizerStatsCard } from './components/stats/OptimizerStatsCard';
 import { TransferStatsCard } from './components/stats/TransferStatsCard';
 import { UnmatchedPlayersTable } from './components/stats/UnmatchedPlayersTable';
 import { PlayerModal } from './components/PlayerModal';
+import { getNextNGameweeksTotal, getAvgMinutesNextN } from './utils/predictionUtils';
 
 // ----------------- ERROR BOUNDARY COMPONENT -----------------
 const ErrorBoundary = ({ children }) => {
@@ -484,86 +485,11 @@ export default function FPLDashboard() {
       case 'sleeper_points_ros':
         return v3ScoringService.getScoringValue(player, 'points_ros', scoringMode);
       case 'sleeper_points_next5':
-        // Use specific gameweek predictions from the predictions array (better logic)
-        if (player.predictions && Array.isArray(player.predictions)) {
-          const currentGW = currentGameweek?.number;
-          const targetGameweeks = Array.from({length: 5}, (_, i) => currentGW + i);
-          let totalPoints = 0;
-          const gameweekDetails = [];
-
-          targetGameweeks.forEach(gw => {
-            const prediction = player.predictions.find(p => p.gw === gw);
-            if (prediction) {
-              const gwPoints = scoringMode === 'v3'
-                ? (prediction.v3_predicted_pts || prediction.predicted_pts || 0)
-                : (prediction.predicted_pts || 0);
-              totalPoints += gwPoints;
-              gameweekDetails.push({ gw, points: gwPoints });
-            }
-          });
-
-          // Debug logging for Lammens
-          if (player.name?.includes('Lammens') || player.web_name?.includes('Lammens')) {
-            console.log(`🔍 Players table calc for ${player.name || player.web_name}:`, {
-              scoringMode,
-              currentGW,
-              targetGameweeks,
-              totalPoints,
-              gameweekDetails,
-              predictionsLength: player.predictions?.length
-            });
-          }
-
-          return totalPoints;
-        }
-
-        // Fallback to old logic if predictions array not available
-        if (player.sleeper_gw_predictions) {
-          try {
-            const gwPreds = JSON.parse(player.sleeper_gw_predictions);
-            const next5 = Object.values(gwPreds).slice(0, 5);
-            return next5.length > 0 ? next5.reduce((a, b) => a + b, 0) : 0;
-          } catch (e) {
-            // Fall through
-          }
-        }
-        if (player.ffh_gw_predictions) {
-          try {
-            const gwPreds = JSON.parse(player.ffh_gw_predictions);
-            const next5 = Object.values(gwPreds).slice(0, 5);
-            return next5.length > 0 ? next5.reduce((a, b) => a + b, 0) : 0;
-          } catch (e) {
-            // Fall through
-          }
-        }
-        const seasonPoints = v3ScoringService.getScoringValue(player, 'points_ros', scoringMode);
-        return seasonPoints > 0 ? (seasonPoints / TOTAL_GAMEWEEKS) * NEXT_N_GAMEWEEKS : 0;
+        // Use centralized prediction utility for consistency
+        return getNextNGameweeksTotal(player, scoringMode, currentGameweek?.number, 5);
       case 'avg_minutes_next5':
-        if (player.avg_minutes_next5 && player.avg_minutes_next5 > 0) {
-          return player.avg_minutes_next5;
-        }
-
-        if (player.predictions && Array.isArray(player.predictions)) {
-          const next5Predictions = player.predictions.slice(0, 5);
-          if (next5Predictions.length > 0) {
-            const totalMinutes = next5Predictions.reduce((total, pred) => total + (pred.xmins || 0), 0);
-            return totalMinutes / next5Predictions.length;
-          }
-        }
-
-        if (player.ffh_gw_minutes) {
-          try {
-            const gwMinutes = JSON.parse(player.ffh_gw_minutes);
-            const next5Minutes = Object.values(gwMinutes).slice(0, 5);
-            if (next5Minutes.length > 0) {
-              return next5Minutes.reduce((a, b) => a + b, 0) / next5Minutes.length;
-            }
-          } catch (e) {
-            // Continue to default
-          }
-        }
-
-        return 0;
+        // Use centralized prediction utility for consistency
+        return getAvgMinutesNextN(player, currentGameweek?.number, 5);
       case 'current_ppg':
         // Use FFH season average (actual current PPG)
         return player.ffh_season_avg || 0;

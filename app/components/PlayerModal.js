@@ -10,6 +10,7 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { TOTAL_GAMEWEEKS } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 
 export function PlayerModal({
   player = null,
@@ -30,20 +31,10 @@ export function PlayerModal({
   const seasonAvg = localScoringMode === 'v3' ? player?.v3_season_avg : player?.season_prediction_avg;
   const currentGWPrediction = localScoringMode === 'v3' ? player?.v3_current_gw : player?.current_gw_prediction;
 
-  // Calculate next 5 GW total
+  // Calculate next 5 GW total using centralized utility
   const next5GWTotal = useMemo(() => {
-    if (!predictions || predictions.length === 0) return 0;
-
-    const next5Predictions = predictions
-      .filter(p => p.gw >= currentGW && p.gw < currentGW + 5)
-      .slice(0, 5);
-
-    return next5Predictions.reduce((sum, p) => {
-      const ffhPoints = p.predicted_pts || 0;
-      const points = localScoringMode === 'v3' ? convertToV3Points(ffhPoints, player?.position) : ffhPoints;
-      return sum + points;
-    }, 0);
-  }, [predictions, currentGW, localScoringMode, player?.position]);
+    return getNextNGameweeksTotal(player, localScoringMode, currentGW, 5);
+  }, [player, localScoringMode, currentGW]);
 
   // Calculate ROS (Rest of Season) points
   const rosPoints = useMemo(() => {
