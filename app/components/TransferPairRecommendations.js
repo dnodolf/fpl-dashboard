@@ -20,6 +20,7 @@ export default function TransferPairRecommendations({
   const [selectedPosition, setSelectedPosition] = useState('ALL');
   const [minGain, setMinGain] = useState(5); // Minimum points gain to show
   const [sortMode, setSortMode] = useState('confidence'); // 'confidence', 'next1', 'next3', 'next5', 'season'
+  const [showAll, setShowAll] = useState(false); // Show all recommendations or just top 5
 
   // V3 Conversion ratios (same as v3ScoringService.js)
   const V3_CONVERSION_RATIOS = {
@@ -280,8 +281,10 @@ export default function TransferPairRecommendations({
     return colors[position] || 'bg-gray-600';
   }
 
-  // Top 10 recommendations
-  const topRecommendations = transferPairs.slice(0, 10);
+  // Show top 5 by default, or all if showAll is true
+  const displayCount = showAll ? transferPairs.length : 5;
+  const topRecommendations = transferPairs.slice(0, displayCount);
+  const hasMore = transferPairs.length > 5;
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 mb-6">
@@ -512,6 +515,18 @@ export default function TransferPairRecommendations({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Show More/Less Button */}
+      {hasMore && topRecommendations.length > 0 && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+          >
+            {showAll ? `Show Less` : `Show More (${transferPairs.length - 5} more)`}
+          </button>
         </div>
       )}
 
