@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
 
 /**
  * Transfer Pair Recommendations Component
@@ -415,6 +416,12 @@ export default function TransferPairRecommendations({
                   {/* Drop Player */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
+                      <img
+                        src={getPlayerImageUrl(pair.drop)}
+                        alt={pair.drop.name}
+                        className="w-10 h-10 rounded-full object-cover bg-gray-700"
+                        onError={(e) => handleImageError(e, pair.drop)}
+                      />
                       <span className={`px-2 py-1 rounded text-xs font-bold text-white ${getPositionColor(pair.position)}`}>
                         {pair.position}
                       </span>
@@ -428,6 +435,12 @@ export default function TransferPairRecommendations({
                   {/* Add Player */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
+                      <img
+                        src={getPlayerImageUrl(pair.add)}
+                        alt={pair.add.name}
+                        className="w-10 h-10 rounded-full object-cover bg-gray-700"
+                        onError={(e) => handleImageError(e, pair.add)}
+                      />
                       <div>
                         <div className="font-semibold text-white">{pair.add.name}</div>
                         <div className="text-xs text-gray-400">{pair.add.team} {pair.addForm}</div>
