@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import LeagueStandings from './LeagueStandings';
 import { USER_ID } from '../config/constants';
+import { getV3ConversionRatio } from '../services/v3/conversionRatios';
 
 // Sleeper position colors
 const getSleeperPositionStyle = (position) => {
@@ -307,8 +308,7 @@ const getNext5Points = (player, scoringMode) => {
   const sum = next5.reduce((total, p) => total + (p.predicted_pts || 0), 0);
 
   if (scoringMode === 'v3') {
-    const v3Ratios = { GKP: 0.90, DEF: 1.15, MID: 1.05, FWD: 0.97 };
-    const ratio = v3Ratios[player.position] || 1.0;
+    const ratio = getV3ConversionRatio(player.position);
     return sum * ratio;
   }
 

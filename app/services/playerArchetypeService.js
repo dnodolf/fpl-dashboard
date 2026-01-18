@@ -2,6 +2,7 @@
 // Player archetype classification for enhanced V3 scoring
 
 import archetypeData from '../data/playerArchetypes.json';
+import { getV3ConversionRatio } from './v3/conversionRatios';
 
 /**
  * Get player archetype and associated conversion ratio
@@ -61,13 +62,7 @@ export function getPlayerArchetype(player) {
  * Default position-based ratios (fallback when no archetype found)
  */
 function getDefaultPositionRatio(position) {
-  const defaults = {
-    'GKP': 0.90,
-    'DEF': 1.15,
-    'MID': 1.05,
-    'FWD': 0.97
-  };
-  return defaults[position] || 1.0;
+  return getV3ConversionRatio(position);
 }
 
 /**

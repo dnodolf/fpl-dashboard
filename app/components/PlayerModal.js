@@ -9,21 +9,7 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { TOTAL_GAMEWEEKS } from '../config/constants';
-
-// V3 Sleeper conversion ratios
-const V3_CONVERSION_RATIOS = {
-  GKP: 0.90,
-  DEF: 1.15,
-  MID: 1.05,
-  FWD: 0.97
-};
-
-// Helper function to convert FFH points to V3 Sleeper points
-const convertToV3Points = (ffhPoints, position) => {
-  if (!ffhPoints || ffhPoints <= 0) return 0;
-  const ratio = V3_CONVERSION_RATIOS[position] || 1.0;
-  return ffhPoints * ratio;
-};
+import { convertToV3Points } from '../services/v3/conversionRatios';
 
 export function PlayerModal({
   player = null,

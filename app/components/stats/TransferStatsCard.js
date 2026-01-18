@@ -7,14 +7,6 @@
 import PropTypes from 'prop-types';
 import { USER_ID, OWNERSHIP_STATUS } from '../../config/constants';
 
-// V3 Conversion ratios (same as TransferPairRecommendations)
-const V3_CONVERSION_RATIOS = {
-  GKP: 0.90,
-  DEF: 1.15,
-  MID: 1.05,
-  FWD: 0.97
-};
-
 export function TransferStatsCard({ players, scoringMode = 'ffh', gameweekRange }) {
   const myPlayers = players.filter(p => p.owned_by === USER_ID);
   const freeAgents = players.filter(p => !p.owned_by || p.owned_by === OWNERSHIP_STATUS.FREE_AGENT);

@@ -9,6 +9,7 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { USER_ID } from '../config/constants';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
+import { getV3ConversionRatio } from '../services/v3/conversionRatios';
 
 // Position order for display
 const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
@@ -163,8 +164,7 @@ export default function CheatSheetTabContent({
 
         if (scoringMode === 'v3') {
           // Apply V3 conversion to each gameweek
-          const v3Ratios = { GKP: 0.90, DEF: 1.15, MID: 1.05, FWD: 0.97 };
-          const ratio = v3Ratios[player.position] || 1.0;
+          const ratio = getV3ConversionRatio(player.position);
           displayPoints = nextN.reduce((sum, p) => sum + (p.predicted_pts || 0) * ratio, 0);
         } else {
           displayPoints = nextN.reduce((sum, p) => sum + (p.predicted_pts || 0), 0);

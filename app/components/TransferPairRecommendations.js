@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
+import { V3_CONVERSION_RATIOS, getV3ConversionRatio } from '../services/v3/conversionRatios';
 
 /**
  * Transfer Pair Recommendations Component
@@ -21,14 +22,6 @@ export default function TransferPairRecommendations({
   const [minGain, setMinGain] = useState(5); // Minimum points gain to show
   const [sortMode, setSortMode] = useState('confidence'); // 'confidence', 'next1', 'next3', 'next5', 'season'
   const [showAll, setShowAll] = useState(false); // Show all recommendations or just top 5
-
-  // V3 Conversion ratios (same as v3ScoringService.js)
-  const V3_CONVERSION_RATIOS = {
-    GKP: 0.90,
-    DEF: 1.15,
-    MID: 1.05,
-    FWD: 0.97
-  };
 
   /**
    * Calculate transfer pairs with net gain
