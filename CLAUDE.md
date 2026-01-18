@@ -44,7 +44,8 @@ app/
 │   └── scoringConversionService.js   # Pure FFH data extraction (no conversion)
 ├── components/                    # UI components
 │   ├── OptimizerTabContent.js        # Formation optimization interface
-│   ├── TransferTabContent.js         # Transfer recommendations
+│   ├── TransferTabContent.js         # Transfer recommendations with smart pairing
+│   ├── TransferPairRecommendations.js # Smart "Drop X, Add Y" transfer system
 │   ├── ComparisonTabContent.js       # Player comparison interface
 │   ├── PlayerModal.js                # Detailed player modal with charts & fixtures
 │   ├── MyPlayersTable.js            # Player analytics table
@@ -82,9 +83,14 @@ app/
 - **Smart Logging**: Deduplicated console output for cleaner development
 
 ### Enhanced Transfer Analysis
-- Position-based player recommendations with net gain calculations
+- **Smart Transfer Pairing**: "Drop Player X, Add Player Y" recommendations with net gain
+  - Position-aware matching (GKP-for-GKP, outfield flexibility)
+  - Top 10 recommendations ranked by season points improvement
+  - Adjustable minimum gain threshold filter
+  - Summary statistics: total opportunities, best gain, average top 5
 - **Form Analysis**: Predicted performance trends with visual indicators (📈📉➡️)
-- **Fixture Difficulty Visualization**: Color-coded tiles showing difficulty ratings (1-5)
+- **Fixture Difficulty Visualization**: Color-coded ratings (1-5) based on predicted performance
+  - 🟢 Easy (1-2) | 🟡 Medium (3) | 🟠 Hard (4) | 🔴 Very Hard (5)
 - **Pure Prediction Scoring**: Rankings based on unmodified prediction data for accuracy
 - Intuitive gameweek range controls with arrow navigation and text display
 - Detailed player comparison modals with side-by-side analytics
@@ -251,6 +257,27 @@ async function importServices() {
 - ✅ Clean console logging with duplicate prevention
 
 ## Recent Technical Updates
+
+### v3.5 - Smart Transfer Pair Recommendations (January 2025)
+- **TransferPairRecommendations Component**: New intelligent transfer suggestion system (`app/components/TransferPairRecommendations.js`)
+  - "Drop Player X, Add Player Y" pairing algorithm with net season points gain
+  - Position-aware matching: GKP-for-GKP only, outfield (DEF/MID/FWD) flexible
+  - Top 10 recommendations ranked by net gain
+  - Adjustable filters: position (GKP/DEF/MID/FWD/ALL) and minimum gain threshold
+  - Rich context per transfer: form indicators (📈📉➡️), fixture difficulty (1-5), season points
+  - Summary statistics: total opportunities, best gain available, avg top 5 gain
+  - Fixture difficulty calculation based on predicted points vs season average
+  - Medal-style ranking badges (🥇🥈🥉) for top 3 recommendations
+  - FFH/V3 scoring mode support with instant updates
+- **Integration**: Seamlessly integrated into Transfer tab (`app/components/TransferTabContent.js`)
+  - Appears at top of Transfer tab for immediate visibility
+  - Shares scoring mode toggle with existing transfer analysis
+  - Complements existing position-based recommendations
+- **Documentation**: Comprehensive feature docs (`docs/transfer-pair-recommendations.md`)
+  - Algorithm explanation and decision rationale
+  - Usage scenarios and examples
+  - Future enhancement roadmap
+- **Performance**: Optimized with useMemo hooks, O(n*m) algorithm efficiency
 
 ### v3.4 - Enhanced Player Details & Comparison Visualizations (December 2024)
 - **PlayerModal Component**: New comprehensive player detail modal (`app/components/PlayerModal.js`)

@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import TransferPairRecommendations from './TransferPairRecommendations';
 
 // V3 Sleeper scoring conversion ratios (same as v3ScoringService.js)
 const V3_CONVERSION_RATIOS = {
@@ -526,11 +527,20 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gam
 
   return (
     <div className="space-y-6">
-      
+
+      {/* Transfer Pair Recommendations - New Smart Transfer System */}
+      <TransferPairRecommendations
+        myPlayers={players?.filter(p => p.owned_by === 'ThatDerekGuy') || []}
+        availablePlayers={players?.filter(p => !p.owned_by || p.owned_by === 'Free Agent') || []}
+        scoringMode={scoringMode}
+        currentGameweek={currentGW}
+        nextNGameweeks={endGameweek - startGameweek + 1}
+      />
+
       {/* Controls Section */}
       <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
         <div className="flex flex-wrap gap-4 items-center justify-between">
-          
+
           {/* Position Multi-Select Filter - Left Side */}
           <div className="flex items-center gap-3">
             <label className={`text-sm font-medium text-gray-300`}>
