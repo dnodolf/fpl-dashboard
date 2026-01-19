@@ -22,7 +22,30 @@ export default function TransferPairRecommendations({
 }) {
   const [selectedPosition, setSelectedPosition] = useState('ALL');
   const [minGain, setMinGain] = useState(5); // Minimum points gain to show
-  const [sortMode, setSortMode] = useState('confidence'); // 'confidence', 'next1', 'next3', 'next5', 'season'
+  const [sortColumn, setSortColumn] = useState('confidence'); // Column to sort by
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
+  
+  // Handle column header click for sorting
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+    } else {
+      // New column, default to descending
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+  
+  // Render sort indicator
+  const renderSortIcon = (column) => {
+    if (sortColumn !== column) {
+      return <span className="ml-1 text-gray-600">⇅</span>;
+    }
+    return sortDirection === 'desc' 
+      ? <span className="ml-1 text-blue-400">↓</span>
+      : <span className="ml-1 text-blue-400">↑</span>;
+  };
   const [showAll, setShowAll] = useState(false); // Show all recommendations or just top 5
   const [minRating, setMinRating] = useState(0); // Minimum rating filter: 0=all, 20=weak+, 40=consider+, 60=good+, 80=strong
 
@@ -108,23 +131,39 @@ export default function TransferPairRecommendations({
       });
     });
 
-    // Sort by selected mode
+    // Sort by selected column and direction
     return pairs.sort((a, b) => {
-      switch (sortMode) {
+      let aVal, bVal;
+      switch (sortColumn) {
+        case 'rating':
+          aVal = a.transferRating;
+          bVal = b.transferRating;
+          break;
         case 'next1':
-          return b.next1Gain - a.next1Gain;
+          aVal = a.next1Gain;
+          bVal = b.next1Gain;
+          break;
         case 'next3':
-          return b.next3Gain - a.next3Gain;
+          aVal = a.next3Gain;
+          bVal = b.next3Gain;
+          break;
         case 'next5':
-          return b.next5Gain - a.next5Gain;
+          aVal = a.next5Gain;
+          bVal = b.next5Gain;
+          break;
         case 'season':
-          return b.netGain - a.netGain;
+          aVal = a.netGain;
+          bVal = b.netGain;
+          break;
         case 'confidence':
         default:
-          return b.confidenceScore - a.confidenceScore;
+          aVal = a.confidenceScore;
+          bVal = b.confidenceScore;
+          break;
       }
+      return sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
     });
-  }, [myPlayers, availablePlayers, scoringMode, selectedPosition, minGain, minRating, currentGameweek, nextNGameweeks, sortMode]);
+  }, [myPlayers, availablePlayers, scoringMode, selectedPosition, minGain, minRating, currentGameweek, nextNGameweeks, sortColumn, sortDirection]);
 
   /**
    * Get player score based on scoring mode (using season total)
@@ -280,19 +319,6 @@ export default function TransferPairRecommendations({
 
         {/* Filters */}
         <div className="flex gap-3">
-          {/* Sort Mode */}
-          <select
-            value={sortMode}
-            onChange={(e) => setSortMode(e.target.value)}
-            className="px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="confidence">⭐ Smart (Weighted)</option>
-            <option value="next1">Next GW</option>
-            <option value="next3">Next 3 GW</option>
-            <option value="next5">Next 5 GW</option>
-            <option value="season">Season Total</option>
-          </select>
-
           {/* Position Filter */}
           <select
             value={selectedPosition}
@@ -374,20 +400,35 @@ export default function TransferPairRecommendations({
                 <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
                   Add Player
                 </th>
-                <th className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
-                  Rating
+                <th 
+                  onClick={() => handleSort('rating')}
+                  className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                >
+                  Rating{renderSortIcon('rating')}
                 </th>
-                <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
-                  Next GW
+                <th 
+                  onClick={() => handleSort('next1')}
+                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                >
+                  Next GW{renderSortIcon('next1')}
                 </th>
-                <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
-                  Next 3
+                <th 
+                  onClick={() => handleSort('next3')}
+                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                >
+                  Next 3{renderSortIcon('next3')}
                 </th>
-                <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
-                  Next 5
+                <th 
+                  onClick={() => handleSort('next5')}
+                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                >
+                  Next 5{renderSortIcon('next5')}
                 </th>
-                <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
-                  Season
+                <th 
+                  onClick={() => handleSort('season')}
+                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                >
+                  Season{renderSortIcon('season')}
                 </th>
                 <th className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 px-4">
                   Fixtures
