@@ -247,7 +247,7 @@ export const COMPONENTS = {
   modal: {
     overlay: 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75',
     content: `${COLORS.gray.bg.primary} ${BORDERS.radius.lg} shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4`,
-    header: `${COMPONENTS.card.gradientDark} p-6 ${BORDERS.radius.top}`,
+    header: `bg-gradient-to-r from-blue-900 to-purple-900 p-6 ${BORDERS.radius.top}`,
   },
 
   // Empty state patterns
