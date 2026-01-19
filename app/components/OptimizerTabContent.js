@@ -177,7 +177,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
     const predictedMinutes = getPredictedMinutes(player);
 
     return (
-      <div className="relative flex flex-col items-center p-2 m-1 rounded-lg border text-xs bg-gray-700 border-gray-600 text-white" style={{ minWidth: '72px', maxWidth: '88px' }}>
+      <div className="relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs bg-gray-700 border-gray-600 text-white" style={{ minWidth: '68px', maxWidth: '80px' }}>
         
         {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
         {isOptimal && (
@@ -191,25 +191,17 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         )}
         
         {/* Player Avatar */}
-        <PlayerAvatar player={player} size="xs" className="mb-1" />
+        <PlayerAvatar player={player} size="xs" />
         
-        <div className="font-medium text-center leading-tight truncate w-full" title={player.full_name || player.name}>
+        <div className="font-medium text-center leading-tight truncate w-full text-[10px]" title={player.full_name || player.name}>
           {getLastName(player)}
         </div>
         
-        {/* Position badge with Sleeper colors */}
-        <div className="mt-1">
-          <span className={getSleeperPositionCardStyle(player.position)}>
-            {player.position || 'N/A'}
-          </span>
-        </div>
-        
-        <div className="opacity-75 text-xs mt-1">{player.team_abbr || player.team}</div>
+        <div className="opacity-75 text-[10px]">{player.team_abbr || player.team}</div>
         
         {/* Predicted Points */}
-        <div className="font-semibold mt-1">
+        <div className="font-semibold text-[11px] text-green-400">
           {(() => {
-            // Use explicit field-based logic to match FormationVisualization
             let points = 0;
             if (scoringMode === 'v4') {
               points = player.v4_current_gw || player.v3_current_gw || player.current_gw_prediction || 0;
@@ -221,13 +213,6 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             return points.toFixed(1);
           })()}
         </div>
-        
-        {/* Predicted Minutes */}
-        {predictedMinutes && (
-          <div className={`text-xs mt-1 text-gray-400`}>
-            {predictedMinutes}min
-          </div>
-        )}
       </div>
     );
   };
@@ -282,7 +267,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
               <div key={`empty-fwd-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
                 'border-gray-600 text-gray-500'
-              }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
+              }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">FWD</div>
               </div>
@@ -300,7 +285,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
               <div key={`empty-mid-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
                 'border-gray-600 text-gray-500'
-              }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
+              }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">MID</div>
               </div>
@@ -318,7 +303,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
               <div key={`empty-def-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
                 'border-gray-600 text-gray-500'
-              }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
+              }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">DEF</div>
               </div>
@@ -335,7 +320,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           {playersByPosition.GKP.length === 0 && (
             <div className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
               'border-gray-600 text-gray-500'
-            }`} style={{ minWidth: '72px', maxWidth: '88px' }}>
+            }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
               <div>Empty</div>
               <div className="text-xs opacity-50">GKP</div>
             </div>
