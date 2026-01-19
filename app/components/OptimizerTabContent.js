@@ -7,6 +7,7 @@ import MyPlayersTable from './MyPlayersTable.js';
 import v3ScoringService from '../services/v3ScoringService.js';
 import { getSleeperPositionCardStyle } from '../constants/positionColors';
 import { USER_ID } from '../config/constants';
+import PlayerAvatar from './common/PlayerAvatar';
 
 // ----------------- OPTIMIZER HOOK -----------------
 function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek) {
@@ -188,6 +189,9 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {isInCurrentLineup ? '✓' : '✗'}
           </div>
         )}
+        
+        {/* Player Avatar */}
+        <PlayerAvatar player={player} size="xs" variant="clean" className="mb-1" />
         
         <div className="font-medium text-center leading-tight truncate w-full" title={player.full_name || player.name}>
           {getLastName(player)}

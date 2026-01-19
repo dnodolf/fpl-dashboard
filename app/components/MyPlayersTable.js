@@ -4,6 +4,7 @@ import v3ScoringService from '../services/v3ScoringService.js';
 import { getPositionBadgeWithBorder } from '../constants/positionColors';
 import { USER_ID } from '../config/constants';
 import { getDifficultyColor } from '../constants/designTokens';
+import PlayerAvatar from './common/PlayerAvatar';
 
 const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [] }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
@@ -309,7 +310,7 @@ const getSleeperPositionBadgeColor = (position) => {
       <div className="rounded-lg border overflow-hidden bg-gray-800 border-gray-700">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-750 border-b border-gray-600">
+            <thead className="bg-gray-700 border-b border-gray-600 sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">
                   Status
@@ -393,10 +394,13 @@ const getSleeperPositionBadgeColor = (position) => {
                       </div>
                     </td>
 
-                    {/* Player Name */}
+                    {/* Player Avatar & Name */}
                     <td className="px-4 py-3">
-                      <div className="text-sm font-medium text-white">
-                        {player.full_name || player.web_name || player.name || 'Unknown Player'}
+                      <div className="flex items-center gap-3">
+                        <PlayerAvatar player={player} size="sm" />
+                        <span className="text-sm font-medium text-white">
+                          {player.full_name || player.web_name || player.name || 'Unknown Player'}
+                        </span>
                       </div>
                     </td>
 

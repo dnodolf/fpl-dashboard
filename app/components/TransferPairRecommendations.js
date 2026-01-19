@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
+import PlayerAvatar from './common/PlayerAvatar';
 import { V3_CONVERSION_RATIOS, getV3ConversionRatio } from '../services/v3/conversionRatios';
 import { getPositionColors } from '../constants/positionColors';
 import { getDifficultyColor } from '../constants/designTokens';
@@ -382,7 +382,7 @@ export default function TransferPairRecommendations({
             </thead>
             <tbody>
               {topRecommendations.map((pair, index) => (
-                <tr key={index} className="border-b border-gray-700 hover:bg-gray-750 transition-colors">
+                <tr key={index} className="border-b border-gray-700 hover:bg-gray-700 transition-colors">
                   {/* Rank */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
@@ -400,12 +400,7 @@ export default function TransferPairRecommendations({
                   {/* Drop Player */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
-                      <img
-                        src={getPlayerImageUrl(pair.drop)}
-                        alt={pair.drop.name}
-                        className="w-10 h-10 rounded-full object-cover bg-gray-700"
-                        onError={(e) => handleImageError(e, pair.drop)}
-                      />
+                      <PlayerAvatar player={pair.drop} size="md" variant="clean" />
                       <span className={`px-2 py-1 rounded text-xs font-bold text-white ${getPositionColor(pair.position)}`}>
                         {pair.position}
                       </span>
@@ -419,12 +414,7 @@ export default function TransferPairRecommendations({
                   {/* Add Player */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
-                      <img
-                        src={getPlayerImageUrl(pair.add)}
-                        alt={pair.add.name}
-                        className="w-10 h-10 rounded-full object-cover bg-gray-700"
-                        onError={(e) => handleImageError(e, pair.add)}
-                      />
+                      <PlayerAvatar player={pair.add} size="md" variant="clean" />
                       <div>
                         <div className="font-semibold text-white">{pair.add.name}</div>
                         <div className="text-xs text-gray-400">{pair.add.team} {pair.addForm}</div>

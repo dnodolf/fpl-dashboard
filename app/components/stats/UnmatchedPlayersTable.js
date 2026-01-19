@@ -280,7 +280,7 @@ export function UnmatchedPlayersTable({ optaAnalysis }) {
 
       {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className={`px-6 py-3 border-t flex items-center justify-between border-gray-700 bg-gray-750`}>
+        <div className={`px-6 py-3 border-t flex items-center justify-between border-gray-700 bg-gray-700`}>
           {/* Results Info */}
           <div className={`text-sm text-gray-400`}>
             Showing {startIndex + 1} to {Math.min(endIndex, sortedPlayers.length)} of {sortedPlayers.length} results

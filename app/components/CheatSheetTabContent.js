@@ -11,7 +11,7 @@ import { USER_ID } from '../config/constants';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import { getV3ConversionRatio } from '../services/v3/conversionRatios';
 import { getPositionBadgeStyle } from '../constants/positionColors';
-import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
+import PlayerAvatar from './common/PlayerAvatar';
 
 // Position order for display
 const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
@@ -50,12 +50,7 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
       <span className="text-gray-400 text-sm font-medium min-w-[24px]">{rank}.</span>
 
       {/* Player Image */}
-      <img
-        src={getPlayerImageUrl(player)}
-        alt={player.web_name || player.name}
-        onError={handleImageError}
-        className="w-10 h-10 rounded-full object-cover border-2 border-gray-600"
-      />
+      <PlayerAvatar player={player} size="md" />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

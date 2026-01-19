@@ -12,6 +12,7 @@ import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
+import PlayerAvatar from './common/PlayerAvatar';
 
 export function PlayerModal({
   player = null,
@@ -272,16 +273,19 @@ export function PlayerModal({
           </div>
 
           {/* Player name and team */}
-          <div className="mb-4">
-            <h2 className="text-3xl font-bold text-white mb-1">
-              {player.web_name || player.name || player.full_name}
-            </h2>
+          <div className="mb-4 flex items-start gap-4">
+            <PlayerAvatar player={player} size="lg" />
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-1">
+                {player.web_name || player.name || player.full_name}
+              </h2>
             <div className="flex items-center gap-2 text-lg">
               <span className="text-gray-300">{player.team || 'N/A'}</span>
               <span className="text-gray-400">•</span>
               <span className="text-gray-300">{player.position}</span>
               <span className="text-gray-400">•</span>
               <span className={ownership.color}>{ownership.text}</span>
+            </div>
             </div>
           </div>
 
@@ -360,7 +364,7 @@ export function PlayerModal({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {/* Goals - only show if > 0 or if player is attacker */}
                 {((player.goals_scored || player.goals || 0) > 0 || player.position === 'FWD' || player.position === 'MID') && (
-                  <div className="bg-gray-750 rounded p-2">
+                  <div className="bg-gray-700 rounded p-2">
                     <div className="text-xs text-gray-400">Goals</div>
                     <div className="text-lg font-bold text-white">
                       {player.goals_scored || player.goals || 0}
@@ -370,7 +374,7 @@ export function PlayerModal({
 
                 {/* Assists - only show if > 0 or if player is attacker/mid */}
                 {((player.assists || 0) > 0 || player.position === 'FWD' || player.position === 'MID') && (
-                  <div className="bg-gray-750 rounded p-2">
+                  <div className="bg-gray-700 rounded p-2">
                     <div className="text-xs text-gray-400">Assists</div>
                     <div className="text-lg font-bold text-white">
                       {player.assists || 0}
@@ -380,7 +384,7 @@ export function PlayerModal({
 
                 {/* Clean Sheets - only for GKP/DEF */}
                 {(player.position === 'GKP' || player.position === 'DEF') && (player.clean_sheets || 0) >= 0 && (
-                  <div className="bg-gray-750 rounded p-2">
+                  <div className="bg-gray-700 rounded p-2">
                     <div className="text-xs text-gray-400">Clean Sheets</div>
                     <div className="text-lg font-bold text-white">
                       {player.clean_sheets || 0}
@@ -390,7 +394,7 @@ export function PlayerModal({
 
                 {/* Minutes - always show if available */}
                 {(player.minutes || 0) > 0 && (
-                  <div className="bg-gray-750 rounded p-2">
+                  <div className="bg-gray-700 rounded p-2">
                     <div className="text-xs text-gray-400">Minutes</div>
                     <div className="text-lg font-bold text-white">
                       {player.minutes || 0}
@@ -400,7 +404,7 @@ export function PlayerModal({
 
                 {/* Yellow Cards - only if > 0 */}
                 {(player.yellow_cards || 0) > 0 && (
-                  <div className="bg-gray-750 rounded p-2">
+                  <div className="bg-gray-700 rounded p-2">
                     <div className="text-xs text-gray-400">Yellow Cards</div>
                     <div className="text-lg font-bold text-yellow-400">
                       {player.yellow_cards}
@@ -410,7 +414,7 @@ export function PlayerModal({
 
                 {/* Red Cards - only if > 0 */}
                 {(player.red_cards || 0) > 0 && (
-                  <div className="bg-gray-750 rounded p-2">
+                  <div className="bg-gray-700 rounded p-2">
                     <div className="text-xs text-gray-400">Red Cards</div>
                     <div className="text-lg font-bold text-red-400">
                       {player.red_cards}
@@ -420,7 +424,7 @@ export function PlayerModal({
 
                 {/* Bonus Points - only if available */}
                 {typeof player.bonus !== 'undefined' && player.bonus > 0 && (
-                  <div className="bg-gray-750 rounded p-2">
+                  <div className="bg-gray-700 rounded p-2">
                     <div className="text-xs text-gray-400">Bonus</div>
                     <div className="text-lg font-bold text-purple-400">
                       {player.bonus}
@@ -433,7 +437,7 @@ export function PlayerModal({
         })()}
 
         {/* Scoring mode toggle */}
-        <div className="bg-gray-750 px-6 py-3 border-b border-gray-700">
+        <div className="bg-gray-700 px-6 py-3 border-b border-gray-700">
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-400">Scoring:</span>
             <button
@@ -552,7 +556,7 @@ export function PlayerModal({
                 </thead>
                 <tbody>
                   {remainingFixtures.map((fixture) => (
-                    <tr key={fixture.gw} className="border-b border-gray-700 hover:bg-gray-750">
+                    <tr key={fixture.gw} className="border-b border-gray-700 hover:bg-gray-700">
                       <td className="py-3 px-3 text-white font-medium">{fixture.gw}</td>
                       <td className="py-3 px-3 text-white">
                         {fixture.isHome ? 'vs ' : '@ '}
