@@ -7,6 +7,7 @@ import { normalizePosition } from '../../../utils/positionUtils.js';
 import v3ScoringService from '../../services/v3ScoringService.js';
 import { transformPlayerForClient } from '../../utils/playerTransformUtils.js';
 import { cacheService } from '../../services/cacheService.js';
+import { USER_ID } from '../../config/constants';
 
 const optimizerService = new FormationOptimizerService();
 
@@ -40,7 +41,7 @@ async function fetchPlayerData(baseUrl, forceRefresh = false) {
 export async function POST(request) {
   try {
     const requestData = await request.json();
-    const userId = requestData.userId || 'ThatDerekGuy';
+    const userId = requestData.userId || USER_ID;
     const analysisType = requestData.analysisType || 'current_roster';
     const forceRefresh = requestData.forceRefresh || false;
     const scoringMode = requestData.scoringMode || 'ffh';

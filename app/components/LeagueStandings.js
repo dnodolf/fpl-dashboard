@@ -3,8 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { USER_ID } from '../config/constants';
 
-const LeagueStandings = ({ currentUserId = 'ThatDerekGuy' }) => {
+const LeagueStandings = ({ currentUserId = USER_ID }) => {
   const [standings, setStandings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

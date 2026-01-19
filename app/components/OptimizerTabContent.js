@@ -6,9 +6,10 @@ import PropTypes from 'prop-types';
 import MyPlayersTable from './MyPlayersTable.js';
 import v3ScoringService from '../services/v3ScoringService.js';
 import { getSleeperPositionCardStyle } from '../constants/positionColors';
+import { USER_ID } from '../config/constants';
 
 // ----------------- OPTIMIZER HOOK -----------------
-function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'ffh', currentGameweek) {
+function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek) {
   const [data, setData] = useState({
     loading: true,
     error: null,
@@ -652,7 +653,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
     formations,
     roster,
     refetch 
-  } = useOptimizerData('ThatDerekGuy', scoringMode, currentGameweek);
+  } = useOptimizerData(USER_ID, scoringMode, currentGameweek);
 
   // Calculate optimal player IDs for comparison - for FormationVisualization checkmarks
   const optimalPlayerIdsForDisplay = optimal?.players?.map(p => {

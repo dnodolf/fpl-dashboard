@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { getScoringValue } from '../services/v3ScoringService.js';
-import { TOTAL_GAMEWEEKS } from '../config/constants';
+import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 
@@ -30,7 +30,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
   // Get my players for quick selection
   const myPlayers = useMemo(() => {
     return players.filter(p =>
-      p.owned_by === 'ThatDerekGuy' || p.owned_by === 'You'
+      p.owned_by === USER_ID || p.owned_by === 'You'
     ).sort((a, b) => {
       // Sort by position then name
       const posOrder = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };

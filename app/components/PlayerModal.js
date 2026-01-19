@@ -8,7 +8,7 @@
 
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { TOTAL_GAMEWEEKS } from '../config/constants';
+import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 
@@ -225,7 +225,7 @@ export function PlayerModal({
 
   // Get ownership display
   const getOwnershipDisplay = () => {
-    if (player.owned_by === 'ThatDerekGuy' || player.owned_by === 'You') {
+    if (player.owned_by === USER_ID || player.owned_by === 'You') {
       return { text: 'Your Team', color: 'text-green-400' };
     } else if (!player.owned_by || player.owned_by === 'Free Agent') {
       return { text: 'Free Agent', color: 'text-blue-400' };

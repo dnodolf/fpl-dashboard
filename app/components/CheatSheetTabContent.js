@@ -18,7 +18,7 @@ const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
 // Get ownership status for a player
 const getOwnershipStatus = (player, userId) => {
   const ownerName = player.owned_by || player.owner_name;
-  if (ownerName === userId || ownerName === 'ThatDerekGuy') return 'mine';
+  if (ownerName === userId || ownerName === USER_ID) return 'mine';
   if (!ownerName || ownerName === 'FA' || ownerName === 'Free Agent') return 'fa';
   return 'other';
 };

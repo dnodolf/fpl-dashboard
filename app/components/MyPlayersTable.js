@@ -2,15 +2,16 @@
 import { useState, useEffect } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
 import { getPositionBadgeWithBorder } from '../constants/positionColors';
+import { USER_ID } from '../config/constants';
 
 const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [] }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Filter to get only user's players (owned by ThatDerekGuy)
-  const myPlayers = players.filter(player => 
-    player.owned_by === 'ThatDerekGuy' || 
-    player.owner_name === 'ThatDerekGuy'
+  // Filter to get only user's players (owned by USER_ID)
+  const myPlayers = players.filter(player =>
+    player.owned_by === USER_ID ||
+    player.owner_name === USER_ID
   );
 
   // Apply search filter
@@ -323,7 +324,7 @@ const getSleeperPositionBadgeColor = (position) => {
           No Players Found
         </h3>
         <p className="text-gray-400">
-          No players found for user "ThatDerekGuy". Check ownership data.
+          No players found for user "{USER_ID}". Check ownership data.
         </p>
       </div>
     );
