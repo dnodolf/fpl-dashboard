@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import MyPlayersTable from './MyPlayersTable.js';
 import v3ScoringService from '../services/v3ScoringService.js';
-import { getSleeperPositionCardStyle } from '../constants/positionColors';
+import { getSleeperPositionCardStyle, getPositionColors } from '../constants/positionColors';
 import { USER_ID } from '../config/constants';
 import PlayerAvatar from './common/PlayerAvatar';
 
@@ -176,8 +176,20 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 
     const predictedMinutes = getPredictedMinutes(player);
 
+    // Get position colors for subtle background
+    const posColors = getPositionColors(player.position);
+    
+    // Map position to subtle background color
+    const positionBgMap = {
+      GKP: 'bg-yellow-900/50 border-yellow-700/50',
+      DEF: 'bg-cyan-900/50 border-cyan-700/50', 
+      MID: 'bg-pink-900/50 border-pink-700/50',
+      FWD: 'bg-purple-900/50 border-purple-700/50'
+    };
+    const positionBg = positionBgMap[player.position?.toUpperCase()] || 'bg-gray-700 border-gray-600';
+    
     return (
-      <div className="relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs bg-gray-700 border-gray-600 text-white" style={{ minWidth: '68px', maxWidth: '80px' }}>
+      <div className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg}`} style={{ minWidth: '68px', maxWidth: '80px' }}>
         
         {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
         {isOptimal && (
