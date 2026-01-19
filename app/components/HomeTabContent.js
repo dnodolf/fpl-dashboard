@@ -7,6 +7,7 @@ import LeagueStandings from './LeagueStandings';
 import { USER_ID } from '../config/constants';
 import { getV3ConversionRatio } from '../services/v3/conversionRatios';
 import { getSleeperPositionStyle } from '../constants/positionColors';
+import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
 
 const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
   const [optimizerData, setOptimizerData] = useState(null);
@@ -211,6 +212,12 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
             <div className="space-y-2">
               {playersWithNews.map(player => (
                 <div key={player.sleeper_id} className="flex items-start gap-3 text-sm">
+                  <img
+                    src={getPlayerImageUrl(player)}
+                    alt={player.name}
+                    onError={handleImageError}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-yellow-700/50 flex-shrink-0"
+                  />
                   <span className={getSleeperPositionStyle(player.position)}>
                     {player.position}
                   </span>
@@ -245,7 +252,13 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
                       : (player.current_gw_prediction || 0);
 
                     return (
-                      <div key={player.sleeper_id} className="flex items-center justify-between text-sm">
+                      <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
+                        <img
+                          src={getPlayerImageUrl(player)}
+                          alt={player.web_name || player.name}
+                          onError={handleImageError}
+                          className="w-8 h-8 rounded-full object-cover border-2 border-gray-700 flex-shrink-0"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-white truncate font-medium">{player.web_name || player.name}</p>
                           <p className="text-xs text-gray-400">{player.team_abbr}</p>
