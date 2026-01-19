@@ -6,29 +6,7 @@ import PropTypes from 'prop-types';
 import LeagueStandings from './LeagueStandings';
 import { USER_ID } from '../config/constants';
 import { getV3ConversionRatio } from '../services/v3/conversionRatios';
-
-// Sleeper position colors
-const getSleeperPositionStyle = (position) => {
-  const baseClasses = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border';
-
-  switch (position) {
-    case 'GKP':
-    case 'GK':
-    case 'G':
-      return `${baseClasses} bg-yellow-500 text-black border-yellow-400`;
-    case 'DEF':
-    case 'D':
-      return `${baseClasses} bg-cyan-500 text-black border-cyan-400`;
-    case 'MID':
-    case 'M':
-      return `${baseClasses} bg-pink-500 text-white border-pink-400`;
-    case 'FWD':
-    case 'F':
-      return `${baseClasses} bg-purple-500 text-white border-purple-400`;
-    default:
-      return `${baseClasses} bg-gray-500 text-white border-gray-400`;
-  }
-};
+import { getSleeperPositionStyle } from '../constants/positionColors';
 
 const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
   const [optimizerData, setOptimizerData] = useState(null);

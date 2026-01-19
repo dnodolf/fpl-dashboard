@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
 import { V3_CONVERSION_RATIOS, getV3ConversionRatio } from '../services/v3/conversionRatios';
+import { getPositionBgColor } from '../constants/positionColors';
 
 /**
  * Transfer Pair Recommendations Component
@@ -262,16 +263,10 @@ export default function TransferPairRecommendations({
   }
 
   /**
-   * Get position color
+   * Get position color - now using centralized utility
    */
   function getPositionColor(position) {
-    const colors = {
-      'GKP': 'bg-yellow-600',
-      'DEF': 'bg-green-600',
-      'MID': 'bg-blue-600',
-      'FWD': 'bg-red-600'
-    };
-    return colors[position] || 'bg-gray-600';
+    return getPositionBgColor(position);
   }
 
   // Show top 5 by default, or all if showAll is true

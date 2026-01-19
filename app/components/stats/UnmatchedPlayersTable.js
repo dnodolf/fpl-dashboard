@@ -8,26 +8,11 @@
 
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { getPositionBadgeDark } from '../../constants/positionColors';
 
-// Position color utility for badge styling
+// Position color utility for badge styling - now using centralized utility
 const getSleeperPositionStyle = (position) => {
-  switch (position) {
-    case 'GKP':
-    case 'GK':
-    case 'G':
-      return 'bg-yellow-600 text-white border border-yellow-500';
-    case 'DEF':
-    case 'D':
-      return 'bg-cyan-600 text-white border border-cyan-500';
-    case 'MID':
-    case 'M':
-      return 'bg-pink-600 text-white border border-pink-500';
-    case 'FWD':
-    case 'F':
-      return 'bg-purple-600 text-white border border-purple-500';
-    default:
-      return 'bg-gray-600 text-white border border-gray-500';
-  }
+  return getPositionBadgeDark(position);
 };
 
 export function UnmatchedPlayersTable({ optaAnalysis }) {

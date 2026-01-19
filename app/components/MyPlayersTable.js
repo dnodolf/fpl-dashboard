@@ -1,6 +1,7 @@
 // app/components/MyPlayersTable.js - COMPLETE CORRECTED FILE WITH SLEEPER COLORS
 import { useState, useEffect } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
+import { getPositionBadgeWithBorder } from '../constants/positionColors';
 
 const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [] }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
@@ -297,25 +298,9 @@ const getFixtureDifficultyColorDark = (difficulty) => {
       <span className="text-blue-500 ml-1">↓</span>;
   };
 
-  // Get SLEEPER position badge color with enhanced contrast
+  // Get SLEEPER position badge color - now using centralized utility
 const getSleeperPositionBadgeColor = (position) => {
-  switch(position) {
-    case 'GKP':
-    case 'GK':
-    case 'G':
-      return 'bg-yellow-500 text-black border-yellow-400';
-    case 'DEF':
-    case 'D':
-      return 'bg-cyan-500 text-black border-cyan-400';
-    case 'MID':
-    case 'M':
-      return 'bg-pink-500 text-white border-pink-400';
-    case 'FWD':
-    case 'F':
-      return 'bg-purple-500 text-white border-purple-400';
-    default:
-      return 'bg-gray-500 text-white border-gray-400';
-  }
+  return getPositionBadgeWithBorder(position);
 };
 
   // Format predicted points

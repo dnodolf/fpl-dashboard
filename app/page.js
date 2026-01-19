@@ -20,6 +20,7 @@ import { TransferStatsCard } from './components/stats/TransferStatsCard';
 import { UnmatchedPlayersTable } from './components/stats/UnmatchedPlayersTable';
 import { PlayerModal } from './components/PlayerModal';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from './utils/predictionUtils';
+import { getSleeperPositionStyle, getPositionColors } from './constants/positionColors';
 
 // ----------------- ERROR BOUNDARY COMPONENT -----------------
 const ErrorBoundary = ({ children }) => {
@@ -46,30 +47,7 @@ const ErrorBoundary = ({ children }) => {
 };
 
 
-// ----------------- SLEEPER POSITION COLORS -----------------
-const getSleeperPositionStyle = (position) => {
-  switch (position) {
-    case 'GKP':
-    case 'GK':
-    case 'G':
-      // Sleeper GKP: Better contrast yellow
-      return 'bg-yellow-600 text-white border border-yellow-500'; 
-    case 'DEF':
-    case 'D':
-      // Sleeper DEF: Better contrast cyan
-      return 'bg-cyan-600 text-white border border-cyan-500'; 
-    case 'MID':
-    case 'M':
-      // Sleeper MID: Better contrast pink
-      return 'bg-pink-600 text-white border border-pink-500'; 
-    case 'FWD':
-    case 'F':
-      // Sleeper FWD: Better contrast purple
-      return 'bg-purple-600 text-white border border-purple-500'; 
-    default:
-      return 'bg-gray-600 text-white border border-gray-500';
-  }
-};
+// Position colors now imported from centralized constants/positionColors.js
 
 // ----------------- MATCHING TAB CONTENT COMPONENT -----------------
 const MatchingTabContent = ({ players, integration }) => {
@@ -407,45 +385,41 @@ export default function FPLDashboard() {
     refetch(type, forceRefresh, useCache);
   };
 
-  // Position color utility (shared with transfers tab) - memoized
+  // Position color utility (shared with transfers tab) - now uses centralized colors
   const getPositionColor = useCallback((position) => {
-    switch (position) {
-      case 'FWD': return {
-        bg: 'bg-purple-100',
-        text: 'text-purple-800',
-        border: 'border-purple-200',
-        accent: 'bg-purple-500',
-        pill: 'bg-gradient-to-r from-purple-500 to-purple-600'
-      };
-      case 'MID': return {
-        bg: 'bg-pink-100',
-        text: 'text-pink-800',
-        border: 'border-pink-200',
-        accent: 'bg-pink-500',
-        pill: 'bg-gradient-to-r from-pink-500 to-pink-600'
-      };
-      case 'DEF': return {
-        bg: 'bg-teal-100',
-        text: 'text-teal-800',
-        border: 'border-teal-200',
-        accent: 'bg-teal-500',
-        pill: 'bg-gradient-to-r from-teal-500 to-teal-600'
-      };
-      case 'GKP': return {
-        bg: 'bg-yellow-100',
-        text: 'text-yellow-800',
-        border: 'border-yellow-200',
-        accent: 'bg-yellow-500',
-        pill: 'bg-gradient-to-r from-yellow-500 to-yellow-600'
-      };
-      default: return {
-        bg: 'bg-gray-100',
-        text: 'text-gray-800',
-        border: 'border-gray-200',
-        accent: 'bg-gray-500',
-        pill: 'bg-gradient-to-r from-gray-500 to-gray-600'
-      };
-    }
+    const colors = getPositionColors(position);
+
+    // Add light background variants for this specific use case
+    const lightBgMap = {
+      'GKP': 'bg-yellow-100',
+      'DEF': 'bg-teal-100',
+      'MID': 'bg-pink-100',
+      'FWD': 'bg-purple-100'
+    };
+
+    const textMap = {
+      'GKP': 'text-yellow-800',
+      'DEF': 'text-teal-800',
+      'MID': 'text-pink-800',
+      'FWD': 'text-purple-800'
+    };
+
+    const borderMap = {
+      'GKP': 'border-yellow-200',
+      'DEF': 'border-teal-200',
+      'MID': 'border-pink-200',
+      'FWD': 'border-purple-200'
+    };
+
+    const normalizedPos = position?.toUpperCase() || 'GKP';
+
+    return {
+      bg: lightBgMap[normalizedPos] || 'bg-gray-100',
+      text: textMap[normalizedPos] || 'text-gray-800',
+      border: borderMap[normalizedPos] || 'border-gray-200',
+      accent: colors.accent,
+      pill: colors.pill
+    };
   }, []);
 
   // Sorting function (memoized to prevent unnecessary re-renders)

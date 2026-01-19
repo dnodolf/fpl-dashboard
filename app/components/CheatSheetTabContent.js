@@ -10,17 +10,10 @@ import PropTypes from 'prop-types';
 import { USER_ID } from '../config/constants';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import { getV3ConversionRatio } from '../services/v3/conversionRatios';
+import { getPositionBadgeStyle } from '../constants/positionColors';
 
 // Position order for display
 const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
-
-// Position colors (matching Sleeper theme)
-const POSITION_COLORS = {
-  GKP: 'bg-yellow-500 text-black',
-  DEF: 'bg-cyan-500 text-black',
-  MID: 'bg-pink-500 text-white',
-  FWD: 'bg-purple-500 text-white'
-};
 
 // Get ownership status for a player
 const getOwnershipStatus = (player, userId) => {
@@ -88,7 +81,7 @@ PlayerCard.propTypes = {
 
 // Position column component
 const PositionColumn = ({ position, players, onPlayerClick }) => {
-  const colorClasses = POSITION_COLORS[position] || 'bg-gray-500 text-white';
+  const colorClasses = getPositionBadgeStyle(position);
 
   return (
     <div className="flex-1 min-w-[250px]">

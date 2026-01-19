@@ -5,30 +5,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import MyPlayersTable from './MyPlayersTable.js';
 import v3ScoringService from '../services/v3ScoringService.js';
-
-// ----------------- SLEEPER POSITION COLORS FUNCTIONS -----------------
-// Get Sleeper position badge classes for player cards
-const getSleeperPositionCardStyle = (position) => {
-  const baseClasses = 'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border';
-  
-  switch (position) {
-    case 'GKP':
-    case 'GK':
-    case 'G':
-      return `${baseClasses} bg-yellow-500 text-black border-yellow-400`;
-    case 'DEF':
-    case 'D':
-      return `${baseClasses} bg-cyan-500 text-black border-cyan-400`;
-    case 'MID':
-    case 'M':
-      return `${baseClasses} bg-pink-500 text-white border-pink-400`;
-    case 'FWD':
-    case 'F':
-      return `${baseClasses} bg-purple-500 text-white border-purple-400`;
-    default:
-      return `${baseClasses} bg-gray-500 text-white border-gray-400`;
-  }
-};
+import { getSleeperPositionCardStyle } from '../constants/positionColors';
 
 // ----------------- OPTIMIZER HOOK -----------------
 function useOptimizerData(userId = 'ThatDerekGuy', scoringMode = 'ffh', currentGameweek) {
