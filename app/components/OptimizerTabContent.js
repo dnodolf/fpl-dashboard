@@ -84,7 +84,7 @@ function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null }) => {
+const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
@@ -133,7 +133,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   };
 
   // Player Card Component - UPDATED WITH SLEEPER COLORS AND PREDICTED MINUTES
-  const PlayerCard = ({ player, isInOptimal = false, scoringMode = 'ffh', currentLineup = null }) => {
+  const PlayerCard = ({ player, isInOptimal = false, scoringMode = 'ffh', currentLineup = null, optimalLineup = null }) => {
     // Extract last name only for better readability
     const getLastName = (player) => {
       if (player.web_name) return player.web_name;
@@ -148,9 +148,12 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
     const playerId = player.id || player.player_id || player.sleeper_id;
     
     // For optimal lineup display: ✓ if player is ALSO in current, ✗ if player is NOT in current
-    // We need to compare against current lineup, not optimal lineup
     const currentPlayerIds = currentLineup?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
     const isInCurrentLineup = currentPlayerIds.includes(playerId);
+    
+    // For current lineup display: Check if player is in optimal lineup (should be kept) or not (should be benched)
+    const optimalPlayerIds = optimalLineup?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
+    const isInOptimalLineup = optimalPlayerIds.includes(playerId);
 
     // Extract predicted minutes
     const getPredictedMinutes = (player) => {
@@ -196,9 +199,20 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
             isInCurrentLineup 
               ? 'bg-green-500 text-white' 
+              : 'bg-blue-500 text-white'
+          }`}>
+            {isInCurrentLineup ? '✓' : '+'}
+          </div>
+        )}
+        
+        {/* Show indicators on current lineup: ✓ for players also in optimal, ✗ for players to bench */}
+        {!isOptimal && optimalLineup && (
+          <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
+            isInOptimalLineup 
+              ? 'bg-green-500 text-white' 
               : 'bg-red-500 text-white'
           }`}>
-            {isInCurrentLineup ? '✓' : '✗'}
+            {isInOptimalLineup ? '✓' : '✗'}
           </div>
         )}
         
@@ -273,7 +287,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         {layout.fwd > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.FWD.slice(0, layout.fwd).map((player, idx) => (
-              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
+              <PlayerCard key={`fwd-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} optimalLineup={optimalLineup} />
             ))}
             {/* Fill missing FWD slots if needed */}
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
@@ -291,7 +305,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         {layout.mid > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.MID.slice(0, layout.mid).map((player, idx) => (
-              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
+              <PlayerCard key={`mid-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} optimalLineup={optimalLineup} />
             ))}
             {/* Fill missing MID slots if needed */}
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
@@ -309,7 +323,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         {layout.def > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             {playersByPosition.DEF.slice(0, layout.def).map((player, idx) => (
-              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
+              <PlayerCard key={`def-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} optimalLineup={optimalLineup} />
             ))}
             {/* Fill missing DEF slots if needed */}
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
@@ -326,7 +340,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         {/* Goalkeeper - Always show 1 */}
         <div className="flex justify-center">
           {playersByPosition.GKP.slice(0, 1).map((player, idx) => (
-            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} />
+            <PlayerCard key={`gkp-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} optimalLineup={optimalLineup} />
           ))}
           {/* Show empty GKP slot if needed */}
           {playersByPosition.GKP.length === 0 && (
@@ -785,6 +799,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
             lineup={current}
             optimalPlayerIds={optimalPlayerIdsForDisplay}
             scoringMode={scoringMode}
+            optimalLineup={optimal}
           />
         </div>
 
