@@ -11,6 +11,7 @@ import { USER_ID } from '../config/constants';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import { getV3ConversionRatio } from '../services/v3/conversionRatios';
 import { getPositionBadgeStyle } from '../constants/positionColors';
+import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
 
 // Position order for display
 const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
@@ -45,8 +46,17 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
     : 'bg-gray-800/30 border-gray-700';
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 mb-1 rounded border ${bgColor} hover:opacity-80 transition-opacity`}>
+    <div className={`flex items-center gap-3 px-3 py-2 mb-1 rounded border ${bgColor} hover:opacity-80 transition-opacity`}>
       <span className="text-gray-400 text-sm font-medium min-w-[24px]">{rank}.</span>
+
+      {/* Player Image */}
+      <img
+        src={getPlayerImageUrl(player)}
+        alt={player.web_name || player.name}
+        onError={handleImageError}
+        className="w-10 h-10 rounded-full object-cover border-2 border-gray-600"
+      />
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <button
@@ -61,10 +71,17 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400">
-          {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team || 'N/A'}
-        </span>
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <span>{TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team || 'N/A'}</span>
+          {player.avgMinutes > 0 && (
+            <>
+              <span>•</span>
+              <span>{player.avgMinutes} min/gw</span>
+            </>
+          )}
+        </div>
       </div>
+
       <span className="text-white text-sm font-bold">
         {player.displayPoints?.toFixed(1) || '0.0'}
       </span>
@@ -129,15 +146,23 @@ export default function CheatSheetTabContent({
   const rankedPlayers = useMemo(() => {
     if (!players || players.length === 0) return {};
 
-    // Calculate display points based on timeframe
+    // Calculate display points and avg minutes based on timeframe
     const playersWithPoints = players.map(player => {
       let displayPoints = 0;
+      let avgMinutes = 0;
 
       if (timeframe === 'ros') {
         // Rest of season
         displayPoints = scoringMode === 'v3'
           ? (player.v3_season_total || 0)
           : (player.predicted_points || 0);
+
+        // Calculate avg minutes for rest of season
+        const predictions = player.predictions || [];
+        if (predictions.length > 0) {
+          const totalMinutes = predictions.reduce((sum, p) => sum + (p.xmins || 0), 0);
+          avgMinutes = Math.round(totalMinutes / predictions.length);
+        }
       } else {
         // Next N gameweeks (1, 5, or custom)
         const currentGW = currentGameweek?.number || 15;
@@ -162,6 +187,12 @@ export default function CheatSheetTabContent({
         } else {
           displayPoints = nextN.reduce((sum, p) => sum + (p.predicted_pts || 0), 0);
         }
+
+        // Calculate avg minutes for selected timeframe
+        if (nextN.length > 0) {
+          const totalMinutes = nextN.reduce((sum, p) => sum + (p.xmins || 0), 0);
+          avgMinutes = Math.round(totalMinutes / nextN.length);
+        }
       }
 
       const ownershipStatus = getOwnershipStatus(player, USER_ID);
@@ -169,6 +200,7 @@ export default function CheatSheetTabContent({
       return {
         ...player,
         displayPoints,
+        avgMinutes,
         ownershipStatus
       };
     });
