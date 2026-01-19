@@ -11,6 +11,7 @@ import PropTypes from 'prop-types';
 import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
+import { getDifficultyColor } from '../constants/designTokens';
 
 export function PlayerModal({
   player = null,
@@ -148,18 +149,6 @@ export function PlayerModal({
 
   // Early return AFTER all hooks have been called
   if (!isOpen || !player) return null;
-
-  // Get fixture difficulty color
-  const getDifficultyColor = (difficulty) => {
-    switch(difficulty) {
-      case 1: return 'bg-green-500';
-      case 2: return 'bg-green-400';
-      case 3: return 'bg-yellow-500';
-      case 4: return 'bg-orange-500';
-      case 5: return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
 
   // Get injury/availability status from news
   const getAvailabilityStatus = (news) => {

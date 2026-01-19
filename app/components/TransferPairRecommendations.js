@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { getPlayerImageUrl, handleImageError } from '../utils/playerImage';
 import { V3_CONVERSION_RATIOS, getV3ConversionRatio } from '../services/v3/conversionRatios';
-import { getPositionBgColor } from '../constants/positionColors';
+import { getPositionColors } from '../constants/positionColors';
+import { getDifficultyColor } from '../constants/designTokens';
 
 /**
  * Transfer Pair Recommendations Component
@@ -210,15 +211,6 @@ export default function TransferPairRecommendations({
     return Math.round((totalDifficulty / count) * 10) / 10; // Round to 1 decimal
   }
 
-  /**
-   * Get difficulty color
-   */
-  function getDifficultyColor(difficulty) {
-    if (difficulty <= 2) return 'bg-green-600';
-    if (difficulty === 3) return 'bg-yellow-600';
-    if (difficulty === 4) return 'bg-orange-600';
-    return 'bg-red-600';
-  }
 
   /**
    * Get transfer recommendation badge
@@ -263,10 +255,11 @@ export default function TransferPairRecommendations({
   }
 
   /**
-   * Get position color - now using centralized utility
+   * Get position color - now using Sleeper-inspired colors (bgDark variant)
    */
   function getPositionColor(position) {
-    return getPositionBgColor(position);
+    const colors = getPositionColors(position);
+    return colors.bgDark; // Use darker variant for better contrast on dark backgrounds
   }
 
   // Show top 5 by default, or all if showAll is true

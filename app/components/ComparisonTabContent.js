@@ -6,18 +6,7 @@ import { getScoringValue } from '../services/v3ScoringService.js';
 import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
-
-// Get fixture difficulty color
-const getDifficultyColor = (difficulty) => {
-  switch(difficulty) {
-    case 1: return 'bg-green-500';
-    case 2: return 'bg-green-400';
-    case 3: return 'bg-yellow-500';
-    case 4: return 'bg-orange-500';
-    case 5: return 'bg-red-500';
-    default: return 'bg-gray-500';
-  }
-};
+import { getDifficultyColor } from '../constants/designTokens';
 
 const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ffh', onPlayerClick, preSelectedPlayer1, onClearPreSelection }) => {
   const [selectedPlayer1, setSelectedPlayer1] = useState(null);

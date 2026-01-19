@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
 import { getPositionBadgeWithBorder } from '../constants/positionColors';
 import { USER_ID } from '../config/constants';
+import { getDifficultyColor } from '../constants/designTokens';
 
 const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [] }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
@@ -175,58 +176,7 @@ const getFixtureDifficulty = (player) => {
   return 3.0; // Medium difficulty
 };
 
-// Updated getFixtureDifficultyColor function with proper green-to-red scale
-// Add both color functions
-const getFixtureDifficultyColor = (difficulty) => {
-  if (difficulty === 'N/A' || difficulty === null || difficulty === undefined) {
-    return 'bg-gray-700 text-gray-300';
-  }
-
-  const numDifficulty = parseFloat(difficulty);
-
-  if (isNaN(numDifficulty)) {
-    return 'bg-gray-700 text-gray-300';
-  }
-
-  // Green to Red scale with better contrast
-  if (numDifficulty <= 1.5) {
-    return 'bg-green-600 text-white'; // Easiest - Dark Green
-  } else if (numDifficulty <= 2.5) {
-    return 'bg-green-400 text-green-900';  // Easy - Light Green
-  } else if (numDifficulty <= 3.5) {
-    return 'bg-yellow-500 text-yellow-900'; // Medium - Yellow
-  } else if (numDifficulty <= 4.5) {
-    return 'bg-orange-600 text-white'; // Hard - Orange
-  } else {
-    return 'bg-red-600 text-white';      // Hardest - Red
-  }
-};
-
-// Fixture difficulty color function with better contrast
-const getFixtureDifficultyColorDark = (difficulty) => {
-  if (difficulty === 'N/A' || difficulty === null || difficulty === undefined) {
-    return 'bg-gray-700 text-gray-300';
-  }
-
-  const numDifficulty = parseFloat(difficulty);
-
-  if (isNaN(numDifficulty)) {
-    return 'bg-gray-700 text-gray-300';
-  }
-
-  // Green to Red scale with better contrast
-  if (numDifficulty <= 1.5) {
-    return 'bg-green-600 text-white'; // Easiest - Dark Green
-  } else if (numDifficulty <= 2.5) {
-    return 'bg-green-400 text-green-900';  // Easy - Light Green
-  } else if (numDifficulty <= 3.5) {
-    return 'bg-yellow-500 text-yellow-900'; // Medium - Yellow
-  } else if (numDifficulty <= 4.5) {
-    return 'bg-orange-600 text-white'; // Hard - Orange
-  } else {
-    return 'bg-red-600 text-white';      // Hardest - Red
-  }
-};
+// Using centralized difficulty color function from designTokens
 
   // Calculate start percentage based on chance of playing
   const calculateStartPercentage = (player) => {
@@ -493,7 +443,7 @@ const getSleeperPositionBadgeColor = (position) => {
 
                     {/* Fixture Difficulty - ENHANCED WITH PROPER COLOR CODING */}
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getFixtureDifficultyColor(player.fixture_difficulty_value)}`}>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(player.fixture_difficulty_value)}`}>
                         {player.fixture_difficulty_value !== 'N/A' && !isNaN(parseFloat(player.fixture_difficulty_value))
                           ? parseFloat(player.fixture_difficulty_value).toFixed(1)
                           : player.fixture_difficulty_value || 'N/A'}

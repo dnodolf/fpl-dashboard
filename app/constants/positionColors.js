@@ -100,22 +100,6 @@ export function getPositionBadgeDark(position) {
 }
 
 /**
- * Get simple background color for position (for simple badges)
- * @param {string} position - Player position
- * @returns {string} Background color class
- */
-export function getPositionBgColor(position) {
-  const normalized = normalizePosition(position);
-  const colorMap = {
-    'GKP': 'bg-yellow-600',
-    'DEF': 'bg-green-600',  // Note: Some components use green instead of cyan
-    'MID': 'bg-blue-600',   // Note: Some components use blue instead of pink
-    'FWD': 'bg-red-600'     // Note: Some components use red instead of purple
-  };
-  return colorMap[normalized] || 'bg-gray-600';
-}
-
-/**
  * Get position color object (for complex styling needs)
  * @param {string} position - Player position
  * @returns {Object} Color object with all variants
