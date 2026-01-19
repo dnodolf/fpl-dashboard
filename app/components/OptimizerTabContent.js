@@ -225,8 +225,12 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         
         <div className="opacity-75 text-[10px]">{player.team_abbr || player.team}</div>
         
-        {/* Predicted Points */}
-        <div className="font-semibold text-[11px] text-green-400">
+        {/* Predicted Points - green if optimal, red if should be benched */}
+        <div className={`font-semibold text-[11px] ${
+          isOptimal 
+            ? (isInCurrentLineup ? 'text-green-400' : 'text-blue-400')
+            : (isInOptimalLineup ? 'text-green-400' : 'text-red-400')
+        }`}>
           {(() => {
             let points = 0;
             if (scoringMode === 'v4') {
