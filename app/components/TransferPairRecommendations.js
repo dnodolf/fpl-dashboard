@@ -24,6 +24,7 @@ export default function TransferPairRecommendations({
   const [minGain, setMinGain] = useState(5); // Minimum points gain to show
   const [sortMode, setSortMode] = useState('confidence'); // 'confidence', 'next1', 'next3', 'next5', 'season'
   const [showAll, setShowAll] = useState(false); // Show all recommendations or just top 5
+  const [minRating, setMinRating] = useState(0); // Minimum rating filter: 0=all, 20=weak+, 40=consider+, 60=good+, 80=strong
 
   /**
    * Calculate transfer pairs with net gain
@@ -82,8 +83,8 @@ export default function TransferPairRecommendations({
             ? Math.min(100, Math.max(0, (actualScore / maxPossibleScore) * 100))
             : 50;
 
-          // Only include if net gain meets minimum threshold
-          if (netGain >= minGain) {
+          // Only include if net gain and rating meet minimum thresholds
+          if (netGain >= minGain && transferRating >= minRating) {
             pairs.push({
               drop: dropPlayer,
               add: addPlayer,
@@ -123,7 +124,7 @@ export default function TransferPairRecommendations({
           return b.confidenceScore - a.confidenceScore;
       }
     });
-  }, [myPlayers, availablePlayers, scoringMode, selectedPosition, minGain, currentGameweek, nextNGameweeks, sortMode]);
+  }, [myPlayers, availablePlayers, scoringMode, selectedPosition, minGain, minRating, currentGameweek, nextNGameweeks, sortMode]);
 
   /**
    * Get player score based on scoring mode (using season total)
@@ -318,6 +319,19 @@ export default function TransferPairRecommendations({
             />
             <span className="text-sm text-gray-400">pts</span>
           </div>
+          
+          {/* Rating Filter */}
+          <select
+            value={minRating}
+            onChange={(e) => setMinRating(Number(e.target.value))}
+            className="px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={0}>All Ratings</option>
+            <option value={20}>Weak+ (20%+)</option>
+            <option value={40}>Consider+ (40%+)</option>
+            <option value={60}>Good+ (60%+)</option>
+            <option value={80}>Strong Only (80%+)</option>
+          </select>
         </div>
       </div>
 
