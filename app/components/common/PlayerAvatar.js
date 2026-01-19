@@ -9,10 +9,10 @@
  * - lg: 48x48px (w-12 h-12) - Modal headers, featured displays
  *
  * Variants:
- * - default: Gray border (border-gray-600)
+ * - default: No border (clean look, like Transfers tab)
+ * - bordered: Gray border (border-gray-600) if needed
  * - news: Yellow border for news/alerts (border-yellow-700/50)
- * - position: No border, used when combined with position badge
- * - clean: No border at all
+ * - clean: Same as default, no border
  */
 
 import { getPlayerImageUrl, handleImageError } from '../../utils/playerImage';
@@ -25,12 +25,12 @@ const SIZE_CLASSES = {
   lg: 'w-12 h-12',
 };
 
-// Border variants
+// Border variants - default is no border for cleaner look
 const BORDER_CLASSES = {
-  default: 'border-2 border-gray-600',
+  default: '',
+  bordered: 'border-2 border-gray-600',
   news: 'border-2 border-yellow-700/50',
-  position: 'border-0',
-  clean: 'border-0',
+  clean: '',
 };
 
 export default function PlayerAvatar({

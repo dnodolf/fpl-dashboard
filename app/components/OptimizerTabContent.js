@@ -191,7 +191,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         )}
         
         {/* Player Avatar */}
-        <PlayerAvatar player={player} size="xs" variant="clean" className="mb-1" />
+        <PlayerAvatar player={player} size="xs" className="mb-1" />
         
         <div className="font-medium text-center leading-tight truncate w-full" title={player.full_name || player.name}>
           {getLastName(player)}

@@ -212,7 +212,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
             <div className="space-y-2">
               {playersWithNews.map(player => (
                 <div key={player.sleeper_id} className="flex items-start gap-3 text-sm">
-                  <PlayerAvatar player={player} size="md" variant="news" />
+                  <PlayerAvatar player={player} size="md" />
                   <span className={getSleeperPositionStyle(player.position)}>
                     {player.position}
                   </span>

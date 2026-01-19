@@ -400,7 +400,7 @@ export default function TransferPairRecommendations({
                   {/* Drop Player */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
-                      <PlayerAvatar player={pair.drop} size="md" variant="clean" />
+                      <PlayerAvatar player={pair.drop} size="md" />
                       <span className={`px-2 py-1 rounded text-xs font-bold text-white ${getPositionColor(pair.position)}`}>
                         {pair.position}
                       </span>
@@ -414,7 +414,7 @@ export default function TransferPairRecommendations({
                   {/* Add Player */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
-                      <PlayerAvatar player={pair.add} size="md" variant="clean" />
+                      <PlayerAvatar player={pair.add} size="md" />
                       <div>
                         <div className="font-semibold text-white">{pair.add.name}</div>
                         <div className="text-xs text-gray-400">{pair.add.team} {pair.addForm}</div>
