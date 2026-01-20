@@ -38,17 +38,13 @@ export function PlayerModal({
     return getNextNGameweeksTotal(player, localScoringMode, currentGW, 5);
   }, [player, localScoringMode, currentGW]);
 
-  // Calculate ROS (Rest of Season) points
+  // ROS (Rest of Season) points - use pre-calculated fields for consistency
   const rosPoints = useMemo(() => {
-    if (!predictions || predictions.length === 0) return seasonTotal || 0;
-
-    const remainingPredictions = predictions.filter(p => p.gw >= currentGW);
-    return remainingPredictions.reduce((sum, p) => {
-      const ffhPoints = p.predicted_pts || 0;
-      const points = localScoringMode === 'v3' ? convertToV3Points(ffhPoints, player?.position) : ffhPoints;
-      return sum + points;
-    }, 0);
-  }, [predictions, currentGW, localScoringMode, seasonTotal, player?.position]);
+    if (localScoringMode === 'v3') {
+      return player?.v3_season_total || 0;
+    }
+    return player?.predicted_points || 0;
+  }, [player?.v3_season_total, player?.predicted_points, localScoringMode]);
 
   // Get next 5 gameweeks for chart (excluding current live GW)
   const next5Fixtures = useMemo(() => {

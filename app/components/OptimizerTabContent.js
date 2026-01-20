@@ -232,14 +232,9 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             : (isInOptimalLineup ? 'text-green-400' : 'text-red-400')
         }`}>
           {(() => {
-            let points = 0;
-            if (scoringMode === 'v4') {
-              points = player.v4_current_gw || player.v3_current_gw || player.current_gw_prediction || 0;
-            } else if (scoringMode === 'v3') {
-              points = player.v3_current_gw || 0;
-            } else {
-              points = player.current_gw_prediction || 0;
-            }
+            const points = scoringMode === 'v3'
+              ? (player.v3_current_gw || 0)
+              : (player.current_gw_prediction || 0);
             return points.toFixed(1);
           })()}
         </div>
@@ -248,16 +243,11 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   };
 
   const currentFormation = lineup.formation || 'Unknown';
-  // Recalculate total points based on current scoring mode - be very specific about which field to use
+  // Recalculate total points based on current scoring mode
   const totalPoints = lineup.players ? lineup.players.reduce((sum, player) => {
-    let points = 0;
-    if (scoringMode === 'v4') {
-      points = player.v4_current_gw || player.v3_current_gw || player.current_gw_prediction || 0;
-    } else if (scoringMode === 'v3') {
-      points = player.v3_current_gw || 0;
-    } else {
-      points = player.current_gw_prediction || 0;
-    }
+    const points = scoringMode === 'v3'
+      ? (player.v3_current_gw || 0)
+      : (player.current_gw_prediction || 0);
     return sum + points;
   }, 0) : (lineup.points || lineup.totalPoints || 0);
   const layout = getFormationLayout(currentFormation);

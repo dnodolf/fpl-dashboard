@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import LeagueStandings from './LeagueStandings';
 import { USER_ID } from '../config/constants';
-import { getV3ConversionRatio } from '../services/v3/conversionRatios';
 import { getSleeperPositionStyle } from '../constants/positionColors';
 import PlayerAvatar from './common/PlayerAvatar';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 
 const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
   const [optimizerData, setOptimizerData] = useState(null);
@@ -71,14 +71,16 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
     ros: 0
   };
 
+  const currentGW = currentGameweek?.number || 1;
+
   myPlayers.forEach(myPlayer => {
-    const myNext5 = getNext5Points(myPlayer, scoringMode);
+    const myNext5 = getNextNGameweeksTotal(myPlayer, scoringMode, currentGW, 5);
     const myROS = getROSPoints(myPlayer, scoringMode);
 
     // Count how many FAs are better for next 5
     const betterNext5 = freeAgents.filter(fa => {
       if (fa.position !== myPlayer.position) return false;
-      const faNext5 = getNext5Points(fa, scoringMode);
+      const faNext5 = getNextNGameweeksTotal(fa, scoringMode, currentGW, 5);
       return faNext5 > myNext5;
     }).length;
 
@@ -281,21 +283,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
   );
 };
 
-// Helper functions
-const getNext5Points = (player, scoringMode) => {
-  if (!player.predictions || player.predictions.length === 0) return 0;
-
-  const next5 = player.predictions.slice(0, 5);
-  const sum = next5.reduce((total, p) => total + (p.predicted_pts || 0), 0);
-
-  if (scoringMode === 'v3') {
-    const ratio = getV3ConversionRatio(player.position);
-    return sum * ratio;
-  }
-
-  return sum;
-};
-
+// Helper function for ROS points
 const getROSPoints = (player, scoringMode) => {
   if (scoringMode === 'v3') {
     return player.v3_season_total || 0;

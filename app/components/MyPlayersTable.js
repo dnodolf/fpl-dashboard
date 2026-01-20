@@ -90,11 +90,12 @@ const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scori
 };
 
   const getPlayerPPG = (player) => {
-    // Use explicit field-based logic for season average
+    // Use pre-calculated fields for season average
     if (scoringMode === 'v3') {
       return player.v3_season_avg || 0;
     } else {
-      return player.sleeper_season_avg || 0;
+      // FFH mode: use FFH's season_prediction_avg
+      return player.season_prediction_avg || 0;
     }
   };
   

@@ -38,7 +38,8 @@ export async function calculateV3Prediction(player, currentGameweek) {
 
     const position = player.position || 'MID';
 
-    // Get player-specific archetype and ratio
+    // Get position-based conversion ratio (validated approach - simple ratio only)
+    // This matches convertToV3Points() for consistency across all V3 calculations
     const archetypeInfo = getPlayerArchetype(player);
     const ratio = archetypeInfo.ratio;
 
@@ -47,64 +48,12 @@ export async function calculateV3Prediction(player, currentGameweek) {
     const fplSeasonAvg = player.season_prediction_avg || 0;
     const fplCurrentGW = player.current_gw_prediction || 0;
 
-    // Step 1: Convert to Sleeper points using position ratio
-    let v3SeasonTotal = fplSeasonTotal * ratio;
-    let v3SeasonAvg = fplSeasonAvg * ratio;
-    let v3CurrentGW = fplCurrentGW * ratio;
-
-    // Step 2: Apply form momentum adjustment
-    const formData = calculateFormMomentum(player, currentGameweek.number);
-    const formMultiplier = formData.multiplier;
-
-    v3SeasonTotal *= formMultiplier;
-    v3SeasonAvg *= formMultiplier;
-    v3CurrentGW *= formMultiplier;
-
-    // Step 3: Apply fixture run quality adjustment
-    const fixtureData = calculateFixtureRunQuality(player, currentGameweek.number);
-    const fixtureMultiplier = fixtureData.multiplier;
-
-    v3SeasonTotal *= fixtureMultiplier;
-    v3SeasonAvg *= fixtureMultiplier;
-    v3CurrentGW *= fixtureMultiplier;
-
-    // Step 4: Apply injury return adjustment
-    const injuryData = calculateInjuryReturnAdjustment(player, currentGameweek.number);
-    const injuryMultiplier = injuryData.multiplier;
-
-    v3SeasonTotal *= injuryMultiplier;
-    v3SeasonAvg *= injuryMultiplier;
-    v3CurrentGW *= injuryMultiplier;
-
-    // Step 5: Get expected minutes for playing time adjustment
-    // Try multiple sources: current GW prediction, season average, or player metadata
-    let expectedMinutes = 90; // Default assumption
-
-    if (player.predictions && player.predictions.length > 0) {
-      // Find current gameweek prediction for minutes
-      const currentPred = player.predictions.find(p => p.gw === currentGameweek.number);
-      if (currentPred && currentPred.predicted_mins) {
-        expectedMinutes = currentPred.predicted_mins;
-      } else if (currentPred && currentPred.xmins) {
-        expectedMinutes = currentPred.xmins;
-      } else {
-        // Calculate average expected minutes from all predictions
-        const minsData = player.predictions
-          .map(p => p.predicted_mins || p.xmins || 0)
-          .filter(m => m > 0);
-
-        if (minsData.length > 0) {
-          expectedMinutes = minsData.reduce((a, b) => a + b) / minsData.length;
-        }
-      }
-    }
-
-    // Step 6: Apply playing time adjustment
-    const playingTimeMultiplier = applyPlayingTimeAdjustment(1.0, expectedMinutes);
-
-    v3SeasonTotal *= playingTimeMultiplier;
-    v3SeasonAvg *= playingTimeMultiplier;
-    v3CurrentGW *= playingTimeMultiplier;
+    // Convert to Sleeper points using position ratio ONLY
+    // This is the validated approach from CLAUDE.md (2.78 MAE, 1.3% improvement)
+    // Removing form/fixture/injury/minutes adjustments for consistency with convertToV3Points()
+    const v3SeasonTotal = fplSeasonTotal * ratio;
+    const v3SeasonAvg = fplSeasonAvg * ratio;
+    const v3CurrentGW = fplCurrentGW * ratio;
 
     // Determine confidence based on FFH data availability
     let confidence = 'none';
@@ -158,56 +107,16 @@ export async function calculateV3Prediction(player, currentGameweek) {
       };
     }
 
-    // Log significant adjustments (only for players with meaningful predictions)
-    const totalMultiplier = formMultiplier * fixtureMultiplier * injuryMultiplier * playingTimeMultiplier;
-
-    // Log archetype assignment for known players
-    if (archetypeInfo.source === 'archetype_mapping' && fplSeasonTotal > 100) {
-      console.log(`🎯 Archetype: ${playerName} → ${archetypeInfo.archetype} (${ratio}x)`);
-    }
-
-    if (formMultiplier !== 1.0 && formData.trend !== 'neutral' && fplSeasonTotal > 50) {
-      console.log(`🔥 Form ${formData.trend}: ${playerName} - Recent: ${formData.recentAvg} vs Avg: ${formData.seasonAvg} → ${(formMultiplier * 100).toFixed(0)}%`);
-    }
-
-    if (fixtureMultiplier !== 1.0 && fixtureData.rating !== 'average' && fplSeasonTotal > 50) {
-      console.log(`📅 Fixtures ${fixtureData.rating}: ${playerName} - Upcoming: ${fixtureData.upcomingAvg} vs Avg: ${fixtureData.seasonAvg} → ${(fixtureMultiplier * 100).toFixed(0)}%`);
-    }
-
-    if (injuryMultiplier < 0.95 && fplSeasonTotal > 50) {
-      console.log(`🏥 Injury return: ${playerName} - ${injuryData.description} → ${(injuryMultiplier * 100).toFixed(0)}%`);
-    }
-
-    if (playingTimeMultiplier < 0.95 && fplSeasonTotal > 50) {
-      console.log(`⏱️ Minutes adjustment: ${playerName} - ${expectedMinutes}min → ${(playingTimeMultiplier * 100).toFixed(0)}%`);
-    }
-
-    if (totalMultiplier < 0.85 || totalMultiplier > 1.15) {
-      console.log(`📊 Total adjustments: ${playerName} - ${(fplSeasonTotal * ratio).toFixed(1)} → ${v3SeasonTotal.toFixed(1)} pts (${(totalMultiplier * 100).toFixed(0)}%)`);
-    }
-
     return {
       v3_season_total: Math.round(v3SeasonTotal * 100) / 100,
       v3_season_avg: Math.round(v3SeasonAvg * 100) / 100,
       v3_current_gw: Math.round(v3CurrentGW * 100) / 100,
-      v3_calculation_source: 'fpl_conversion_with_all_enhancements',
+      v3_calculation_source: 'fpl_simple_ratio_conversion',
       v3_confidence: confidence,
       v3_conversion_ratio: ratio,
       v3_archetype: archetypeInfo.archetype,
       v3_archetype_source: archetypeInfo.source,
-      v3_minutes_adjustment: playingTimeMultiplier,
-      v3_expected_minutes: Math.round(expectedMinutes),
-      v3_form_multiplier: formMultiplier,
-      v3_form_trend: formData.trend,
-      v3_form_recent_avg: formData.recentAvg,
-      v3_form_season_avg: formData.seasonAvg,
-      v3_fixture_multiplier: fixtureMultiplier,
-      v3_fixture_rating: fixtureData.rating,
-      v3_fixture_upcoming_avg: fixtureData.upcomingAvg,
-      v3_injury_multiplier: injuryMultiplier,
-      v3_injury_status: injuryData.status,
-      v3_injury_weeks_back: injuryData.weeks_back,
-      // NEW: THIS WEEK matchup data for start/sit decisions
+      // THIS WEEK matchup data for start/sit decisions
       v3_this_week_opponent: thisWeekMatchup?.opponent || 'TBD',
       v3_this_week_opponent_full: thisWeekMatchup?.opponentFull || 'TBD',
       v3_this_week_difficulty: thisWeekMatchup?.difficulty || 3,
@@ -216,7 +125,7 @@ export async function calculateV3Prediction(player, currentGameweek) {
       v3_this_week_matchup_label: thisWeekMatchup?.label || '❓ Unknown',
       v3_this_week_matchup_color: thisWeekMatchup?.color || 'text-gray-500',
       v3_this_week_matchup_description: thisWeekMatchup?.description || 'No matchup data',
-      // NEW: START/BENCH recommendation
+      // START/BENCH recommendation
       v3_start_recommendation: startRec?.recommendation || 'UNKNOWN',
       v3_start_label: startRec?.label || '❓ N/A',
       v3_start_color: startRec?.color || 'text-gray-500',
@@ -356,25 +265,17 @@ export function getScoringValue(player, field, scoringMode = 'ffh') {
     }
   }
 
-  // Pure FFH data for standard mode - NO FALLBACKS
+  // Pure FFH data for standard mode - use pre-calculated fields
   switch (field) {
     case 'season_total':
-      // Sum all predictions[].predicted_pts for ROS Points
-      if (player.predictions && Array.isArray(player.predictions)) {
-        return player.predictions.reduce((sum, pred) => sum + (pred.predicted_pts || 0), 0);
-      }
-      return 0;
+    case 'points_ros':
+      // Use pre-calculated predicted_points field
+      return player.predicted_points || 0;
     case 'season_avg':
       // Direct FFH season_prediction_avg for PPG Predicted
       return player.season_prediction_avg || 0;
     case 'current_gw':
       return player.current_gw_prediction || 0;
-    case 'points_ros':
-      // Same as season_total - sum all predictions
-      if (player.predictions && Array.isArray(player.predictions)) {
-        return player.predictions.reduce((sum, pred) => sum + (pred.predicted_pts || 0), 0);
-      }
-      return 0;
     default:
       return player[field] || 0;
   }

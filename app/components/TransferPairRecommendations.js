@@ -3,9 +3,9 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import PlayerAvatar from './common/PlayerAvatar';
-import { V3_CONVERSION_RATIOS, getV3ConversionRatio } from '../services/v3/conversionRatios';
 import { getPositionColors } from '../constants/positionColors';
 import { getDifficultyColor } from '../constants/designTokens';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 
 /**
  * Transfer Pair Recommendations Component
@@ -75,18 +75,25 @@ export default function TransferPairRecommendations({
           const addScore = getPlayerScore(addPlayer, scoringMode);
           const netGain = addScore - dropScore;
 
-          // Calculate short-term gains
-          const nextGW = currentGameweek + 1;
-          const next1Drop = getGameweekRangeScore(dropPlayer, scoringMode, nextGW, nextGW);
-          const next1Add = getGameweekRangeScore(addPlayer, scoringMode, nextGW, nextGW);
+          // Calculate short-term gains using centralized utility for consistency
+          // Next 1 GW uses pre-calculated fields
+          const next1Drop = scoringMode === 'v3'
+            ? (dropPlayer.v3_current_gw || 0)
+            : (dropPlayer.current_gw_prediction || 0);
+          const next1Add = scoringMode === 'v3'
+            ? (addPlayer.v3_current_gw || 0)
+            : (addPlayer.current_gw_prediction || 0);
           const next1Gain = next1Add - next1Drop;
 
-          const next3Drop = getGameweekRangeScore(dropPlayer, scoringMode, nextGW, nextGW + 2);
-          const next3Add = getGameweekRangeScore(addPlayer, scoringMode, nextGW, nextGW + 2);
+          // Use centralized utility for Next 3 and Next 5 calculations
+          const nextGW = currentGameweek + 1;
+
+          const next3Drop = getNextNGameweeksTotal(dropPlayer, scoringMode, nextGW, 3);
+          const next3Add = getNextNGameweeksTotal(addPlayer, scoringMode, nextGW, 3);
           const next3Gain = next3Add - next3Drop;
 
-          const next5Drop = getGameweekRangeScore(dropPlayer, scoringMode, nextGW, nextGW + 4);
-          const next5Add = getGameweekRangeScore(addPlayer, scoringMode, nextGW, nextGW + 4);
+          const next5Drop = getNextNGameweeksTotal(dropPlayer, scoringMode, nextGW, 5);
+          const next5Add = getNextNGameweeksTotal(addPlayer, scoringMode, nextGW, 5);
           const next5Gain = next5Add - next5Drop;
 
           // Confidence-weighted score (next GW 100%, next 3 GW 80%, ROS 50%)
@@ -176,26 +183,6 @@ export default function TransferPairRecommendations({
     } else {
       return player.predicted_points || player.season_prediction || 0;
     }
-  }
-
-  /**
-   * Get player score for specific gameweek range
-   */
-  function getGameweekRangeScore(player, mode, startGW, endGW) {
-    if (!player?.predictions?.length) return 0;
-
-    const v3Ratio = mode === 'v3' ? (V3_CONVERSION_RATIOS[player.position] || 1.0) : 1.0;
-    let total = 0;
-
-    for (let gw = startGW; gw <= endGW && gw <= 38; gw++) {
-      const prediction = player.predictions.find(p => p.gw === gw);
-      if (prediction) {
-        const pts = prediction.predicted_pts || 0;
-        total += mode === 'v3' ? (pts * v3Ratio) : pts;
-      }
-    }
-
-    return total;
   }
 
   /**

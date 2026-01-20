@@ -9,9 +9,9 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { USER_ID } from '../config/constants';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
-import { getV3ConversionRatio } from '../services/v3/conversionRatios';
 import { getPositionBadgeStyle } from '../constants/positionColors';
 import PlayerAvatar from './common/PlayerAvatar';
+import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 
 // Position order for display
 const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
@@ -158,36 +158,22 @@ export default function CheatSheetTabContent({
           const totalMinutes = predictions.reduce((sum, p) => sum + (p.xmins || 0), 0);
           avgMinutes = Math.round(totalMinutes / predictions.length);
         }
+      } else if (timeframe === 'next1' || (timeframe === 'custom' && customGames === 1)) {
+        // Next 1 gameweek - use pre-calculated fields for consistency with Start/Sit tab
+        displayPoints = scoringMode === 'v3'
+          ? (player.v3_current_gw || 0)
+          : (player.current_gw_prediction || 0);
+
+        // Get minutes for current gameweek
+        avgMinutes = player.predicted_mins || 0;
       } else {
-        // Next N gameweeks (1, 5, or custom)
+        // Next N gameweeks (5 or custom with N > 1) - use centralized utility for consistency
         const currentGW = currentGameweek?.number || 15;
-        const predictions = player.predictions || [];
+        const gamesToConsider = timeframe === 'custom' ? customGames : 5;
 
-        // Determine how many games to look at
-        let gamesToConsider = 5;
-        if (timeframe === 'next1') {
-          gamesToConsider = 1;
-        } else if (timeframe === 'custom') {
-          gamesToConsider = customGames;
-        }
-
-        const nextN = predictions
-          .filter(p => p.gw >= currentGW && p.gw < currentGW + gamesToConsider)
-          .slice(0, gamesToConsider);
-
-        if (scoringMode === 'v3') {
-          // Apply V3 conversion to each gameweek
-          const ratio = getV3ConversionRatio(player.position);
-          displayPoints = nextN.reduce((sum, p) => sum + (p.predicted_pts || 0) * ratio, 0);
-        } else {
-          displayPoints = nextN.reduce((sum, p) => sum + (p.predicted_pts || 0), 0);
-        }
-
-        // Calculate avg minutes for selected timeframe
-        if (nextN.length > 0) {
-          const totalMinutes = nextN.reduce((sum, p) => sum + (p.xmins || 0), 0);
-          avgMinutes = Math.round(totalMinutes / nextN.length);
-        }
+        // Use centralized utility for consistent calculation across all components
+        displayPoints = getNextNGameweeksTotal(player, scoringMode, currentGW, gamesToConsider);
+        avgMinutes = Math.round(getAvgMinutesNextN(player, currentGW, gamesToConsider));
       }
 
       const ownershipStatus = getOwnershipStatus(player, USER_ID);
