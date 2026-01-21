@@ -187,6 +187,7 @@ All services implement graceful fallback:
 - **Vice-captain** - No vice-captain either
 - **Budget/Salary cap** - No transfer budget constraints
 - **Transfer costs** - Free transfers anytime
+- **Double Gameweeks (DGW)** - Players only play once per gameweek regardless of FPL schedule
 
 **Sleeper FC DOES have:**
 - 11 starters + 4 bench players
