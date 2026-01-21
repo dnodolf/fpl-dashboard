@@ -15,7 +15,6 @@ import { useGameweek } from './hooks/useGameweek';
 import { USER_ID, TOTAL_GAMEWEEKS, OWNERSHIP_STATUS, FILTER_OPTIONS } from './config/constants';
 import { MatchingStatsCard } from './components/stats/MatchingStatsCard';
 import { OptimizerStatsCard } from './components/stats/OptimizerStatsCard';
-import { TransferStatsCard } from './components/stats/TransferStatsCard';
 import { UnmatchedPlayersTable } from './components/stats/UnmatchedPlayersTable';
 import { PlayerModal } from './components/PlayerModal';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from './utils/predictionUtils';
@@ -631,11 +630,7 @@ export default function FPLDashboard() {
       case 'optimizer':
         return <OptimizerStatsCard scoringMode={scoringMode} currentGameweek={currentGameweek} />;
       case 'transfers':
-        return <TransferStatsCard
-          players={processedPlayers}
-          scoringMode={scoringMode}
-          gameweekRange={transferGameweekRange}
-        />;
+        return null; // Transfer recommendations are shown in the tab content
       default: 
         return null;
     }
