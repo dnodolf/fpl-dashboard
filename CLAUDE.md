@@ -16,7 +16,7 @@ npm run lint        # Run ESLint checks
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v3.4 - Enhanced Player Details & Comparison Visualizations
+**Current Version**: v3.6 - Scoring Consistency Standardization
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -258,6 +258,25 @@ async function importServices() {
 
 ## Recent Technical Updates
 
+### v3.6 - Scoring Consistency Standardization (January 2025)
+- **Comprehensive Scoring Audit**: Fixed inconsistencies where same player showed different points across tabs
+- **Centralized Utility Functions**: All components now use `getNextNGameweeksTotal()` and `getAvgMinutesNextN()` from `app/utils/predictionUtils.js`
+- **V3 Scoring Simplification**: Removed complex form/fixture/injury/minutes adjustments from `app/services/v3/core.js`
+  - Now uses ONLY position ratios (the validated approach with 2.78 MAE)
+  - Eliminates inconsistency between pre-calculated fields and on-the-fly calculations
+- **Files Standardized**:
+  - `CheatSheetTabContent.js` - Uses centralized utilities, custom GW=1 uses same fields as Start/Sit
+  - `HomeTabContent.js` - Replaced custom `getNext5Points()` with centralized utility
+  - `MyPlayersTable.js` - Fixed PPG to use `season_prediction_avg` for FFH mode
+  - `OptimizerTabContent.js` - Removed dead v4 mode code
+  - `PlayerModal.js` - Uses pre-calculated fields for ROS points
+  - `TransferPairRecommendations.js` - Uses centralized utility instead of custom function
+- **Scoring Field Standards**:
+  - Current GW: `current_gw_prediction` (FFH) / `v3_current_gw` (V3)
+  - Season Total: `predicted_points` (FFH) / `v3_season_total` (V3)
+  - Season Average: `season_prediction_avg` (FFH) / `v3_season_avg` (V3)
+  - Next N GWs: Use `getNextNGameweeksTotal()` utility with predictions array
+
 ### v3.5 - Smart Transfer Pair Recommendations (January 2025)
 - **TransferPairRecommendations Component**: New intelligent transfer suggestion system (`app/components/TransferPairRecommendations.js`)
   - "Drop Player X, Add Player Y" pairing algorithm with net season points gain
@@ -384,6 +403,11 @@ async function importServices() {
   - Pass callbacks down for navigation (handleCompare)
   - Use state lifting for pre-selection (comparisonPlayer1)
   - Always provide cleanup handlers (onClearPreSelection) to prevent state leakage
+- **Scoring Consistency**: CRITICAL - All components must use the same scoring approach
+  - Use pre-calculated fields (`v3_current_gw`, `predicted_points`, etc.) for single values
+  - Use centralized utilities (`getNextNGameweeksTotal()`) for gameweek range calculations
+  - NEVER create custom scoring functions in components - use `app/utils/predictionUtils.js`
+  - V3 conversion: position ratio ONLY (no form/fixture/injury adjustments)
 
 ---
 
@@ -417,11 +441,14 @@ Position-based multipliers applied to FFH FPL predictions:
 2. **Client-Side Toggle** (`page.js`, `TransferTabContent.js`):
    - Toggle button switches between FFH and V3 scoring modes
    - All tables, charts, and recommendations update dynamically
-   - Transfer tab applies conversion ratios to individual gameweek predictions
+   - Centralized utilities apply conversion ratios consistently
 
-3. **Scoring Field Selection** (`v3ScoringService.js`):
+3. **Scoring Field Selection**:
    - FFH mode: Uses `predicted_points`, `season_prediction_avg`, `current_gw_prediction`
    - V3 mode: Uses `v3_season_total`, `v3_season_avg`, `v3_current_gw`
+   - Next N GWs: Use `getNextNGameweeksTotal()` from `app/utils/predictionUtils.js`
+
+**IMPORTANT**: V3 scoring uses ONLY position ratios. Complex adjustments (form, fixture, injury, minutes) were removed in v3.6 as they caused inconsistencies and did not improve accuracy.
 
 ### Key Files
 
