@@ -180,6 +180,22 @@ All services implement graceful fallback:
 - **Smart Compression**: Automatic data compression to prevent quota exceeded errors
 - **Intelligent Cleanup**: Auto-removes stale cache data when storage is full
 
+## Sleeper FC Rules (IMPORTANT)
+
+**Sleeper FC does NOT have:**
+- **Captain** - No captain system, no 2x points for any player
+- **Vice-captain** - No vice-captain either
+- **Budget/Salary cap** - No transfer budget constraints
+- **Transfer costs** - Free transfers anytime
+
+**Sleeper FC DOES have:**
+- 11 starters + 4 bench players
+- Formation flexibility (various formations allowed)
+- Weekly lineup locks at gameweek deadline
+- Head-to-head or points-based league formats
+
+**NEVER suggest captain-related features** - this is a common FPL concept that does not exist in Sleeper.
+
 ## Code Conventions
 
 ### Position Handling
