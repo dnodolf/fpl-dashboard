@@ -7,7 +7,6 @@ import TransferTabContent from './components/TransferTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
 import CheatSheetTabContent from './components/CheatSheetTabContent';
 import HomeTabContent from './components/HomeTabContent';
-import LeagueStandings from './components/LeagueStandings';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { EPL_TEAMS, TEAM_MAPPINGS, TEAM_DISPLAY_NAMES, isEPLPlayer } from './constants/teams';
 import CacheManager, { getDataFreshnessStatus, formatCacheAge } from './utils/cacheManager';

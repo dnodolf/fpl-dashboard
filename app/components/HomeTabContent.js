@@ -3,15 +3,16 @@
 
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import LeagueStandings from './LeagueStandings';
 import { USER_ID } from '../config/constants';
 import { getSleeperPositionStyle } from '../constants/positionColors';
 import PlayerAvatar from './common/PlayerAvatar';
-import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 
 const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
   const [optimizerData, setOptimizerData] = useState(null);
   const [loadingOptimizer, setLoadingOptimizer] = useState(true);
+  const [standings, setStandings] = useState([]);
+  const [loadingStandings, setLoadingStandings] = useState(true);
+  const [standingsExpanded, setStandingsExpanded] = useState(false);
 
   // Fetch optimizer data to check if lineup is optimized
   useEffect(() => {
@@ -44,8 +45,43 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
     }
   }, [currentGameweek, scoringMode]);
 
+  // Fetch league standings
+  useEffect(() => {
+    const fetchStandings = async () => {
+      try {
+        setLoadingStandings(true);
+        const response = await fetch('/api/standings');
+        if (response.ok) {
+          const data = await response.json();
+          setStandings(data.standings || []);
+        }
+      } catch (error) {
+        console.error('Error fetching standings:', error);
+      } finally {
+        setLoadingStandings(false);
+      }
+    };
+    fetchStandings();
+  }, []);
+
   // Get my players
   const myPlayers = players.filter(p => p.owned_by === USER_ID);
+
+  // Helper to get current GW points
+  const getPlayerPoints = (player) => {
+    return scoringMode === 'v3'
+      ? (player.v3_current_gw || 0)
+      : (player.current_gw_prediction || 0);
+  };
+
+  // Get top 3 players for this GW
+  const top3ThisGW = [...myPlayers]
+    .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a))
+    .slice(0, 3);
+
+  // Find user's league standing
+  const userStanding = standings.find(s => s.displayName === USER_ID);
+  const userRank = userStanding ? standings.indexOf(userStanding) + 1 : null;
 
   // Count players by availability status
   const availabilityStats = {
@@ -62,38 +98,6 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
       return chance < 25;
     }).length
   };
-
-  // Find upgrade opportunities
-  const freeAgents = players.filter(p => !p.owned_by || p.owned_by === 'Free Agent');
-
-  const upgradeOpportunities = {
-    next5: 0,
-    ros: 0
-  };
-
-  const currentGW = currentGameweek?.number || 1;
-
-  myPlayers.forEach(myPlayer => {
-    const myNext5 = getNextNGameweeksTotal(myPlayer, scoringMode, currentGW, 5);
-    const myROS = getROSPoints(myPlayer, scoringMode);
-
-    // Count how many FAs are better for next 5
-    const betterNext5 = freeAgents.filter(fa => {
-      if (fa.position !== myPlayer.position) return false;
-      const faNext5 = getNextNGameweeksTotal(fa, scoringMode, currentGW, 5);
-      return faNext5 > myNext5;
-    }).length;
-
-    // Count how many FAs are better ROS
-    const betterROS = freeAgents.filter(fa => {
-      if (fa.position !== myPlayer.position) return false;
-      const faROS = getROSPoints(fa, scoringMode);
-      return faROS > myROS;
-    }).length;
-
-    if (betterNext5 > 0) upgradeOpportunities.next5++;
-    if (betterROS > 0) upgradeOpportunities.ros++;
-  });
 
   // Get players with injury/news
   const playersWithNews = myPlayers.filter(p => p.news && p.news.length > 0);
@@ -165,37 +169,107 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
           </div>
         </div>
 
-        {/* Upgrade Opportunities - Next 5 */}
+        {/* Top 3 This Gameweek */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-400">Upgrades (Next 5)</h3>
-            <span className="text-2xl">📈</span>
+            <h3 className="text-sm font-medium text-gray-400">Top 3 This GW</h3>
+            <span className="text-2xl">⭐</span>
           </div>
-          <p className="text-2xl font-bold text-blue-400">{upgradeOpportunities.next5}</p>
-          <p className="text-xs text-gray-400 mt-1">
-            {upgradeOpportunities.next5 === 0
-              ? 'No clear upgrades available'
-              : `${upgradeOpportunities.next5} position${upgradeOpportunities.next5 !== 1 ? 's' : ''} could be upgraded`}
-          </p>
+          <div className="space-y-1.5">
+            {top3ThisGW.map((player, idx) => (
+              <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500 w-4">{idx + 1}.</span>
+                <span className={getSleeperPositionStyle(player.position)}>{player.position}</span>
+                <span className="text-white truncate flex-1">{player.web_name || player.name}</span>
+                <span className="text-green-400 font-bold">{getPlayerPoints(player).toFixed(1)}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Upgrade Opportunities - ROS */}
+        {/* League Standing */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-400">Upgrades (ROS)</h3>
-            <span className="text-2xl">🎯</span>
+            <h3 className="text-sm font-medium text-gray-400">League Standing</h3>
+            <span className="text-2xl">🏆</span>
           </div>
-          <p className="text-2xl font-bold text-purple-400">{upgradeOpportunities.ros}</p>
-          <p className="text-xs text-gray-400 mt-1">
-            {upgradeOpportunities.ros === 0
-              ? 'Strong roster for ROS'
-              : `${upgradeOpportunities.ros} position${upgradeOpportunities.ros !== 1 ? 's' : ''} could be upgraded`}
-          </p>
+          {loadingStandings ? (
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-700 rounded w-16 mb-1"></div>
+              <div className="h-4 bg-gray-700 rounded w-24"></div>
+            </div>
+          ) : userRank ? (
+            <>
+              <p className="text-2xl font-bold text-yellow-400">#{userRank}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {userStanding.wins}-{userStanding.losses}
+                {userStanding.ties > 0 && `-${userStanding.ties}`} record
+              </p>
+              <button
+                onClick={() => setStandingsExpanded(!standingsExpanded)}
+                className="text-xs text-blue-400 hover:text-blue-300 mt-2 flex items-center gap-1"
+              >
+                {standingsExpanded ? '▼' : '▶'} View standings table
+              </button>
+            </>
+          ) : (
+            <p className="text-gray-500 text-sm">Unable to load</p>
+          )}
         </div>
       </div>
 
-      {/* League Standings */}
-      <LeagueStandings currentUserId={USER_ID} />
+      {/* Expanded Standings Table */}
+      {standingsExpanded && standings.length > 0 && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-900">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase">#</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase">Team</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">W-L-T</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">PF</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">PA</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700">
+              {standings.map((team, index) => {
+                const isCurrentUser = team.displayName === USER_ID;
+                return (
+                  <tr
+                    key={team.roster_id}
+                    className={`${
+                      isCurrentUser
+                        ? 'bg-blue-900/30 border-l-4 border-blue-500'
+                        : 'hover:bg-gray-700'
+                    }`}
+                  >
+                    <td className="px-4 py-2 text-gray-300 font-medium">{index + 1}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium ${isCurrentUser ? 'text-blue-400' : 'text-white'}`}>
+                          {team.displayName}
+                        </span>
+                        {isCurrentUser && (
+                          <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">You</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-center text-gray-300">
+                      {team.wins}-{team.losses}{team.ties > 0 && `-${team.ties}`}
+                    </td>
+                    <td className="px-4 py-2 text-center text-green-400 font-medium">
+                      {team.pointsFor.toFixed(1)}
+                    </td>
+                    <td className="px-4 py-2 text-center text-red-400 font-medium">
+                      {team.pointsAgainst.toFixed(1)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* My Current Roster */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
@@ -234,7 +308,9 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
         {/* Roster by Position */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {['GKP', 'DEF', 'MID', 'FWD'].map(position => {
-            const positionPlayers = myPlayers.filter(p => p.position === position);
+            const positionPlayers = myPlayers
+              .filter(p => p.position === position)
+              .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a));
             return (
               <div key={position} className="bg-gray-900/50 rounded-lg p-4">
                 <h3 className="font-bold text-white mb-3 flex items-center gap-2">
@@ -281,14 +357,6 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
       </div>
     </div>
   );
-};
-
-// Helper function for ROS points
-const getROSPoints = (player, scoringMode) => {
-  if (scoringMode === 'v3') {
-    return player.v3_season_total || 0;
-  }
-  return player.predicted_points || 0;
 };
 
 HomeTabContent.propTypes = {
