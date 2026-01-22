@@ -84,7 +84,7 @@ function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null }) => {
+const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null, onPlayerClick }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
@@ -192,42 +192,46 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
     const positionBg = positionBgMap[player.position?.toUpperCase()] || 'bg-gray-700 border-gray-600';
     
     return (
-      <div className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg}`} style={{ minWidth: '68px', maxWidth: '80px' }}>
-        
+      <button
+        onClick={() => onPlayerClick?.(player)}
+        className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg} hover:brightness-125 transition-all cursor-pointer`}
+        style={{ minWidth: '68px', maxWidth: '80px' }}
+      >
+
         {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
         {isOptimal && (
           <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-            isInCurrentLineup 
-              ? 'bg-green-500 text-white' 
+            isInCurrentLineup
+              ? 'bg-green-500 text-white'
               : 'bg-blue-500 text-white'
           }`}>
             {isInCurrentLineup ? '✓' : '+'}
           </div>
         )}
-        
+
         {/* Show indicators on current lineup: ✓ for players also in optimal, ✗ for players to bench */}
         {!isOptimal && optimalLineup && (
           <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-            isInOptimalLineup 
-              ? 'bg-green-500 text-white' 
+            isInOptimalLineup
+              ? 'bg-green-500 text-white'
               : 'bg-red-500 text-white'
           }`}>
             {isInOptimalLineup ? '✓' : '✗'}
           </div>
         )}
-        
+
         {/* Player Avatar */}
         <PlayerAvatar player={player} size="xs" />
-        
+
         <div className="font-medium text-center leading-tight truncate w-full text-[10px]" title={player.full_name || player.name}>
           {getLastName(player)}
         </div>
-        
+
         <div className="opacity-75 text-[10px]">{player.team_abbr || player.team}</div>
-        
+
         {/* Predicted Points - green if optimal, red if should be benched */}
         <div className={`font-semibold text-[11px] ${
-          isOptimal 
+          isOptimal
             ? (isInCurrentLineup ? 'text-green-400' : 'text-blue-400')
             : (isInOptimalLineup ? 'text-green-400' : 'text-red-400')
         }`}>
@@ -238,7 +242,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             return points.toFixed(1);
           })()}
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -641,7 +645,7 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
 };
 
 // ----------------- MAIN OPTIMIZER TAB CONTENT - ENHANCED -----------------
-export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'ffh' }) => {
+export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlayerClick }) => {
   // Don't render if gameweek data isn't loaded for v3 scoring
   if (scoringMode === 'v3' && !currentGameweek?.number) {
     return (
@@ -794,6 +798,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
             optimalPlayerIds={optimalPlayerIdsForDisplay}
             scoringMode={scoringMode}
             optimalLineup={optimal}
+            onPlayerClick={onPlayerClick}
           />
         </div>
 
@@ -818,6 +823,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
             optimalPlayerIds={optimalPlayerIdsForDisplay}
             scoringMode={scoringMode}
             currentLineup={current}
+            onPlayerClick={onPlayerClick}
           />
         </div>
       </div>
@@ -846,6 +852,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
           optimalPlayerIds={optimalPlayerIdsForDisplay}
           scoringMode={scoringMode}
           hideColumns={['ppg']}
+          onPlayerClick={onPlayerClick}
         />
       </div>
 
@@ -867,7 +874,8 @@ OptimizerTabContent.propTypes = {
   currentGameweek: PropTypes.shape({
     number: PropTypes.number.isRequired
   }).isRequired,
-  scoringMode: PropTypes.oneOf(['ffh', 'v3'])
+  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  onPlayerClick: PropTypes.func
 };
 
 OptimizerTabContent.defaultProps = {

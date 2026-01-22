@@ -664,6 +664,7 @@ export default function FPLDashboard() {
               players={processedPlayers}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
+              onPlayerClick={handlePlayerClick}
             />
           )}
 
@@ -994,11 +995,11 @@ export default function FPLDashboard() {
 
           {/* Optimizing lineup for the current GW */}
           {activeTab === 'optimizer' && (
-            <OptimizerTabContent 
- 
+            <OptimizerTabContent
               players={processedPlayers}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
+              onPlayerClick={handlePlayerClick}
             />
           )}
           

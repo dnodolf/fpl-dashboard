@@ -6,7 +6,7 @@ import PropTypes from 'prop-types';
 import TransferPairRecommendations from './TransferPairRecommendations';
 import { USER_ID } from '../config/constants';
 
-const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gameweekRange, onGameweekRangeChange }) => {
+const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gameweekRange, onGameweekRangeChange, onPlayerClick }) => {
   // Calculate default gameweek range: current GW + next 4 (total of 5)
   const currentGW = currentGameweek?.number;
   const defaultEndGW = currentGW + 4;
@@ -23,6 +23,7 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gam
         scoringMode={scoringMode}
         currentGameweek={currentGW}
         nextNGameweeks={endGameweek - currentGW + 1}
+        onPlayerClick={onPlayerClick}
       />
     </div>
   );
@@ -38,7 +39,8 @@ TransferTabContent.propTypes = {
     start: PropTypes.number,
     end: PropTypes.number
   }),
-  onGameweekRangeChange: PropTypes.func
+  onGameweekRangeChange: PropTypes.func,
+  onPlayerClick: PropTypes.func
 };
 
 TransferTabContent.defaultProps = {

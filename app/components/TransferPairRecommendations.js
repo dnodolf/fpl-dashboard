@@ -18,7 +18,8 @@ export default function TransferPairRecommendations({
   availablePlayers,
   scoringMode,
   currentGameweek,
-  nextNGameweeks = 5
+  nextNGameweeks = 5,
+  onPlayerClick
 }) {
   const [selectedPosition, setSelectedPosition] = useState('ALL');
   const [minGain, setMinGain] = useState(5); // Minimum points gain to show
@@ -447,7 +448,12 @@ export default function TransferPairRecommendations({
                         {pair.position}
                       </span>
                       <div>
-                        <div className="font-semibold text-white">{pair.drop.name}</div>
+                        <button
+                          onClick={() => onPlayerClick?.(pair.drop)}
+                          className="font-semibold text-white hover:text-blue-400 transition-colors text-left"
+                        >
+                          {pair.drop.name}
+                        </button>
                         <div className="text-xs text-gray-400">{pair.drop.team} {pair.dropForm}</div>
                       </div>
                     </div>
@@ -458,7 +464,12 @@ export default function TransferPairRecommendations({
                     <div className="flex items-center gap-2">
                       <PlayerAvatar player={pair.add} size="md" />
                       <div>
-                        <div className="font-semibold text-white">{pair.add.name}</div>
+                        <button
+                          onClick={() => onPlayerClick?.(pair.add)}
+                          className="font-semibold text-white hover:text-blue-400 transition-colors text-left"
+                        >
+                          {pair.add.name}
+                        </button>
                         <div className="text-xs text-gray-400">{pair.add.team} {pair.addForm}</div>
                       </div>
                     </div>
@@ -588,5 +599,6 @@ TransferPairRecommendations.propTypes = {
   availablePlayers: PropTypes.array.isRequired,
   scoringMode: PropTypes.string.isRequired,
   currentGameweek: PropTypes.number.isRequired,
-  nextNGameweeks: PropTypes.number
+  nextNGameweeks: PropTypes.number,
+  onPlayerClick: PropTypes.func
 };

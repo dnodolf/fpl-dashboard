@@ -6,7 +6,7 @@ import { USER_ID } from '../config/constants';
 import { getDifficultyColor } from '../constants/designTokens';
 import PlayerAvatar from './common/PlayerAvatar';
 
-const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [] }) => {
+const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [], onPlayerClick }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -399,9 +399,12 @@ const getSleeperPositionBadgeColor = (position) => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <PlayerAvatar player={player} size="sm" />
-                        <span className="text-sm font-medium text-white">
+                        <button
+                          onClick={() => onPlayerClick?.(player)}
+                          className="text-sm font-medium text-white hover:text-blue-400 transition-colors text-left"
+                        >
                           {player.full_name || player.web_name || player.name || 'Unknown Player'}
-                        </span>
+                        </button>
                       </div>
                     </td>
 

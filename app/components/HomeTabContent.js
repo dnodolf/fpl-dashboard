@@ -7,7 +7,7 @@ import { USER_ID } from '../config/constants';
 import { getSleeperPositionStyle } from '../constants/positionColors';
 import PlayerAvatar from './common/PlayerAvatar';
 
-const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
+const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }) => {
   const [optimizerData, setOptimizerData] = useState(null);
   const [loadingOptimizer, setLoadingOptimizer] = useState(true);
   const [standings, setStandings] = useState([]);
@@ -180,7 +180,12 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
               <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
                 <span className="text-gray-500 w-4">{idx + 1}.</span>
                 <span className={getSleeperPositionStyle(player.position)}>{player.position}</span>
-                <span className="text-white truncate flex-1">{player.web_name || player.name}</span>
+                <button
+                  onClick={() => onPlayerClick?.(player)}
+                  className="text-white truncate flex-1 text-left hover:text-blue-400 transition-colors"
+                >
+                  {player.web_name || player.name}
+                </button>
                 <span className="text-green-400 font-bold">{getPlayerPoints(player).toFixed(1)}</span>
               </div>
             ))}
@@ -293,7 +298,12 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
                     {player.position}
                   </span>
                   <div className="flex-1">
-                    <p className="font-medium text-white">{player.name}</p>
+                    <button
+                      onClick={() => onPlayerClick?.(player)}
+                      className="font-medium text-white hover:text-blue-400 transition-colors text-left"
+                    >
+                      {player.name}
+                    </button>
                     <p className="text-xs text-gray-400 mt-0.5">{player.news}</p>
                   </div>
                   <span className="text-xs text-yellow-400">
@@ -328,7 +338,12 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
                       <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
                         <PlayerAvatar player={player} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-white truncate font-medium">{player.web_name || player.name}</p>
+                          <button
+                            onClick={() => onPlayerClick?.(player)}
+                            className="text-white truncate font-medium hover:text-blue-400 transition-colors text-left block w-full"
+                          >
+                            {player.web_name || player.name}
+                          </button>
                           <p className="text-xs text-gray-400">{player.team_abbr}</p>
                         </div>
                         <div className="flex items-center gap-2 ml-2">
@@ -362,7 +377,8 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode }) => {
 HomeTabContent.propTypes = {
   players: PropTypes.array.isRequired,
   currentGameweek: PropTypes.object,
-  scoringMode: PropTypes.string.isRequired
+  scoringMode: PropTypes.string.isRequired,
+  onPlayerClick: PropTypes.func
 };
 
 export default HomeTabContent;
