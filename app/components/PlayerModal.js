@@ -13,6 +13,7 @@ import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
 import PlayerAvatar from './common/PlayerAvatar';
+import { getTeamLogoFromPlayer, getTeamFullName } from '../utils/teamImage';
 
 export function PlayerModal({
   player = null,
@@ -300,17 +301,30 @@ export function PlayerModal({
             <div className={`ring-4 ${getPositionRingColor(player.position)} rounded-full`}>
               <PlayerAvatar player={player} size="xl" />
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-3xl font-bold text-white mb-1">
                 {player.web_name || player.name || player.full_name}
               </h2>
-            <div className="flex items-center gap-2 text-lg">
-              <span className="text-gray-300">{player.team || 'N/A'}</span>
-              <span className="text-gray-400">•</span>
-              <span className="text-gray-300">{player.position}</span>
-              <span className="text-gray-400">•</span>
-              <span className={ownership.color}>{ownership.text}</span>
-            </div>
+              <div className="flex items-center gap-3 text-lg">
+                {/* Team logo and name */}
+                <div className="flex items-center gap-2">
+                  {getTeamLogoFromPlayer(player) && (
+                    <img
+                      src={getTeamLogoFromPlayer(player)}
+                      alt={getTeamFullName(player.team_abbr)}
+                      className="w-6 h-6 object-contain"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
+                  <span className="text-gray-200 font-medium">
+                    {getTeamFullName(player.team_abbr) || player.team || 'N/A'}
+                  </span>
+                </div>
+                <span className="text-gray-500">•</span>
+                <span className="text-gray-300">{player.position}</span>
+                <span className="text-gray-500">•</span>
+                <span className={ownership.color}>{ownership.text}</span>
+              </div>
             </div>
           </div>
 
