@@ -23,6 +23,7 @@ const SIZE_CLASSES = {
   sm: 'w-8 h-8',
   md: 'w-10 h-10',
   lg: 'w-12 h-12',
+  xl: 'w-20 h-20',  // 80px - for modal headers
 };
 
 // Border variants - default is no border for cleaner look

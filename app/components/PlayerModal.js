@@ -237,14 +237,41 @@ export function PlayerModal({
 
   const form = getFormIndicator();
 
+  // Position-themed gradient for header
+  const getPositionGradient = (position) => {
+    switch (position) {
+      case 'GKP': return 'from-yellow-700 to-amber-900';
+      case 'DEF': return 'from-green-700 to-emerald-900';
+      case 'MID': return 'from-blue-700 to-indigo-900';
+      case 'FWD': return 'from-purple-700 to-fuchsia-900';
+      default: return 'from-gray-700 to-gray-900';
+    }
+  };
+
+  // Position-themed ring color for avatar
+  const getPositionRingColor = (position) => {
+    switch (position) {
+      case 'GKP': return 'ring-yellow-500';
+      case 'DEF': return 'ring-green-500';
+      case 'MID': return 'ring-blue-500';
+      case 'FWD': return 'ring-purple-500';
+      default: return 'ring-gray-500';
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+      onClick={onClose}
+      style={{ animation: 'fadeIn 0.2s ease-out' }}
+    >
       <div
         className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4"
         onClick={(e) => e.stopPropagation()}
+        style={{ animation: 'slideUp 0.3s ease-out' }}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-900 to-purple-900 p-6 rounded-t-lg relative">
+        <div className={`bg-gradient-to-r ${getPositionGradient(player.position)} p-6 rounded-t-lg relative`}>
           {/* Action buttons */}
           <div className="absolute top-4 right-4 flex items-center gap-2">
             {/* Compare button */}
@@ -270,7 +297,9 @@ export function PlayerModal({
 
           {/* Player name and team */}
           <div className="mb-4 flex items-start gap-4">
-            <PlayerAvatar player={player} size="lg" />
+            <div className={`ring-4 ${getPositionRingColor(player.position)} rounded-full`}>
+              <PlayerAvatar player={player} size="xl" />
+            </div>
             <div>
               <h2 className="text-3xl font-bold text-white mb-1">
                 {player.web_name || player.name || player.full_name}
@@ -323,6 +352,25 @@ export function PlayerModal({
               <span className={`text-sm ${form.color} flex items-center gap-1`}>
                 {form.icon} {form.text}
               </span>
+            </div>
+          )}
+
+          {/* Fixture Difficulty Heat Strip */}
+          {next5Fixtures.length > 0 && (
+            <div className="mt-4">
+              <div className="text-xs text-gray-400 mb-2">Upcoming Fixtures</div>
+              <div className="flex gap-1">
+                {next5Fixtures.map((fixture) => (
+                  <div
+                    key={fixture.gw}
+                    className={`w-12 h-8 rounded ${getDifficultyColor(fixture.difficulty)} flex flex-col items-center justify-center text-xs font-bold text-white cursor-default`}
+                    title={`GW${fixture.gw}: ${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Difficulty ${fixture.difficulty}`}
+                  >
+                    <span className="text-[10px] opacity-80">{fixture.gw}</span>
+                    <span className="text-[9px] truncate max-w-[40px]">{fixture.opponent}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
