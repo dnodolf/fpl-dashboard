@@ -281,12 +281,12 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         <div className="flex space-x-1 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           {[
             { id: 'home', label: 'Home' },
-            { id: 'players', label: 'Players' },
-            { id: 'matching', label: 'Matching' },
             { id: 'optimizer', label: 'Start/Sit' },
             { id: 'transfers', label: 'Transfers' },
+            { id: 'cheatsheet', label: 'Cheat Sheet' },
             { id: 'comparison', label: 'Comparison' },
-            { id: 'cheatsheet', label: 'Cheat Sheet' }
+            { id: 'players', label: 'Players' },
+            { id: 'matching', label: 'Matching' }
           ].map((tab) => (
             <button
               key={tab.id}
