@@ -74,6 +74,41 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
       : (player.current_gw_prediction || 0);
   };
 
+  // Calculate playersToSwap locally (same logic as OptimizerTabContent)
+  // This ensures consistency between Home tab and Start/Sit tab
+  const calculateOptimizationStats = () => {
+    const current = optimizerData?.current;
+    const optimal = optimizerData?.optimal;
+
+    if (!current?.players || !optimal?.players) {
+      return { playersToSwap: 0, improvement: 0 };
+    }
+
+    // Get IDs of players in optimal lineup
+    const optimalPlayerIds = new Set(
+      optimal.players.map(p => p.sleeper_id || p.id || p.player_id)
+    );
+
+    // Count how many current players are NOT in optimal
+    const playersToSwap = current.players.filter(p => {
+      const playerId = p.sleeper_id || p.id || p.player_id;
+      return !optimalPlayerIds.has(playerId);
+    }).length;
+
+    // Recalculate points based on scoring mode
+    const currentPts = current.players.reduce((sum, p) => {
+      return sum + getPlayerPoints(p);
+    }, 0);
+    const optimalPts = optimal.players.reduce((sum, p) => {
+      return sum + getPlayerPoints(p);
+    }, 0);
+    const improvement = optimalPts - currentPts;
+
+    return { playersToSwap, improvement };
+  };
+
+  const optimizationStats = calculateOptimizationStats();
+
   // Get top 3 players for this GW
   const top3ThisGW = [...myPlayers]
     .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a))
@@ -122,7 +157,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
             <h3 className="text-sm font-medium text-gray-400">Lineup Status</h3>
             {loadingOptimizer ? (
               <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-            ) : optimizerData?.stats?.playersToSwap === 0 ? (
+            ) : optimizationStats.playersToSwap === 0 ? (
               <span className="text-2xl">✅</span>
             ) : (
               <span className="text-2xl">⚠️</span>
@@ -130,7 +165,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
           </div>
           {loadingOptimizer ? (
             <p className="text-xs text-gray-500">Checking...</p>
-          ) : optimizerData?.stats?.playersToSwap === 0 ? (
+          ) : optimizationStats.playersToSwap === 0 ? (
             <>
               <p className="text-2xl font-bold text-green-400">Optimized</p>
               <p className="text-xs text-gray-400 mt-1">Your lineup is optimal!</p>
@@ -138,10 +173,10 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
           ) : (
             <>
               <p className="text-2xl font-bold text-yellow-400">
-                {optimizerData?.stats?.playersToSwap || 0} Changes
+                {optimizationStats.playersToSwap} Changes
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                +{optimizerData?.stats?.improvement?.toFixed(1) || 0} pts possible
+                +{optimizationStats.improvement.toFixed(1)} pts possible
               </p>
             </>
           )}
