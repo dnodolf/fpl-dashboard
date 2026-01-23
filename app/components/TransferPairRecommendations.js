@@ -97,11 +97,15 @@ export default function TransferPairRecommendations({
           const next5Add = getNextNGameweeksTotal(addPlayer, scoringMode, nextGW, 5);
           const next5Gain = next5Add - next5Drop;
 
+          // Calculate risk score
+          const risk = calculateRiskScore(dropPlayer, addPlayer);
+
           // Confidence-weighted score (next GW 100%, next 3 GW 80%, ROS 50%)
           const confidenceScore = (next1Gain * 1.0) + (next3Gain * 0.8) + (netGain * 0.5);
 
           // Calculate transfer recommendation rating (0-100%)
           // Based on: positive gains across all timeframes = good
+          // Now also factors in risk (positive risk = bonus, negative risk = penalty)
           const maxPossibleScore = Math.max(
             Math.abs(next1Gain),
             Math.abs(next3Gain / 3),
@@ -110,9 +114,15 @@ export default function TransferPairRecommendations({
           ) * 3; // Multiply by 3 to get rough max score
 
           const actualScore = (next1Gain * 1.0) + (next3Gain / 3 * 0.8) + (netGain / 38 * 0.5);
-          const transferRating = maxPossibleScore > 0
+          let transferRating = maxPossibleScore > 0
             ? Math.min(100, Math.max(0, (actualScore / maxPossibleScore) * 100))
             : 50;
+
+          // Adjust rating based on risk (max ±15% adjustment)
+          // Positive risk = safer = bonus to rating
+          // Negative risk = riskier = penalty to rating
+          const riskAdjustment = Math.max(-15, Math.min(15, risk.score * 0.15));
+          transferRating = Math.min(100, Math.max(0, transferRating + riskAdjustment));
 
           // Only include if net gain and rating meet minimum thresholds
           if (netGain >= minGain && transferRating >= minRating) {
@@ -127,6 +137,7 @@ export default function TransferPairRecommendations({
               next5Gain,
               confidenceScore,
               transferRating,
+              risk,
               position,
               // Additional context
               dropForm: getFormIndicator(dropPlayer, scoringMode),
@@ -162,6 +173,10 @@ export default function TransferPairRecommendations({
         case 'season':
           aVal = a.netGain;
           bVal = b.netGain;
+          break;
+        case 'risk':
+          aVal = a.risk.score;
+          bVal = b.risk.score;
           break;
         case 'confidence':
         default:
@@ -203,6 +218,65 @@ export default function TransferPairRecommendations({
     if (currentGW > seasonAvg * 1.1) return '📈';
     if (currentGW < seasonAvg * 0.9) return '📉';
     return '➡️';
+  }
+
+  /**
+   * Get player availability percentage
+   * Returns 0-100 based on chance_of_playing_next_round
+   */
+  function getAvailability(player) {
+    if (!player) return 100;
+    return player.chance_next_round ?? player.chance_of_playing_next_round ?? 100;
+  }
+
+  /**
+   * Get player expected minutes (average from predictions)
+   */
+  function getExpectedMinutes(player) {
+    if (!player?.predictions?.length) return 90; // Default to full game
+
+    // Get average predicted minutes from next few gameweeks
+    const upcomingPredictions = player.predictions
+      .filter(p => p.gw >= currentGameweek && p.gw <= currentGameweek + 5)
+      .slice(0, 5);
+
+    if (upcomingPredictions.length === 0) return 90;
+
+    const avgMins = upcomingPredictions.reduce((sum, p) => {
+      return sum + (p.xmins || p.predicted_mins || 90);
+    }, 0) / upcomingPredictions.length;
+
+    return Math.round(avgMins);
+  }
+
+  /**
+   * Calculate risk score for a transfer
+   * Positive = safer (adding more reliable player)
+   * Negative = riskier (adding less reliable player)
+   */
+  function calculateRiskScore(dropPlayer, addPlayer) {
+    const dropAvail = getAvailability(dropPlayer);
+    const addAvail = getAvailability(addPlayer);
+    const availDiff = addAvail - dropAvail; // Positive = adding healthier player
+
+    const dropMins = getExpectedMinutes(dropPlayer);
+    const addMins = getExpectedMinutes(addPlayer);
+    const minsDiff = addMins - dropMins; // Positive = adding player with more minutes
+
+    // Combine: availability weighted more heavily (injury = immediate impact)
+    // Availability diff is 0-100 scale, minutes is 0-90 scale
+    // Normalize minutes to similar scale (divide by 0.9)
+    const riskScore = (availDiff * 0.7) + ((minsDiff / 0.9) * 0.3);
+
+    return {
+      score: Math.round(riskScore),
+      availDiff,
+      minsDiff,
+      dropAvail,
+      addAvail,
+      dropMins,
+      addMins
+    };
   }
 
   /**
@@ -421,6 +495,12 @@ export default function TransferPairRecommendations({
                 <th className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 px-4">
                   Fixtures
                 </th>
+                <th
+                  onClick={() => handleSort('risk')}
+                  className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 px-4 cursor-pointer hover:text-white transition-colors"
+                >
+                  Risk{renderSortIcon('risk')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -535,6 +615,33 @@ export default function TransferPairRecommendations({
                       </div>
                     </div>
                   </td>
+
+                  {/* Risk Score */}
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${
+                        pair.risk.score > 10 ? 'bg-green-600 text-white' :
+                        pair.risk.score > 0 ? 'bg-green-500/70 text-white' :
+                        pair.risk.score > -10 ? 'bg-yellow-600 text-white' :
+                        pair.risk.score > -25 ? 'bg-orange-500 text-white' :
+                        'bg-red-500 text-white'
+                      }`}>
+                        {pair.risk.score > 0 ? '+' : ''}{pair.risk.score}%
+                      </span>
+                      <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                        <span title={`Drop: ${pair.risk.dropAvail}% → Add: ${pair.risk.addAvail}%`}>
+                          {pair.risk.addAvail < 100 && (
+                            <span className={pair.risk.addAvail < 75 ? 'text-yellow-400' : ''}>
+                              {pair.risk.addAvail}%
+                            </span>
+                          )}
+                        </span>
+                        <span title={`Drop: ${pair.risk.dropMins}min → Add: ${pair.risk.addMins}min`}>
+                          {pair.risk.addMins}'
+                        </span>
+                      </div>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -582,12 +689,20 @@ export default function TransferPairRecommendations({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <span className="font-semibold">Risk Score:</span>
+          <span className="px-2 py-0.5 rounded bg-green-600 text-white">+10%+ Safer</span>
+          <span className="px-2 py-0.5 rounded bg-green-500/70 text-white">+1-9% Slight</span>
+          <span className="px-2 py-0.5 rounded bg-yellow-600 text-white">0 to -9% Neutral</span>
+          <span className="px-2 py-0.5 rounded bg-orange-500 text-white">-10-24% Riskier</span>
+          <span className="px-2 py-0.5 rounded bg-red-500 text-white">-25%+ Risky</span>
+        </div>
+        <div className="flex items-center gap-2">
           <span className="font-semibold">⭐ Smart Sort:</span>
           <span>Weights next GW (100%) + next 3 GW (80%) + season (50%) for balanced short & long term value</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-semibold">Rating Calculation:</span>
-          <span>Considers consistency across all timeframes - positive gains in short, medium, and long term = higher rating</span>
+          <span className="font-semibold">Rating:</span>
+          <span>Considers gains across timeframes + risk adjustment (±15% based on availability & minutes)</span>
         </div>
       </div>
     </div>
