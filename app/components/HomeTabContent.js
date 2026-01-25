@@ -7,6 +7,146 @@ import { USER_ID } from '../config/constants';
 import { getSleeperPositionStyle } from '../constants/positionColors';
 import PlayerAvatar from './common/PlayerAvatar';
 
+// Progress Ring component for visual stats
+const ProgressRing = ({ progress, size = 60, strokeWidth = 6, color = 'green', label, sublabel }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (progress / 100) * circumference;
+
+  const colorClasses = {
+    green: 'text-green-500',
+    yellow: 'text-yellow-500',
+    red: 'text-red-500',
+    blue: 'text-blue-500',
+    purple: 'text-purple-500'
+  };
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width={size} height={size} className="transform -rotate-90">
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          stroke="currentColor"
+          fill="none"
+          className="text-gray-700"
+        />
+        {/* Progress circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          stroke="currentColor"
+          fill="none"
+          strokeLinecap="round"
+          className={colorClasses[color] || 'text-green-500'}
+          style={{
+            strokeDasharray: circumference,
+            strokeDashoffset: offset,
+            transition: 'stroke-dashoffset 0.5s ease-out'
+          }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-lg font-bold text-white">{label}</span>
+        {sublabel && <span className="text-[10px] text-gray-400">{sublabel}</span>}
+      </div>
+    </div>
+  );
+};
+
+// Countdown timer component
+const CountdownTimer = ({ deadline }) => {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+  const [isUrgent, setIsUrgent] = useState(false);
+
+  useEffect(() => {
+    if (!deadline) return;
+
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const deadlineTime = new Date(deadline).getTime();
+      const diff = deadlineTime - now;
+
+      if (diff <= 0) {
+        return { days: 0, hours: 0, mins: 0, secs: 0 };
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return { days, hours, mins, secs };
+    };
+
+    // Initial calculation
+    const initial = calculateTimeLeft();
+    setTimeLeft(initial);
+    setIsUrgent(initial.days === 0 && initial.hours < 24);
+
+    // Update every second
+    const timer = setInterval(() => {
+      const newTime = calculateTimeLeft();
+      setTimeLeft(newTime);
+      setIsUrgent(newTime.days === 0 && newTime.hours < 24);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [deadline]);
+
+  if (!deadline) return null;
+
+  const TimeUnit = ({ value, label }) => (
+    <div className="flex flex-col items-center">
+      <span className={`text-2xl font-bold ${isUrgent ? 'text-orange-400' : 'text-white'}`}>
+        {String(value).padStart(2, '0')}
+      </span>
+      <span className="text-[10px] text-gray-500 uppercase">{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="flex items-center gap-2">
+      {timeLeft.days > 0 && (
+        <>
+          <TimeUnit value={timeLeft.days} label="days" />
+          <span className="text-gray-600 text-xl">:</span>
+        </>
+      )}
+      <TimeUnit value={timeLeft.hours} label="hrs" />
+      <span className="text-gray-600 text-xl">:</span>
+      <TimeUnit value={timeLeft.mins} label="min" />
+      <span className="text-gray-600 text-xl">:</span>
+      <TimeUnit value={timeLeft.secs} label="sec" />
+    </div>
+  );
+};
+
+// Gradient border card wrapper
+const GradientCard = ({ children, gradient = 'from-blue-500 to-purple-500', className = '' }) => (
+  <div className={`relative p-[1px] rounded-lg bg-gradient-to-r ${gradient} ${className}`}>
+    <div className="bg-gray-800 rounded-lg h-full">
+      {children}
+    </div>
+  </div>
+);
+
+// Position-themed text color helper
+const getPositionTextColor = (position) => {
+  switch (position) {
+    case 'GKP': return 'text-yellow-400';
+    case 'DEF': return 'text-green-400';
+    case 'MID': return 'text-blue-400';
+    case 'FWD': return 'text-purple-400';
+    default: return 'text-gray-400';
+  }
+};
+
 const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }) => {
   const [optimizerData, setOptimizerData] = useState(null);
   const [loadingOptimizer, setLoadingOptimizer] = useState(true);
@@ -75,36 +215,34 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   };
 
   // Calculate playersToSwap locally (same logic as OptimizerTabContent)
-  // This ensures consistency between Home tab and Start/Sit tab
   const calculateOptimizationStats = () => {
     const current = optimizerData?.current;
     const optimal = optimizerData?.optimal;
 
     if (!current?.players || !optimal?.players) {
-      return { playersToSwap: 0, improvement: 0 };
+      return { playersToSwap: 0, improvement: 0, efficiency: 100 };
     }
 
-    // Get IDs of players in optimal lineup
     const optimalPlayerIds = new Set(
       optimal.players.map(p => p.sleeper_id || p.id || p.player_id)
     );
 
-    // Count how many current players are NOT in optimal
     const playersToSwap = current.players.filter(p => {
       const playerId = p.sleeper_id || p.id || p.player_id;
       return !optimalPlayerIds.has(playerId);
     }).length;
 
-    // Recalculate points based on scoring mode
-    const currentPts = current.players.reduce((sum, p) => {
-      return sum + getPlayerPoints(p);
-    }, 0);
-    const optimalPts = optimal.players.reduce((sum, p) => {
-      return sum + getPlayerPoints(p);
-    }, 0);
+    const currentPts = current.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
+    const optimalPts = optimal.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
     const improvement = optimalPts - currentPts;
+    let efficiency = optimalPts > 0 ? Math.round((currentPts / optimalPts) * 100) : 100;
 
-    return { playersToSwap, improvement };
+    // Cap efficiency at 99% if there are changes needed (prevents showing 100% with pending swaps)
+    if (playersToSwap > 0 && efficiency >= 100) {
+      efficiency = 99;
+    }
+
+    return { playersToSwap, improvement, efficiency };
   };
 
   const optimizationStats = calculateOptimizationStats();
@@ -134,127 +272,183 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
     }).length
   };
 
+  // Calculate team health percentage
+  const teamHealth = myPlayers.length > 0
+    ? Math.round((availabilityStats.healthy / myPlayers.length) * 100)
+    : 100;
+
   // Get players with injury/news
   const playersWithNews = myPlayers.filter(p => p.news && p.news.length > 0);
 
+  // Calculate predicted points for this GW
+  const predictedPoints = myPlayers.reduce((sum, p) => sum + getPlayerPoints(p), 0);
+
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6 text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          ⚽ Fantasy FC Playbook
-        </h1>
-        <p className="text-blue-100">
-          Gameweek {currentGameweek?.number || '?'} • {scoringMode === 'v3' ? 'V3 Sleeper' : 'FFH'} Scoring
-        </p>
+      {/* Hero Header with Countdown */}
+      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-xl shadow-lg px-6 py-4 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          {/* GW Info Widget */}
+          <button
+            onClick={() => {
+              const url = `https://fantasy.premierleague.com/fixtures/${currentGameweek?.number || 1}`;
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            className="text-left hover:bg-white/10 rounded-lg p-2 -m-2 transition-colors"
+            title={`Click to view GW${currentGameweek?.number} fixtures`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-4xl font-bold text-white">
+                GW {currentGameweek?.number || '?'}
+              </div>
+              <div className="text-sm">
+                <p className="text-blue-100">
+                  {currentGameweek?.status === 'live' ? '🔴 Live' : currentGameweek?.status === 'upcoming' ? '🏁 Upcoming' : '✓ Complete'}
+                </p>
+                <p className="text-blue-200/70 text-xs">
+                  {currentGameweek?.date || 'Loading...'}
+                  <span className="ml-1 opacity-60">🔗</span>
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Countdown Timer */}
+          <div className="bg-black/20 backdrop-blur-sm rounded-lg px-4 py-2">
+            <p className="text-xs text-blue-200 mb-1 text-center">Deadline</p>
+            <CountdownTimer deadline={currentGameweek?.deadline} />
+          </div>
+        </div>
       </div>
 
-      {/* Quick Stats Grid */}
+      {/* Stats Grid with Progress Rings */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Lineup Optimization Status */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-400">Lineup Status</h3>
+        {/* Lineup Optimization with Progress Ring */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">Lineup Status</h3>
             {loadingOptimizer ? (
-              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-            ) : optimizationStats.playersToSwap === 0 ? (
-              <span className="text-2xl">✅</span>
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              </div>
             ) : (
-              <span className="text-2xl">⚠️</span>
+              <div className="flex items-center gap-4">
+                <ProgressRing
+                  progress={optimizationStats.efficiency}
+                  size={70}
+                  color={optimizationStats.playersToSwap === 0 ? 'green' : 'yellow'}
+                  label={`${optimizationStats.efficiency}%`}
+                  sublabel="optimal"
+                />
+                <div>
+                  {optimizationStats.playersToSwap === 0 ? (
+                    <>
+                      <p className="text-lg font-bold text-green-400">Optimized</p>
+                      <p className="text-xs text-gray-400">No changes needed</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-yellow-400">{optimizationStats.playersToSwap} Changes</p>
+                      <p className="text-xs text-gray-400">+{optimizationStats.improvement.toFixed(1)} pts</p>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
-          {loadingOptimizer ? (
-            <p className="text-xs text-gray-500">Checking...</p>
-          ) : optimizationStats.playersToSwap === 0 ? (
-            <>
-              <p className="text-2xl font-bold text-green-400">Optimized</p>
-              <p className="text-xs text-gray-400 mt-1">Your lineup is optimal!</p>
-            </>
-          ) : (
-            <>
-              <p className="text-2xl font-bold text-yellow-400">
-                {optimizationStats.playersToSwap} Changes
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                +{optimizationStats.improvement.toFixed(1)} pts possible
-              </p>
-            </>
-          )}
         </div>
 
-        {/* Player Availability */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-400">Availability</h3>
-            <span className="text-2xl">🏥</span>
-          </div>
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-green-400">Healthy:</span>
-              <span className="font-bold text-white">{availabilityStats.healthy}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-yellow-400">Doubtful:</span>
-              <span className="font-bold text-white">{availabilityStats.doubtful}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-red-400">Out:</span>
-              <span className="font-bold text-white">{availabilityStats.out}</span>
+        {/* Team Health with Progress Ring */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">Team Health</h3>
+            <div className="flex items-center gap-4">
+              <ProgressRing
+                progress={teamHealth}
+                size={70}
+                color={teamHealth >= 80 ? 'green' : teamHealth >= 60 ? 'yellow' : 'red'}
+                label={`${teamHealth}%`}
+                sublabel="healthy"
+              />
+              <div className="space-y-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className="text-gray-400">Fit:</span>
+                  <span className="text-white font-bold">{availabilityStats.healthy}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  <span className="text-gray-400">Doubt:</span>
+                  <span className="text-white font-bold">{availabilityStats.doubtful}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  <span className="text-gray-400">Out:</span>
+                  <span className="text-white font-bold">{availabilityStats.out}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Top 3 This Gameweek */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-400">Top 3 This GW</h3>
-            <span className="text-2xl">⭐</span>
-          </div>
-          <div className="space-y-1.5">
-            {top3ThisGW.map((player, idx) => (
-              <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
-                <span className="text-gray-500 w-4">{idx + 1}.</span>
-                <span className={getSleeperPositionStyle(player.position)}>{player.position}</span>
-                <button
-                  onClick={() => onPlayerClick?.(player)}
-                  className="text-white truncate flex-1 text-left hover:text-blue-400 transition-colors"
-                >
-                  {player.web_name || player.name}
-                </button>
-                <span className="text-green-400 font-bold">{getPlayerPoints(player).toFixed(1)}</span>
-              </div>
-            ))}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">Top 3 This GW</h3>
+            <div className="space-y-2">
+              {top3ThisGW.map((player, idx) => (
+                <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-600 w-4 font-bold">{idx + 1}</span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
+                    {player.position}
+                  </span>
+                  <button
+                    onClick={() => onPlayerClick?.(player)}
+                    className={`truncate flex-1 text-left font-medium hover:underline transition-colors ${getPositionTextColor(player.position)}`}
+                  >
+                    {player.web_name || player.name}
+                  </button>
+                  <span className="text-green-400 font-bold">{getPlayerPoints(player).toFixed(1)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* League Standing */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-400">League Standing</h3>
-            <span className="text-2xl">🏆</span>
+        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">League Standing</h3>
+            {loadingStandings ? (
+              <div className="animate-pulse space-y-2">
+                <div className="h-8 bg-gray-700 rounded w-16"></div>
+                <div className="h-4 bg-gray-700 rounded w-24"></div>
+              </div>
+            ) : userRank ? (
+              <div className="flex items-center gap-4">
+                <div className="text-4xl font-bold text-yellow-400">#{userRank}</div>
+                <div>
+                  <p className="text-white font-medium">
+                    {userStanding.wins}-{userStanding.losses}
+                    {userStanding.ties > 0 && `-${userStanding.ties}`}
+                  </p>
+                  <p className="text-xs text-gray-400">of {standings.length} teams</p>
+                  <button
+                    onClick={() => setStandingsExpanded(!standingsExpanded)}
+                    className="text-xs text-blue-400 hover:text-blue-300 mt-1 flex items-center gap-1"
+                  >
+                    {standingsExpanded ? '▼' : '▶'} Full standings
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">Unable to load</p>
+            )}
           </div>
-          {loadingStandings ? (
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-700 rounded w-16 mb-1"></div>
-              <div className="h-4 bg-gray-700 rounded w-24"></div>
-            </div>
-          ) : userRank ? (
-            <>
-              <p className="text-2xl font-bold text-yellow-400">#{userRank}</p>
-              <p className="text-xs text-gray-400 mt-1">
-                {userStanding.wins}-{userStanding.losses}
-                {userStanding.ties > 0 && `-${userStanding.ties}`} record
-              </p>
-              <button
-                onClick={() => setStandingsExpanded(!standingsExpanded)}
-                className="text-xs text-blue-400 hover:text-blue-300 mt-2 flex items-center gap-1"
-              >
-                {standingsExpanded ? '▼' : '▶'} View standings table
-              </button>
-            </>
-          ) : (
-            <p className="text-gray-500 text-sm">Unable to load</p>
-          )}
         </div>
       </div>
 
@@ -314,34 +508,39 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
       {/* My Current Roster */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <span>👥</span>
-          <span>My Roster ({myPlayers.length} players)</span>
+          <span>My Roster</span>
+          <span className="text-gray-400 text-sm font-normal">({myPlayers.length} players)</span>
         </h2>
 
         {/* Players with News/Injuries */}
         {playersWithNews.length > 0 && (
-          <div className="mb-6 bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4">
-            <h3 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
-              <span>📰</span>
-              <span>Player News ({playersWithNews.length})</span>
+          <div className="mb-6 bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-4">
+            <h3 className="text-sm font-bold text-cyan-400 mb-3 flex items-center gap-2">
+              <span>📰 Player News ({playersWithNews.length})</span>
             </h3>
             <div className="space-y-2">
               {playersWithNews.map(player => (
                 <div key={player.sleeper_id} className="flex items-start gap-3 text-sm">
                   <PlayerAvatar player={player} size="md" />
-                  <span className={getSleeperPositionStyle(player.position)}>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
                     {player.position}
                   </span>
                   <div className="flex-1">
                     <button
                       onClick={() => onPlayerClick?.(player)}
-                      className="font-medium text-white hover:text-blue-400 transition-colors text-left"
+                      className={`font-medium hover:underline transition-colors text-left ${getPositionTextColor(player.position)}`}
                     >
                       {player.name}
                     </button>
                     <p className="text-xs text-gray-400 mt-0.5">{player.news}</p>
                   </div>
-                  <span className="text-xs text-yellow-400">
+                  <span className={`text-xs font-medium ${
+                    (player.chance_next_round ?? player.chance_of_playing_next_round ?? 100) < 50
+                      ? 'text-red-400'
+                      : (player.chance_next_round ?? player.chance_of_playing_next_round ?? 100) < 75
+                        ? 'text-orange-400'
+                        : 'text-cyan-400'
+                  }`}>
                     {player.chance_next_round ?? player.chance_of_playing_next_round ?? 100}%
                   </span>
                 </div>
@@ -356,18 +555,26 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
             const positionPlayers = myPlayers
               .filter(p => p.position === position)
               .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a));
+
+            const positionGradients = {
+              GKP: 'from-yellow-600/20 to-amber-600/20',
+              DEF: 'from-green-600/20 to-emerald-600/20',
+              MID: 'from-blue-600/20 to-indigo-600/20',
+              FWD: 'from-purple-600/20 to-fuchsia-600/20'
+            };
+
             return (
-              <div key={position} className="bg-gray-900/50 rounded-lg p-4">
+              <div key={position} className={`bg-gradient-to-br ${positionGradients[position]} rounded-lg p-4 border border-gray-700/50`}>
                 <h3 className="font-bold text-white mb-3 flex items-center gap-2">
-                  <span className={getSleeperPositionStyle(position)}>{position}</span>
-                  <span className="text-gray-400 text-sm">({positionPlayers.length})</span>
+                  <span className={`text-sm font-bold px-2 py-0.5 rounded ${getSleeperPositionStyle(position)}`}>
+                    {position}
+                  </span>
+                  <span className="text-gray-400 text-sm font-normal">({positionPlayers.length})</span>
                 </h3>
                 <div className="space-y-2">
                   {positionPlayers.map(player => {
                     const chance = player.chance_next_round ?? player.chance_of_playing_next_round ?? 100;
-                    const points = scoringMode === 'v3'
-                      ? (player.v3_current_gw || 0)
-                      : (player.current_gw_prediction || 0);
+                    const points = getPlayerPoints(player);
 
                     return (
                       <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
@@ -375,11 +582,11 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
                         <div className="flex-1 min-w-0">
                           <button
                             onClick={() => onPlayerClick?.(player)}
-                            className="text-white truncate font-medium hover:text-blue-400 transition-colors text-left block w-full"
+                            className={`truncate font-medium hover:underline transition-colors text-left block w-full ${getPositionTextColor(position)}`}
                           >
                             {player.web_name || player.name}
                           </button>
-                          <p className="text-xs text-gray-400">{player.team_abbr}</p>
+                          <p className="text-xs text-gray-500">{player.team_abbr}</p>
                         </div>
                         <div className="flex items-center gap-2 ml-2">
                           {chance < 75 && (

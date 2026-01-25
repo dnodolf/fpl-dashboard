@@ -19,6 +19,7 @@ import { UnmatchedPlayersTable } from './components/stats/UnmatchedPlayersTable'
 import { PlayerModal } from './components/PlayerModal';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from './utils/predictionUtils';
 import { getSleeperPositionStyle, getPositionColors } from './constants/positionColors';
+import { AppLogo } from './components/common/AppLogo';
 
 // ----------------- ERROR BOUNDARY COMPONENT -----------------
 const ErrorBoundary = ({ children }) => {
@@ -208,33 +209,15 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         {/* Top Row: Title, Gameweek, Update Button */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-            <h1 className={`text-lg sm:text-2xl font-bold text-white whitespace-nowrap`}>⚽ Fantasy FC Playbook</h1>
+            <h1 className="flex items-center gap-3 text-xl sm:text-3xl font-bold text-white whitespace-nowrap">
+              <AppLogo size={48} className="hidden sm:block" />
+              <AppLogo size={40} className="block sm:hidden" />
+              Fantasy FC Playbook
+            </h1>
 
-            {/* Data Freshness Indicator - Hidden on mobile */}
-            <div className="hidden sm:flex flex-col gap-1 text-sm">
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${freshnessStatus.color}-100 text-${freshnessStatus.color}-800`}>
-                  🕒 {freshnessStatus.message}
-                </span>
-              </div>
-              {lastUpdated && (
-                <div className="text-xs text-gray-400">
-                  Last data pull: {new Date(lastUpdated).toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })} (FFH + Sleeper)
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
-            {/* Current Gameweek with Enhanced Display */}
-            <GameweekDisplay gameweek={currentGameweek} />
-
             {/* Scoring Mode Toggle - 2 Options: FFH / V3 */}
             <div className="flex items-center gap-1 sm:gap-2">
               <span className="text-xs sm:text-sm text-gray-300 hidden sm:inline">
@@ -267,13 +250,18 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             </div>
 
 
-            {/* Update Data Button */}
-            <button
-              onClick={() => updateData('manual', true, false)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 sm:gap-2 whitespace-nowrap"
-            >
-              🔄 <span className="hidden sm:inline">Update Data</span>
-            </button>
+            {/* Data Freshness + Update Button */}
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-xs text-gray-400">
+                {freshnessStatus.message}
+              </span>
+              <button
+                onClick={() => updateData('manual', true, false)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 sm:gap-2 whitespace-nowrap"
+              >
+                🔄 <span className="hidden sm:inline">Update Data</span>
+              </button>
+            </div>
           </div>
         </div>
 
