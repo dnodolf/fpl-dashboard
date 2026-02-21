@@ -28,7 +28,9 @@ export function usePlayerData() {
       if (!forceRefresh && useCache) {
         const cachedData = CacheManager.get();
         if (cachedData) {
-          console.log('⚡ Loading from cache');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('⚡ Loading from cache');
+          }
           setData(prev => ({
             ...prev,
             loading: false,
@@ -38,7 +40,9 @@ export function usePlayerData() {
         }
       }
 
-      console.log('🔄 Fetching fresh data from API');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 Fetching fresh data from API');
+      }
 
       const response = await fetch('/api/integrated-players', {
         method: 'POST',
@@ -58,7 +62,9 @@ export function usePlayerData() {
 
       // Direct check for players array
       if (result.players && Array.isArray(result.players)) {
-        console.log('✅ Setting player data:', result.players.length, 'players');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Setting player data:', result.players.length, 'players');
+        }
 
         const newData = {
           players: result.players,

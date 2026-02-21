@@ -31,7 +31,9 @@ const CacheManager = {
   // Clean up old cache data and other stale items
   cleanupStorage: () => {
     try {
-      console.log('🧹 Cleaning up localStorage...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🧹 Cleaning up localStorage...');
+      }
 
       // Remove old FPL cache
       localStorage.removeItem(CACHE_KEY);
@@ -48,9 +50,13 @@ const CacheManager = {
         }
       });
 
-      console.log('✅ localStorage cleanup completed');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ localStorage cleanup completed');
+      }
     } catch (error) {
-      console.warn('⚠️ Storage cleanup failed:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ Storage cleanup failed:', error);
+      }
     }
   },
 
@@ -120,14 +126,18 @@ const CacheManager = {
 
       // Log cache size for monitoring (deduplicated)
       const sizeStr = `${(dataSize / 1024 / 1024).toFixed(2)}MB (compressed)`;
-      if (typeof window !== 'undefined' && (!window._lastCacheLog || window._lastCacheLog !== sizeStr)) {
-        console.log(`💾 Cache size: ${sizeStr}`);
-        window._lastCacheLog = sizeStr;
+      if (process.env.NODE_ENV === 'development') {
+        if (typeof window !== 'undefined' && (!window._lastCacheLog || window._lastCacheLog !== sizeStr)) {
+          console.log(`💾 Cache size: ${sizeStr}`);
+          window._lastCacheLog = sizeStr;
+        }
       }
 
       // Check if still too large (>4MB threshold for safety)
       if (dataSize > 4 * 1024 * 1024) {
-        console.warn('📦 Data still too large after compression, skipping cache');
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('📦 Data still too large after compression, skipping cache');
+        }
         return;
       }
 
@@ -136,7 +146,9 @@ const CacheManager = {
 
     } catch (error) {
       if (error.name === 'QuotaExceededError') {
-        console.warn('📦 Storage quota exceeded, attempting cleanup...');
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('📦 Storage quota exceeded, attempting cleanup...');
+        }
 
         // Clean up storage and try again
         CacheManager.cleanupStorage();
@@ -150,13 +162,19 @@ const CacheManager = {
             compressed: true
           };
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-          console.log('✅ Compressed cache saved after cleanup');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Compressed cache saved after cleanup');
+          }
         } catch (retryError) {
-          console.warn('❌ Cache save failed even after compression and cleanup. Skipping cache.');
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('❌ Cache save failed even after compression and cleanup. Skipping cache.');
+          }
           // Don't cache this time, but continue without failing
         }
       } else {
-        console.warn('Could not save to cache:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Could not save to cache:', error);
+        }
       }
     }
   },
@@ -180,7 +198,9 @@ const CacheManager = {
         cacheAge: Math.round(age / 1000) // seconds
       };
     } catch (error) {
-      console.warn('Could not read from cache:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Could not read from cache:', error);
+      }
       return null;
     }
   },
@@ -189,7 +209,9 @@ const CacheManager = {
     try {
       localStorage.removeItem(CACHE_KEY);
     } catch (error) {
-      console.warn('Could not clear cache:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Could not clear cache:', error);
+      }
     }
   },
 

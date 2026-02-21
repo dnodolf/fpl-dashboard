@@ -127,7 +127,9 @@ export class PlayerMatchingService {
    * Pure Opta ID matching - simplified and fast
    */
   async matchAllPlayers(sleeperPlayers, ffhPlayers) {
-    console.log('🎯 OPTA-ONLY MATCHING: Starting with', sleeperPlayers.length, 'Sleeper players');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎯 OPTA-ONLY MATCHING: Starting with', sleeperPlayers.length, 'Sleeper players');
+    }
     
     const stats = {
       sleeperWithOpta: 0,
@@ -226,38 +228,36 @@ export class PlayerMatchingService {
 }
     }
 
-    console.log('🔍 SLEEPER OPTA MAP DEBUG:', {
-      totalSleeperPlayers: sleeperPlayers.length,
-      sleeperWithOpta: stats.sleeperWithOpta,
-      sleeperOptaMapSize: sleeperOptaMap.size,
-      sampleSleeperOptaEntries: Array.from(sleeperOptaMap.entries()).slice(0, 3)
-    });
-
     // Calculate rates
     const sleeperOptaRate = Math.round((stats.sleeperWithOpta / sleeperPlayers.length) * 100);
     const ffhOptaRate = Math.round((stats.ffhWithOpta / ffhPlayers.length) * 100);
     const optaMatchRate = stats.ffhWithOpta > 0 ?
         Math.round((stats.optaMatches / stats.ffhWithOpta) * 100) : 0;
 
-    console.log(`📊 OPTA COVERAGE:`);
-    console.log(`  Sleeper with Opta: ${stats.sleeperWithOpta}/${sleeperPlayers.length} (${sleeperOptaRate}%)`);
-    console.log(`  FFH with Opta: ${stats.ffhWithOpta}/${ffhPlayers.length} (${ffhOptaRate}%)`);
-    console.log(`  Successful matches: ${stats.optaMatches}/${stats.ffhWithOpta} (${optaMatchRate}%)`);
-    console.log(`  Unmatched Sleeper with Opta: ${stats.unmatchedSleeperWithOpta.length}`);
-
-    // Show sample matches
-    console.log(`✅ SAMPLE MATCHES (first 5):`);
-    matches.slice(0, 5).forEach(match => {
-      const sleeperData = this.extractSleeperData(match.sleeperPlayer);
-      const ffhData = this.extractFFHData(match.ffhPlayer);
-      console.log(`  ${sleeperData.name} (${sleeperData.team}) → ${ffhData.name} (${ffhData.team})`);
-    });
-
-    if (stats.unmatchedSleeperWithOpta.length > 0) {
-      console.log(`❌ UNMATCHED SLEEPER PLAYERS (first 5):`);
-      stats.unmatchedSleeperWithOpta.slice(0, 5).forEach(player => {
-        console.log(`  ${player.name} (${player.team}) - ${player.position}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 SLEEPER OPTA MAP DEBUG:', {
+        totalSleeperPlayers: sleeperPlayers.length,
+        sleeperWithOpta: stats.sleeperWithOpta,
+        sleeperOptaMapSize: sleeperOptaMap.size,
+        sampleSleeperOptaEntries: Array.from(sleeperOptaMap.entries()).slice(0, 3)
       });
+      console.log(`📊 OPTA COVERAGE:`);
+      console.log(`  Sleeper with Opta: ${stats.sleeperWithOpta}/${sleeperPlayers.length} (${sleeperOptaRate}%)`);
+      console.log(`  FFH with Opta: ${stats.ffhWithOpta}/${ffhPlayers.length} (${ffhOptaRate}%)`);
+      console.log(`  Successful matches: ${stats.optaMatches}/${stats.ffhWithOpta} (${optaMatchRate}%)`);
+      console.log(`  Unmatched Sleeper with Opta: ${stats.unmatchedSleeperWithOpta.length}`);
+      console.log(`✅ SAMPLE MATCHES (first 5):`);
+      matches.slice(0, 5).forEach(match => {
+        const sleeperData = this.extractSleeperData(match.sleeperPlayer);
+        const ffhData = this.extractFFHData(match.ffhPlayer);
+        console.log(`  ${sleeperData.name} (${sleeperData.team}) → ${ffhData.name} (${ffhData.team})`);
+      });
+      if (stats.unmatchedSleeperWithOpta.length > 0) {
+        console.log(`❌ UNMATCHED SLEEPER PLAYERS (first 5):`);
+        stats.unmatchedSleeperWithOpta.slice(0, 5).forEach(player => {
+          console.log(`  ${player.name} (${player.team}) - ${player.position}`);
+        });
+      }
     }
 
     return {

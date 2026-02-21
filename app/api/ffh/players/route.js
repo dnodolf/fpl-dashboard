@@ -26,7 +26,9 @@ class FFHApiService {
       
       const url = `${this.baseUrl}/player-predictions/?orderBy=points&focus=range&positions=1,2,3,4&min_cost=40&max_cost=145&search_term=&gw_start=1&gw_end=47&first=${first}&last=${last}&use_predicted_fixtures=false&selected_players=`;
       
-      console.log(`🔥 Fetching FFH data from: ${url}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔥 Fetching FFH data from: ${url}`);
+      }
       
       const response = await fetch(url, {
         method: 'GET',
@@ -119,7 +121,9 @@ const ffhService = new FFHApiService();
 
 export async function GET() {
   try {
-    console.log('FFH GET: Fetching player data...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('FFH GET: Fetching player data...');
+    }
     
     // Get predictions from FFH
     const predictions = await ffhService.getPlayerPredictions();
@@ -135,7 +139,9 @@ export async function GET() {
     // Transform to dashboard format
     const transformedPlayers = ffhService.transformFFHData(predictions);
     
-    console.log(`✅ FFH GET: Successfully fetched ${transformedPlayers.length} players`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ FFH GET: Successfully fetched ${transformedPlayers.length} players`);
+    }
     
     return NextResponse.json({
       success: true,
@@ -162,14 +168,18 @@ export async function GET() {
 // NEW: Add POST handler for integrated-players route
 export async function POST(request) {
   try {
-    console.log('FFH POST: Processing request...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('FFH POST: Processing request...');
+    }
     
     // Parse request body
     const requestData = await request.json();
     const endpoint = requestData.endpoint || 'player-predictions';
     const params = requestData.params || {};
     
-    console.log(`FFH POST: Endpoint=${endpoint}, Params=`, params);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`FFH POST: Endpoint=${endpoint}, Params=`, params);
+    }
     
     // Only handle player-predictions for now
     if (endpoint !== 'player-predictions') {
@@ -192,7 +202,9 @@ export async function POST(request) {
     }
 
     // Return raw FFH data (not transformed) for the integrated-players route
-    console.log(`✅ FFH POST: Successfully fetched ${predictions.length} raw players`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ FFH POST: Successfully fetched ${predictions.length} raw players`);
+    }
     
     return NextResponse.json({
       success: true,

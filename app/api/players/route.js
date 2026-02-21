@@ -8,7 +8,9 @@ export async function GET(request) {
     const refresh = searchParams.get('refresh') === 'true';
     const includeMatching = searchParams.get('matching') === 'true';
 
-    console.log(`Fetching player data: source=${source}, refresh=${refresh}, matching=${includeMatching}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Fetching player data: source=${source}, refresh=${refresh}, matching=${includeMatching}`);
+    }
 
     let playerData;
     const baseUrl = new URL(request.url).origin;
@@ -45,7 +47,9 @@ export async function GET(request) {
             }
           }
         } catch (sheetsError) {
-          console.warn('Sheets failed, trying FFH:', sheetsError.message);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Sheets failed, trying FFH:', sheetsError.message);
+          }
         }
         
         // Fallback to FFH
@@ -87,7 +91,9 @@ export async function GET(request) {
           }
         }
       } catch (ownershipError) {
-        console.warn('Could not fetch ownership data:', ownershipError.message);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Could not fetch ownership data:', ownershipError.message);
+        }
         playerData.ownershipData = false;
       }
     }

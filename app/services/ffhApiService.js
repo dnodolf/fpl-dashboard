@@ -6,7 +6,9 @@ class FFHApiService {
     this.bearerToken = process.env.FFH_BEARER_TOKEN;
 
     if (!this.authStatic || !this.bearerToken) {
-      console.warn('⚠️ FFH credentials not configured. FFH predictions will be unavailable.');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ FFH credentials not configured. FFH predictions will be unavailable.');
+      }
     }
   }
 

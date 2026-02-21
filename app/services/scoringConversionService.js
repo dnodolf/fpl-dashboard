@@ -101,8 +101,10 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const currentGwData = allGameweekPredictions.find(gw => gw.gw === currentGameweek);
     if (currentGwData) {
       currentGwMins = currentGwData.predicted_mins || 0;
-      if (currentGwMins > 0 && Math.random() < 0.01) {
-        console.log(`✅ Predicted minutes for ${sleeperPlayer.full_name || ffhName} GW${currentGameweek}: ${currentGwMins}`);
+      if (process.env.NODE_ENV === 'development') {
+        if (currentGwMins > 0 && Math.random() < 0.01) {
+          console.log(`✅ Predicted minutes for ${sleeperPlayer.full_name || ffhName} GW${currentGameweek}: ${currentGwMins}`);
+        }
       }
     }
 
@@ -114,7 +116,9 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
 
     // Zero out current gameweek prediction if player isn't playing
     if (chanceOfPlaying !== null && chanceOfPlaying !== undefined && chanceOfPlaying < 25) {
-      console.log(`⚠️ ${sleeperPlayer.full_name || ffhName}: Not playing (${chanceOfPlaying}% chance) - zeroing GW${currentGameweek} prediction`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`⚠️ ${sleeperPlayer.full_name || ffhName}: Not playing (${chanceOfPlaying}% chance) - zeroing GW${currentGameweek} prediction`);
+      }
       currentGwPrediction = 0;
       currentGwMins = 0;
     }
@@ -201,7 +205,9 @@ export async function convertFFHToSleeperPrediction(ffhPrediction, position) {
     const positionRatio = conversionRatios[position.toUpperCase()];
     
     if (!positionRatio) {
-      console.warn(`No conversion ratio for position ${position}, using 1.0`);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`No conversion ratio for position ${position}, using 1.0`);
+      }
       return ffhPrediction;
     }
     
@@ -265,7 +271,9 @@ async function calculateConversionRatios() {
     });
     
     cachedConversionRatios = ratios;
-    console.log('✅ Calculated conversion ratios:', ratios);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Calculated conversion ratios:', ratios);
+    }
     return ratios;
   } catch (error) {
     console.error('Error calculating conversion ratios:', error);
@@ -302,11 +310,15 @@ export async function fetchSleeperScoringSettings() {
     const enhancedScoring = { ...DEFAULT_SLEEPER_SCORING, ...scoring };
     
     cachedSleeperScoring = enhancedScoring;
-    console.log('✅ Sleeper scoring settings fetched and cached');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Sleeper scoring settings fetched and cached');
+    }
     return enhancedScoring;
   } catch (error) {
     console.error('Error fetching Sleeper scoring:', error);
-    console.log('📋 Using fallback scoring settings');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📋 Using fallback scoring settings');
+    }
     cachedSleeperScoring = DEFAULT_SLEEPER_SCORING;
     return DEFAULT_SLEEPER_SCORING;
   }
@@ -318,7 +330,9 @@ export async function fetchSleeperScoringSettings() {
 export function clearConversionCache() {
   cachedSleeperScoring = null;
   cachedConversionRatios = null;
-  console.log('🔄 Conversion cache cleared');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Conversion cache cleared');
+  }
 }
 
 // Default export for compatibility

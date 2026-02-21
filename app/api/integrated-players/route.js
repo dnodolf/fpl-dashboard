@@ -10,7 +10,9 @@ import { cacheService } from '../../services/cacheService.js';
 
 async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) {
   try {
-    console.log(`🚀 V3 Sleeper Scoring: Converting ${matchedPlayers.length} players to Sleeper league scoring`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🚀 V3 Sleeper Scoring: Converting ${matchedPlayers.length} players to Sleeper league scoring`);
+    }
 
     // Use our simplified v3ScoringService with FPL→Sleeper conversion
     const enhancedPlayers = await v3ScoringService.applyV3Scoring(matchedPlayers, currentGameweek);
@@ -24,7 +26,9 @@ async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) 
       averageImprovement: 0
     };
 
-    console.log(`📊 V3 Sleeper Summary: ${playersWithV3.length}/${enhancedPlayers.length} players with predictions`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 V3 Sleeper Summary: ${playersWithV3.length}/${enhancedPlayers.length} players with predictions`);
+    }
 
     return {
       players: enhancedPlayers,
@@ -65,35 +69,35 @@ function findFFHStatsMatch(sleeperPlayer, ffhStatsPlayers) {
  * Fail-fast import wrapper - no fallbacks, system errors if services unavailable
  */
 async function importServices() {
-  console.log('🔧 Starting critical service import (fail-fast mode)...');
-  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔧 Starting critical service import (fail-fast mode)...');
+  }
+
   // Import playerMatchingService - REQUIRED
-  console.log('🔧 Importing playerMatchingService...');
   const playerMatchingModule = await import('../../services/playerMatchingService.js');
-  
+
   if (!playerMatchingModule.PlayerMatchingService) {
     throw new Error('PlayerMatchingService class not found in playerMatchingService.js');
   }
-  
+
   const matchingService = new playerMatchingModule.PlayerMatchingService();
-  console.log('✅ PlayerMatchingService loaded and instantiated');
-  
-  // Import scoringConversionService - REQUIRED  
-  console.log('🔧 Importing scoringConversionService...');
+
+  // Import scoringConversionService - REQUIRED
   const scoringModule = await import('../../services/scoringConversionService.js');
-  
+
   const scoringService = scoringModule.default || scoringModule;
   if (!scoringService) {
     throw new Error('scoringConversionService default export not found');
   }
-  
+
   // Verify required methods exist
   if (typeof scoringService.enhancePlayerWithScoringConversion !== 'function') {
     throw new Error('scoringConversionService missing enhancePlayerWithScoringConversion method');
   }
-  
-  console.log('✅ scoringConversionService loaded with required methods');
-  console.log('✅ All services loaded successfully - system ready');
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ All services loaded successfully - system ready');
+  }
 
   return {
     matching: matchingService,
@@ -136,7 +140,9 @@ function fallbackConvertFFHToSleeper(ffhPrediction, position) {
  */
 async function fetchSleeperData() {
   try {
-    console.log('📡 Pipeline: Fetching Sleeper players & rosters');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📡 Pipeline: Fetching Sleeper players & rosters');
+    }
     const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
     
     const [playersResponse, rostersResponse, usersResponse] = await Promise.all([
@@ -149,7 +155,9 @@ async function fetchSleeperData() {
       throw new Error('Failed to fetch Sleeper data - one or more endpoints failed');
     }
 
-    console.log('✅ All Sleeper API calls successful, processing data...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ All Sleeper API calls successful, processing data...');
+    }
 
     const [playersData, rostersData, usersData] = await Promise.all([
       playersResponse.json(),
@@ -174,7 +182,9 @@ async function fetchSleeperData() {
       }
     });
 
-    console.log('✅ Sleeper ownership mapping created');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Sleeper ownership mapping created');
+    }
 
     return {
       players: playersData,
@@ -191,20 +201,26 @@ async function fetchSleeperData() {
  * Fetch FFH data directly from FFH API - corrected for direct array response
  */
 async function fetchFFHData() {
-  console.log('📡 Pipeline: Fetching FFH predictions & stats');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📡 Pipeline: Fetching FFH predictions & stats');
+  }
 
   const ffhBaseUrl = 'https://data.fantasyfootballhub.co.uk/api';
   const authStatic = process.env.FFH_AUTH_STATIC;
   const bearerToken = process.env.FFH_BEARER_TOKEN;
 
   if (!authStatic || !bearerToken) {
-    console.warn('⚠️ FFH credentials not configured. Falling back to Sleeper-only mode.');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ FFH credentials not configured. Falling back to Sleeper-only mode.');
+    }
     throw new Error('FFH credentials not available');
   }
   
   const url = `${ffhBaseUrl}/player-predictions/?orderBy=points&focus=range&positions=1,2,3,4&min_cost=40&max_cost=145&search_term=&gw_start=1&gw_end=47&first=0&last=1000&use_predicted_fixtures=false&selected_players=`;
   
-  console.log('🔗 Calling FFH directly: ' + url);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔗 Calling FFH directly: ' + url);
+  }
   
   const response = await fetch(url, {
     method: 'GET',
@@ -223,17 +239,19 @@ async function fetchFFHData() {
 
   const ffhData = await response.json();
   
-  if (Array.isArray(ffhData)) {
-    console.log('  - Direct array length:', ffhData.length);
-    if (ffhData.length > 0) {
-      console.log('  - First player keys:', Object.keys(ffhData[0]));
-      console.log('  - First player web_name:', ffhData[0].web_name);
-      console.log('  - Has player.opta_uuid?', !!ffhData[0].player?.opta_uuid);
+  if (process.env.NODE_ENV === 'development') {
+    if (Array.isArray(ffhData)) {
+      console.log('  - Direct array length:', ffhData.length);
+      if (ffhData.length > 0) {
+        console.log('  - First player keys:', Object.keys(ffhData[0]));
+        console.log('  - First player web_name:', ffhData[0].web_name);
+        console.log('  - Has player.opta_uuid?', !!ffhData[0].player?.opta_uuid);
+      }
+    } else {
+      console.log('  - Response keys:', Object.keys(ffhData));
+      console.log('  - Has results?', !!ffhData.results);
+      console.log('  - Has data?', !!ffhData.data);
     }
-  } else {
-    console.log('  - Response keys:', Object.keys(ffhData));
-    console.log('  - Has results?', !!ffhData.results);
-    console.log('  - Has data?', !!ffhData.data);
   }
 
   // Handle the response based on actual structure
@@ -242,13 +260,19 @@ async function fetchFFHData() {
   if (Array.isArray(ffhData)) {
     // FFH returns direct array
     playerArray = ffhData;
-    console.log('✅ Using direct FFH array as player data');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Using direct FFH array as player data');
+    }
   } else if (ffhData.results && Array.isArray(ffhData.results)) {
     playerArray = ffhData.results;
-    console.log('✅ Using ffhData.results as player array');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Using ffhData.results as player array');
+    }
   } else if (ffhData.data && Array.isArray(ffhData.data)) {
     playerArray = ffhData.data;
-    console.log('✅ Using ffhData.data as player array');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Using ffhData.data as player array');
+    }
   }
 
   if (!playerArray || !Array.isArray(playerArray)) {
@@ -260,7 +284,9 @@ async function fetchFFHData() {
     throw new Error('FFH API returned empty player data');
   }
 
-  console.log(`✅ FFH data fetched successfully: ${playerArray.length} players`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`✅ FFH data fetched successfully: ${playerArray.length} players`);
+  }
   
   return {
     players: playerArray,
@@ -273,7 +299,9 @@ async function fetchFFHData() {
  * FAIL-FAST INTEGRATION - No fallbacks, system errors if any component fails
  */
 async function integratePlayersWithOptaMatching(currentGameweek) {
-  console.log('🔗 Pipeline: Starting player integration');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔗 Pipeline: Starting player integration');
+  }
   const services = await importServices(); // Will throw if any service fails
   
   // Fetch data from both sources - BOTH must succeed
@@ -283,7 +311,9 @@ async function integratePlayersWithOptaMatching(currentGameweek) {
     fetchFFHData()      // Will throw if fails
   ]);
 
-  console.log(`📊 All data fetched successfully - Sleeper: ${sleeperData.totalPlayers}, FFH: ${ffhData.totalPlayers}`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`📊 All data fetched successfully - Sleeper: ${sleeperData.totalPlayers}, FFH: ${ffhData.totalPlayers}`);
+  }
 
 // Convert Sleeper players to array with unified positions - WITH OWNERSHIP
 const sleeperPlayersArray = Object.entries(sleeperData.players)
@@ -307,10 +337,10 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
     };
   });
 
-  console.log(`🔗 Pipeline: Matched ${sleeperPlayersArray.length} players with FFH data`);
-
-  // **CRITICAL**: Match players using services - MUST succeed
-  console.log('🎯 Matching players with FFH data using services...');
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔗 Pipeline: Matched ${sleeperPlayersArray.length} players with FFH data`);
+    console.log('🎯 Matching players with FFH data using services...');
+  }
   
   const matchedPlayers = [];
   let matchCount = 0;
@@ -362,15 +392,19 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
     }
   }
 
-  console.log(`🎯 Player matching completed:`);
-  console.log(`  - Total players: ${matchedPlayers.length}`);
-  console.log(`  - Successfully matched: ${matchCount}`);
-  console.log(`  - Enhancement errors: ${enhancementErrors}`);
-  console.log(`  - Match rate: ${((matchCount / sleeperPlayersArray.length) * 100).toFixed(1)}%`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🎯 Player matching completed:`);
+    console.log(`  - Total players: ${matchedPlayers.length}`);
+    console.log(`  - Successfully matched: ${matchCount}`);
+    console.log(`  - Enhancement errors: ${enhancementErrors}`);
+    console.log(`  - Match rate: ${((matchCount / sleeperPlayersArray.length) * 100).toFixed(1)}%`);
+  }
 
   // Verify we have meaningful data
   const playersWithPredictions = matchedPlayers.filter(p => p.predicted_points > 0);
-  console.log(`📊 Players with predictions: ${playersWithPredictions.length}`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`📊 Players with predictions: ${playersWithPredictions.length}`);
+  }
 
   if (playersWithPredictions.length === 0) {
     throw new Error('No players have prediction data - system cannot function');
@@ -391,7 +425,9 @@ export async function POST(request) {
     if (!forceRefresh) {
       const cached = cacheService.get('integrated-players');
       if (cached) {
-        console.log('📋 Returning cached data');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📋 Returning cached data');
+        }
         return NextResponse.json({
           ...cached,
           cached: true,
@@ -403,11 +439,15 @@ export async function POST(request) {
     // Get current gameweek from authoritative service
     let currentGameweek;
     try {
-      console.log('📅 Getting current gameweek from authoritative service...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📅 Getting current gameweek from authoritative service...');
+      }
       const gameweekService = (await import('../../services/gameweekService.js')).default;
       const gameweekData = await gameweekService.getCurrentGameweek();
       currentGameweek = gameweekData; // Keep full object with .number property
-      console.log(`📅 Current gameweek: ${currentGameweek.number}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📅 Current gameweek: ${currentGameweek.number}`);
+      }
     } catch (error) {
       console.error('❌ Failed to get current gameweek from authoritative service:', error);
       throw new Error('Cannot proceed without current gameweek information');
@@ -417,15 +457,17 @@ export async function POST(request) {
     const players = await integratePlayersWithOptaMatching(currentGameweek); // Pass it here
 
     // Enhanced player processing with V3 predictions
-    console.log('🚀 Starting V3 prediction enhancement...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🚀 Starting V3 prediction enhancement...');
+    }
     const v3EnhancedResult = await enhancePlayersWithV3Predictions(players, currentGameweek);
 
-    // Enhanced player processing with V4 predictions
-    console.log('🚀 Starting V4 ensemble enhancement...');
 const finalPlayers = v3EnhancedResult.players;
 const v3Statistics = v3EnhancedResult.v3Stats;
 
-console.log(`✅ Pipeline: V3 scoring applied to ${v3Statistics.v3Enhanced}/${v3Statistics.totalPlayers} players`);
+if (process.env.NODE_ENV === 'development') {
+  console.log(`✅ Pipeline: V3 scoring applied to ${v3Statistics.v3Enhanced}/${v3Statistics.totalPlayers} players`);
+}
 
 // Calculate matching statistics from V3 enhanced players
 const playersWithPredictions = finalPlayers.filter(p => p.predicted_points > 0);
@@ -469,7 +511,9 @@ const responseData = {
 
 // Cache successful results
 cacheService.set('integrated-players', responseData, 15 * 60 * 1000); // 15 minutes
-console.log('💾 Data cached successfully');
+if (process.env.NODE_ENV === 'development') {
+  console.log('💾 Data cached successfully');
+}
 
 return NextResponse.json(responseData);
     

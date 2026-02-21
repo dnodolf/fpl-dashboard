@@ -5,13 +5,17 @@ import GameweekService from '../../services/gameweekService.js';
 
 export async function GET() {
   try {
-    console.log('📅 FPL Gameweek API: Using hardcoded schedule...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📅 FPL Gameweek API: Using hardcoded schedule...');
+    }
 
     // Get gameweek data from our reliable hardcoded service
     const currentGameweek = await GameweekService.getCurrentGameweek();
     const upcomingGameweeks = await GameweekService.getUpcomingGameweeks();
 
-    console.log(`✅ Returning GW${currentGameweek.number} (${currentGameweek.status})`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Returning GW${currentGameweek.number} (${currentGameweek.status})`);
+    }
 
     return Response.json({
       success: true,

@@ -195,7 +195,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
       <button
         onClick={() => onPlayerClick?.(player)}
         className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg} hover:brightness-125 transition-all cursor-pointer`}
-        style={{ minWidth: '68px', maxWidth: '80px' }}
+        style={{ width: 'clamp(68px, 100%, 80px)' }}
       >
 
         {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
@@ -259,7 +259,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   return (
     <div className={`relative border-2 rounded-lg overflow-hidden ${
       'bg-gray-800 border-gray-600'
-      } ${isOptimal ? 'ring-2 ring-green-500' : ''}`} style={{ height: '480px' }}>
+      } ${isOptimal ? 'ring-2 ring-green-500' : ''} h-[480px]`}>
       
       {/* Field Background */}
       <div className="absolute inset-2 bg-gradient-to-b from-green-600 to-green-700 rounded-lg opacity-20"></div>
@@ -291,7 +291,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
               <div key={`empty-fwd-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
                 'border-gray-600 text-gray-500'
-              }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
+              }`} style={{ width: 'clamp(68px, 100%, 80px)' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">FWD</div>
               </div>
@@ -309,7 +309,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
               <div key={`empty-mid-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
                 'border-gray-600 text-gray-500'
-              }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
+              }`} style={{ width: 'clamp(68px, 100%, 80px)' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">MID</div>
               </div>
@@ -327,7 +327,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
               <div key={`empty-def-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
                 'border-gray-600 text-gray-500'
-              }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
+              }`} style={{ width: 'clamp(68px, 100%, 80px)' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">DEF</div>
               </div>
@@ -344,7 +344,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           {playersByPosition.GKP.length === 0 && (
             <div className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
               'border-gray-600 text-gray-500'
-            }`} style={{ minWidth: '68px', maxWidth: '80px' }}>
+            }`} style={{ width: 'clamp(68px, 100%, 80px)' }}>
               <div>Empty</div>
               <div className="text-xs opacity-50">GKP</div>
             </div>
@@ -752,9 +752,6 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
       </div>
     );
   }
-
-  // Clean optimizer summary
-  console.log(`⚡ Optimizer: ${current?.formation || 'N/A'} → ${optimal?.formation || 'N/A'} (${formations?.length || 0} evaluated)`);
 
   return (
     <div className="space-y-6">

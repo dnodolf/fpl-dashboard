@@ -71,7 +71,9 @@ class EnhancedDataService {
         return { ...sheetsData, source: 'sheets-primary' };
       }
     } catch (sheetsError) {
-      console.warn('Google Sheets failed, falling back to FFH:', sheetsError.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Google Sheets failed, falling back to FFH:', sheetsError.message);
+      }
     }
 
     try {

@@ -151,7 +151,9 @@ export async function calculateV3Prediction(player, currentGameweek) {
  */
 export async function applyV3Scoring(players, currentGameweek) {
   if (!Array.isArray(players)) {
-    console.warn('applyV3Scoring: players is not an array');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('applyV3Scoring: players is not an array');
+    }
     return players;
   }
 
@@ -160,7 +162,9 @@ export async function applyV3Scoring(players, currentGameweek) {
     throw new Error('currentGameweek is required for V3 scoring');
   }
 
-  console.log(`🚀 V3 Sleeper Scoring (Full Pipeline): Processing ${players.length} players for GW${currentGameweek.number}`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🚀 V3 Sleeper Scoring (Full Pipeline): Processing ${players.length} players for GW${currentGameweek.number}`);
+  }
 
   let playersWithPredictions = 0;
   let playersWithZeroPredictions = 0;
@@ -219,12 +223,14 @@ export async function applyV3Scoring(players, currentGameweek) {
     })
   );
 
-  console.log(`📊 V3 Sleeper Summary: ${playersWithPredictions} with predictions, ${playersWithZeroPredictions} with 0/no predictions`);
-  console.log(`🎯 Archetypes: ${playersWithArchetype} players with style-specific ratios`);
-  console.log(`⏱️ Playing time: ${playersWithMinutesAdjustment} players adjusted`);
-  console.log(`🔥 Form: ${playersWithFormBoost} hot, ${playersWithFormPenalty} cold`);
-  console.log(`📅 Fixtures: ${playersWithFavorableFixtures} favorable, ${playersWithDifficultFixtures} difficult`);
-  console.log(`🏥 Injury: ${playersReturningFromInjury} returning, ${playersCurrentlyInjured} currently out`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`📊 V3 Sleeper Summary: ${playersWithPredictions} with predictions, ${playersWithZeroPredictions} with 0/no predictions`);
+    console.log(`🎯 Archetypes: ${playersWithArchetype} players with style-specific ratios`);
+    console.log(`⏱️ Playing time: ${playersWithMinutesAdjustment} players adjusted`);
+    console.log(`🔥 Form: ${playersWithFormBoost} hot, ${playersWithFormPenalty} cold`);
+    console.log(`📅 Fixtures: ${playersWithFavorableFixtures} favorable, ${playersWithDifficultFixtures} difficult`);
+    console.log(`🏥 Injury: ${playersReturningFromInjury} returning, ${playersCurrentlyInjured} currently out`);
+  }
 
   return enhancedPlayers;
 }

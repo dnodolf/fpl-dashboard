@@ -59,10 +59,12 @@ async getCurrentGameweek() {
     gameweekData.source = 'fpl_api';
     
     // Only log gameweek detection once per session to avoid spam
-    if (!this._gameweekLogged || this._lastLoggedGW !== gameweekData.number) {
-      console.log(`✅ Gameweek service: GW${gameweekData.number} (${gameweekData.status})`);
-      this._gameweekLogged = true;
-      this._lastLoggedGW = gameweekData.number;
+    if (process.env.NODE_ENV === 'development') {
+      if (!this._gameweekLogged || this._lastLoggedGW !== gameweekData.number) {
+        console.log(`✅ Gameweek service: GW${gameweekData.number} (${gameweekData.status})`);
+        this._gameweekLogged = true;
+        this._lastLoggedGW = gameweekData.number;
+      }
     }
     return gameweekData;
     
@@ -127,9 +129,11 @@ async getCurrentGameweek() {
     ];
 
     // Only log once per session to avoid spam
-    if (!this._scheduleLogged) {
-      console.log(`📅 Using hardcoded schedule: ${HARDCODED_GAMEWEEK_SCHEDULE.length} gameweeks`);
-      this._scheduleLogged = true;
+    if (process.env.NODE_ENV === 'development') {
+      if (!this._scheduleLogged) {
+        console.log(`📅 Using hardcoded schedule: ${HARDCODED_GAMEWEEK_SCHEDULE.length} gameweeks`);
+        this._scheduleLogged = true;
+      }
     }
     return HARDCODED_GAMEWEEK_SCHEDULE;
   }
@@ -238,7 +242,9 @@ getEnhancedFallback() {
         return fplData.upcomingGameweeks.slice(0, count);
       }
     } catch (error) {
-      console.warn('Using fallback for upcoming gameweeks');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Using fallback for upcoming gameweeks');
+      }
     }
 
     // Fallback to complete schedule

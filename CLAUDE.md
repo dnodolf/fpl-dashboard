@@ -43,12 +43,18 @@ app/
 │   ├── v3ScoringService.js           # V3 Sleeper scoring with FPL conversion
 │   └── scoringConversionService.js   # Pure FFH data extraction (no conversion)
 ├── components/                    # UI components
+│   ├── DashboardHeader.js            # Top nav bar, tabs, scoring toggle
+│   ├── GameweekDisplay.js            # Clickable gameweek status widget
+│   ├── MatchingTabContent.js         # Opta matching stats tab
+│   ├── ComparisonChart.js            # Reusable bar chart for fixture comparisons
 │   ├── OptimizerTabContent.js        # Formation optimization interface
 │   ├── TransferTabContent.js         # Transfer recommendations with smart pairing
 │   ├── TransferPairRecommendations.js # Smart "Drop X, Add Y" transfer system
 │   ├── ComparisonTabContent.js       # Player comparison interface
 │   ├── PlayerModal.js                # Detailed player modal with charts & fixtures
-│   ├── MyPlayersTable.js            # Player analytics table
+│   ├── MyPlayersTable.js            # Player analytics table (memoized)
+│   ├── ErrorBoundary.js             # React error boundary (class component)
+│   ├── common/AppLogo.js            # SVG logo component
 │   └── stats/                       # Statistics card components
 │       ├── MatchingStatsCard.js     # Player matching statistics
 │       └── OptimizerStatsCard.js    # Optimizer performance statistics
@@ -57,7 +63,11 @@ app/
 ├── hooks/                         # Custom React hooks
 │   ├── usePlayerData.js             # Player data fetching hook
 │   └── useGameweek.js               # Gameweek state management hook
-└── page.js                       # Main dashboard (~1,550 lines)
+├── utils/                         # Utility functions
+│   ├── predictionUtils.js            # Centralized scoring utilities
+│   ├── gameweekStyles.js             # Gameweek status color utilities
+│   └── cacheManager.js              # Client-side caching with compression
+└── page.js                       # Main dashboard (~620 lines)
 ```
 
 ### Data Integration System
@@ -250,7 +260,7 @@ async function importServices() {
 4. **Gameweek Issues**: Eliminated by hardcoded system
 
 ### Debugging Tools
-- **Smart Console Logging**: Comprehensive logging with intelligent deduplication to prevent spam
+- **Dev-Only Console Logging**: All console.log/warn wrapped in `process.env.NODE_ENV === 'development'` guards
 - **Enhanced Error Detection**: Malformed API responses and JSON corruption detection
 - **Position Assignment Tracking**: Debugging with conflict resolution
 - **Transfer Analysis Debug**: Output for recommendation calculations
@@ -274,6 +284,22 @@ async function importServices() {
 - ✅ Clean console logging with duplicate prevention
 
 ## Recent Technical Updates
+
+### Codebase Cleanup & Component Extraction (February 2025)
+- **page.js reduced from ~1,550 to ~620 lines** by extracting inline components:
+  - `DashboardHeader.js` - Top nav bar, tabs, scoring toggle, update button
+  - `GameweekDisplay.js` - Clickable gameweek status widget
+  - `MatchingTabContent.js` - Opta matching stats tab content
+  - `ComparisonChart.js` - Reusable bar chart (eliminated duplication in ComparisonTabContent)
+  - `gameweekStyles.js` - Centralized gameweek status color utilities
+- **Console.log cleanup**: 208 statements wrapped in dev guards or removed from components
+  - All component `console.log/warn` removed entirely
+  - API/service/hook logs wrapped in `process.env.NODE_ENV === 'development'`
+  - `console.error` preserved (errors should always log)
+- **Dead code removed**: `getPlayerPredictedPointsLegacy` and `getPlayerPPGLegacy` from MyPlayersTable.js
+- **Performance**: Added `useMemo`/`useCallback` memoization to MyPlayersTable.js for filter/sort operations
+- **Deleted**: `page.js.backup` removed from repository
+- **Inline styles**: Converted OptimizerTabContent.js inline styles to Tailwind/CSS clamp
 
 ### v3.6 - Scoring Consistency Standardization (January 2025)
 - **Comprehensive Scoring Audit**: Fixed inconsistencies where same player showed different points across tabs

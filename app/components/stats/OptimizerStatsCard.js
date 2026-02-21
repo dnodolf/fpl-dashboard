@@ -81,8 +81,6 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
       return sum + points;
     }, 0) : 0;
 
-    console.log(`📊 Points: ${Math.round(currentPoints * 100) / 100} → ${Math.round(optimalPoints * 100) / 100} (${scoringMode})`);
-
     // Calculate optimal player stats
     const optimalPlayerIds = optimal?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
     const currentPlayerIds = current?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];

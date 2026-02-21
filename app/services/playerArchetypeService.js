@@ -113,10 +113,12 @@ export function getArchetypeStats(players) {
  * Log archetype information for debugging
  */
 export function logArchetypeInfo(player, archetypeInfo) {
-  if (archetypeInfo.source === 'archetype_mapping') {
-    console.log(
-      `🎯 Archetype: ${player.name} → ${archetypeInfo.archetype} (${archetypeInfo.ratio}x) - ${archetypeInfo.description}`
-    );
+  if (process.env.NODE_ENV === 'development') {
+    if (archetypeInfo.source === 'archetype_mapping') {
+      console.log(
+        `🎯 Archetype: ${player.name} → ${archetypeInfo.archetype} (${archetypeInfo.ratio}x) - ${archetypeInfo.description}`
+      );
+    }
   }
 }
 

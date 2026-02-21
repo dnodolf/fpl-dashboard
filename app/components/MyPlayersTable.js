@@ -1,5 +1,5 @@
 // app/components/MyPlayersTable.js - COMPLETE CORRECTED FILE WITH SLEEPER COLORS
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
 import { getPositionBadgeWithBorder } from '../constants/positionColors';
 import { USER_ID } from '../config/constants';
@@ -10,20 +10,20 @@ const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scori
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Filter to get only user's players (owned by USER_ID)
-  const myPlayers = players.filter(player =>
+  // Filter to get only user's players (owned by USER_ID) - memoized
+  const myPlayers = useMemo(() => players.filter(player =>
     player.owned_by === USER_ID ||
     player.owner_name === USER_ID
-  );
+  ), [players]);
 
-  // Apply search filter
-  const filteredPlayers = myPlayers.filter(player =>
+  // Apply search filter - memoized
+  const filteredPlayers = useMemo(() => myPlayers.filter(player =>
     player.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     player.web_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     player.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     player.team?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     player.position?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [myPlayers, searchTerm]);
 
   // Enhanced data extraction functions
   const getPlayerPredictedPoints = (player) => {
@@ -36,41 +36,6 @@ const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scori
     }
   };
   
-  // Legacy function for backward compatibility (now uses v3 service)
-  const getPlayerPredictedPointsLegacy = (player) => {
-    // Try current gameweek prediction first
-    if (player.current_gameweek_prediction?.predicted_pts) {
-      return player.current_gameweek_prediction.predicted_pts;
-    }
-    
-    // Try predictions array for current GW
-    if (player.predictions && Array.isArray(player.predictions)) {
-      const currentGWPred = player.predictions.find(p => p.gw === currentGameweek?.number);
-      if (currentGWPred?.predicted_pts) {
-        return currentGWPred.predicted_pts;
-      }
-      // Fall back to first available prediction
-      const firstPred = player.predictions[0];
-      if (firstPred?.predicted_pts) {
-        return firstPred.predicted_pts;
-      }
-    }
-    
-    // Try current predictions array
-    if (player.current_predictions && Array.isArray(player.current_predictions)) {
-      const latest = player.current_predictions[0];
-      if (latest?.predicted_pts) return latest.predicted_pts;
-    }
-    
-    // Try upcoming predictions array
-    if (player.upcoming_predictions && Array.isArray(player.upcoming_predictions)) {
-      const next = player.upcoming_predictions[0];
-      if (next?.predicted_pts) return next.predicted_pts;
-    }
-    
-    // Fallback to other fields
-    return player.predicted_pts || player.current_gw_prediction || 0;
-  };
 
   const getPlayerPredictedMinutes = (player) => {
   if (player.ffh_gw_minutes) {
@@ -82,7 +47,7 @@ const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scori
         return Math.round(gwMinutes[currentGW]);
       }
     } catch (e) {
-      console.warn('Error parsing ffh_gw_minutes:', e);
+      // Silently handle parse errors
     }
   }
   
@@ -99,37 +64,6 @@ const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scori
     }
   };
   
-  // Legacy PPG function for reference
-  const getPlayerPPGLegacy = (player) => {
-    // PRIORITY 1: Use Sleeper season average (predicted PPG after conversion) 
-    if (player.sleeper_season_avg && player.sleeper_season_avg > 0) {
-      return player.sleeper_season_avg;
-    }
-    
-    // PRIORITY 2: FFH form data PPG
-    if (player.form_data?.ppg) return player.form_data.ppg;
-    
-    // PRIORITY 3: Current PPG
-    if (player.current_ppg) return player.current_ppg;
-    
-    // PRIORITY 4: Calculated PPG
-    if (player.ppg) return player.ppg;
-    
-    // PRIORITY 5: Season average fallback
-    if (player.season_prediction_avg) return player.season_prediction_avg;
-    
-    // PRIORITY 6: FFH season average
-    if (player.ffh_season_avg && player.ffh_season_avg > 0) {
-      return player.ffh_season_avg;
-    }
-    
-    // PRIORITY 7: Fallback calculation
-    if (player.total_points && player.games_played && player.games_played > 0) {
-      return player.total_points / player.games_played;
-    }
-    
-    return 0;
-  };
 
 // Updated getFixtureDifficulty function that works with ffh_gw_predictions
 const getFixtureDifficulty = (player) => {
@@ -190,15 +124,14 @@ const getFixtureDifficulty = (player) => {
     return chanceOfPlaying;
   };
 
-  // Create sortable data with extracted values
-  const playersWithExtractedData = filteredPlayers.map(player => ({
+  // Create sortable data with extracted values - memoized for performance
+  const playersWithExtractedData = useMemo(() => filteredPlayers.map(player => ({
     ...player,
     predicted_points: getPlayerPredictedPoints(player),
     predicted_minutes: getPlayerPredictedMinutes(player),
     ppg_value: getPlayerPPG(player),
     fixture_difficulty_value: getFixtureDifficulty(player),
     start_percentage: calculateStartPercentage(player),
-    // Extract THIS WEEK matchup and START/BENCH recommendation (V3 only)
     this_week_opponent: player.v3_this_week_opponent || 'TBD',
     this_week_is_home: player.v3_this_week_is_home !== undefined ? player.v3_this_week_is_home : true,
     this_week_matchup_label: player.v3_this_week_matchup_label || '❓ Unknown',
@@ -206,40 +139,33 @@ const getFixtureDifficulty = (player) => {
     start_recommendation: player.v3_start_recommendation || 'UNKNOWN',
     start_label: player.v3_start_label || '❓ N/A',
     start_color: player.v3_start_color || 'text-gray-500'
-  }));
+  })), [filteredPlayers, scoringMode, currentGameweek]);
 
-  // Sort players
-  const sortedPlayers = [...playersWithExtractedData].sort((a, b) => {
+  // Sort players - memoized for performance
+  const sortedPlayers = useMemo(() => [...playersWithExtractedData].sort((a, b) => {
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
-    
-    // Handle null/undefined values
+
     if (aValue == null && bValue == null) return 0;
     if (aValue == null) return sortConfig.direction === 'asc' ? -1 : 1;
     if (bValue == null) return sortConfig.direction === 'asc' ? 1 : -1;
-    
-    // Sort numbers
+
     if (typeof aValue === 'number' && typeof bValue === 'number') {
       return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
     }
-    
-    // Sort strings
+
     const aStr = String(aValue);
     const bStr = String(bValue);
-    if (sortConfig.direction === 'asc') {
-      return aStr.localeCompare(bStr);
-    } else {
-      return bStr.localeCompare(aStr);
-    }
-  });
+    return sortConfig.direction === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+  }), [playersWithExtractedData, sortConfig.key, sortConfig.direction]);
 
-  // Handle column header click
-  const handleSort = (key) => {
+  // Handle column header click - memoized
+  const handleSort = useCallback((key) => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
     }));
-  };
+  }, []);
 
   // Render sort icon
   const renderSortIcon = (columnKey) => {

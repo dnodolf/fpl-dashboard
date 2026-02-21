@@ -4,7 +4,9 @@ import { sleeperApiService } from '../../services/sleeperApiService';
 
 export async function GET() {
   try {
-    console.log('📊 Standings API: Fetching league standings');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 Standings API: Fetching league standings');
+    }
 
     // Get rosters with user info
     const rosters = await sleeperApiService.getRosters();
@@ -37,7 +39,9 @@ export async function GET() {
       return b.pointsFor - a.pointsFor;
     });
 
-    console.log(`✅ Standings API: Retrieved ${standings.length} teams`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Standings API: Retrieved ${standings.length} teams`);
+    }
 
     return NextResponse.json(
       {

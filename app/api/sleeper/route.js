@@ -161,7 +161,9 @@ export async function GET(request) {
     const endpoint = searchParams.get('endpoint') || 'players';
     const includeOwnership = searchParams.get('ownership') !== 'false';
 
-    console.log(`Sleeper API request: endpoint=${endpoint}, ownership=${includeOwnership}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Sleeper API request: endpoint=${endpoint}, ownership=${includeOwnership}`);
+    }
 
     switch (endpoint) {
       case 'players':

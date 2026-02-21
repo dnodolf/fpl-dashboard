@@ -145,7 +145,9 @@ export class FormationOptimizerService {
       };
     }
 
-    console.log(`🔍 ${formationType} - Available players:`, availablePlayers.length);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 ${formationType} - Available players:`, availablePlayers.length);
+    }
 
     // Group players by position using unified position logic
     const playersByPosition = {
@@ -166,17 +168,20 @@ export class FormationOptimizerService {
           points: this.getPlayerPoints(player)
         });
       } else {
-        console.warn(`🚨 Invalid position: "${position}" for player ${player.name || player.web_name}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`🚨 Invalid position: "${position}" for player ${player.name || player.web_name}`);
+        }
       }
     });
 
-    // DEBUG: Log position counts
-    console.log(`📊 ${formationType} position distribution:`, {
-      GKP: playersByPosition.GKP.length,
-      DEF: playersByPosition.DEF.length, 
-      MID: playersByPosition.MID.length,
-      FWD: playersByPosition.FWD.length
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 ${formationType} position distribution:`, {
+        GKP: playersByPosition.GKP.length,
+        DEF: playersByPosition.DEF.length,
+        MID: playersByPosition.MID.length,
+        FWD: playersByPosition.FWD.length
+      });
+    }
 
     // Check if we have enough players for this formation
     const requirements = formationConfig;
@@ -322,7 +327,9 @@ export class FormationOptimizerService {
       // Get the primary formation (usually key "1")
       return formations["1"] || Object.values(formations)[0] || null;
     } catch (error) {
-      console.warn('Failed to parse formation:', formationString);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to parse formation:', formationString);
+      }
       return null;
     }
   }
@@ -349,7 +356,9 @@ export class FormationOptimizerService {
       if (positionCounts.hasOwnProperty(position)) {
         positionCounts[position]++;
       } else {
-        console.warn(`🚨 Unknown position "${position}" for player ${player.name}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`🚨 Unknown position "${position}" for player ${player.name}`);
+        }
       }
     });
 
@@ -362,7 +371,9 @@ export class FormationOptimizerService {
    */
   async analyzeCurrentRoster(allPlayers, userId) {
     try {
-      console.log(`🔍 Analyzing roster for ${userId}...`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔍 Analyzing roster for ${userId}...`);
+      }
       
       // Get current roster from Sleeper
       const rosterInfo = await this.getCurrentRoster(userId);
@@ -373,7 +384,9 @@ export class FormationOptimizerService {
         return rosterInfo.players.includes(playerId);
       });
 
-      console.log(`📋 Found ${myPlayers.length} owned players for ${rosterInfo.userName}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📋 Found ${myPlayers.length} owned players for ${rosterInfo.userName}`);
+      }
 
       if (myPlayers.length === 0) {
         return {
@@ -389,7 +402,9 @@ export class FormationOptimizerService {
         positionCounts[pos] = (positionCounts[pos] || 0) + 1;
       });
       
-      console.log('📊 Position distribution:', positionCounts);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Position distribution:', positionCounts);
+      }
 
       // Get current formation from starters
       const currentStarters = myPlayers.filter(p => {
@@ -400,7 +415,9 @@ export class FormationOptimizerService {
       const currentFormation = this.calculateFormationFromPlayers(currentStarters);
       const currentPoints = currentStarters.reduce((sum, p) => sum + this.getPlayerPoints(p), 0);
 
-      console.log(`📈 Current: ${currentFormation} with ${currentPoints.toFixed(1)} points`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📈 Current: ${currentFormation} with ${currentPoints.toFixed(1)} points`);
+      }
 
       // Optimize all possible formations
       const allFormationResults = this.optimizeAllFormations(myPlayers);
@@ -486,6 +503,8 @@ export class FormationOptimizerService {
    */
   clearCache() {
     this.cache.clear();
-    console.log('🔄 Formation optimizer cache cleared');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Formation optimizer cache cleared');
+    }
   }
 }

@@ -5,7 +5,9 @@ import { cacheService } from '../../services/cacheService';
 
 export async function GET() {
   try {
-    console.log('Running system health check...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Running system health check...');
+    }
     
     // Get comprehensive health check
     const health = await enhancedDataService.healthCheck();

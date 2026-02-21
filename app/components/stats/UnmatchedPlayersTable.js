@@ -23,8 +23,6 @@ export function UnmatchedPlayersTable({ optaAnalysis }) {
 
   const unmatchedPlayers = optaAnalysis?.unmatchedSleeperWithOpta || [];
 
-  console.log('UNMATCHED PLAYERS RAW DATA:', unmatchedPlayers.slice(0, 3));
-
   if (unmatchedPlayers.length === 0) {
     return (
       <div className={`rounded-lg shadow-sm border p-6 text-center bg-gray-800 border-gray-700`}>

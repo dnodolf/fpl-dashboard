@@ -51,7 +51,9 @@ export async function POST(request) {
     if (!forceRefresh) {
       const cached = cacheService.get(cacheKey);
       if (cached) {
-        console.log('📋 Returning cached optimizer results');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📋 Returning cached optimizer results');
+        }
         return NextResponse.json({
           ...cached,
           cached: true,
@@ -60,11 +62,15 @@ export async function POST(request) {
       }
     }
 
-    console.log(`🔍 OPTIMIZER: Starting ${analysisType} analysis for ${userId}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 OPTIMIZER: Starting ${analysisType} analysis for ${userId}`);
+    }
 
     // Clear service cache if force refresh
     if (forceRefresh) {
-      console.log('🔄 Clearing optimizer service cache due to forceRefresh');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 Clearing optimizer service cache due to forceRefresh');
+      }
       const { FormationOptimizerService } = await import('../../services/formationOptimizerService.js');
       const optimizerService = new FormationOptimizerService();
       optimizerService.clearCache();
@@ -83,7 +89,9 @@ export async function POST(request) {
 
     // Apply v3 scoring if needed
     if (scoringMode === 'v3') {
-      console.log(`🚀 Applying v3 scoring to ${players.length} players`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🚀 Applying v3 scoring to ${players.length} players`);
+      }
       if (!requestData.currentGameweek) {
         throw new Error('currentGameweek is required for v3 scoring mode');
       }
@@ -94,7 +102,9 @@ export async function POST(request) {
       players = await v3ScoringService.applyV3Scoring(players, currentGameweek);
     }
 
-    console.log(`📊 Processing ${players.length} players for optimization`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Processing ${players.length} players for optimization`);
+    }
 
     // Debug position distribution
     const positionCounts = {};
@@ -102,10 +112,10 @@ export async function POST(request) {
       const pos = normalizePosition(player);
       positionCounts[pos] = (positionCounts[pos] || 0) + 1;
     });
-    console.log('📊 Position distribution:', positionCounts);
-
-    // Perform optimization analysis
-    console.log('🎯 Analyzing current roster...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 Position distribution:', positionCounts);
+      console.log('🎯 Analyzing current roster...');
+    }
     const analysis = await optimizerService.analyzeCurrentRoster(players, userId);
 
     if (analysis.error) {
