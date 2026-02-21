@@ -12,6 +12,7 @@ import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
+import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 import { getTeamLogoFromPlayer, getTeamFullName } from '../utils/teamImage';
 
@@ -148,66 +149,40 @@ export function PlayerModal({
   // Early return AFTER all hooks have been called
   if (!isOpen || !player) return null;
 
-  // Get injury/availability status from news
-  const getAvailabilityStatus = (news) => {
+  // Get injury/availability status — prefer FPL status code, fallback to news text parsing
+  const getAvailabilityStatus = (playerData) => {
+    // Prefer FPL Official status (single character, authoritative)
+    if (playerData.fpl_status) {
+      const fplBadge = getFPLStatusBadge(playerData.fpl_status);
+      if (fplBadge) return fplBadge;
+    }
+
+    // Fallback to news text parsing for unmatched players
+    const news = playerData.news;
     if (!news) return null;
 
     const newsLower = news.toLowerCase();
 
-    // Critical - Red badges
     if (newsLower.includes('suspended') || newsLower.includes('banned')) {
-      return {
-        badge: 'SUSPENDED',
-        color: 'bg-red-600 text-white',
-        icon: '🚫'
-      };
+      return { badge: 'SUSPENDED', color: 'bg-red-600 text-white', icon: '🚫' };
     }
     if (newsLower.includes('injured') || newsLower.includes('injury')) {
-      return {
-        badge: 'INJURED',
-        color: 'bg-red-500 text-white',
-        icon: '🏥'
-      };
+      return { badge: 'INJURED', color: 'bg-red-500 text-white', icon: '🏥' };
     }
-
-    // Warning - Orange/Yellow badges
     if (newsLower.includes('doubt') || newsLower.includes('doubtful') || newsLower.includes('50%')) {
-      return {
-        badge: 'DOUBTFUL',
-        color: 'bg-orange-500 text-white',
-        icon: '⚠️'
-      };
+      return { badge: 'DOUBTFUL', color: 'bg-orange-500 text-white', icon: '⚠️' };
     }
     if (newsLower.includes('knock') || newsLower.includes('minor')) {
-      return {
-        badge: 'KNOCK',
-        color: 'bg-yellow-600 text-white',
-        icon: '⚡'
-      };
+      return { badge: 'KNOCK', color: 'bg-yellow-600 text-white', icon: '⚡' };
     }
-
-    // Positive - Green/Blue badges
     if (newsLower.includes('fit') || newsLower.includes('available') || newsLower.includes('training')) {
-      return {
-        badge: 'AVAILABLE',
-        color: 'bg-green-600 text-white',
-        icon: '✅'
-      };
+      return { badge: 'AVAILABLE', color: 'bg-green-600 text-white', icon: '✅' };
     }
     if (newsLower.includes('return') || newsLower.includes('back')) {
-      return {
-        badge: 'RETURNING',
-        color: 'bg-blue-600 text-white',
-        icon: '↩️'
-      };
+      return { badge: 'RETURNING', color: 'bg-blue-600 text-white', icon: '↩️' };
     }
 
-    // Default - Gray badge for other news
-    return {
-      badge: 'NEWS',
-      color: 'bg-gray-600 text-white',
-      icon: '📰'
-    };
+    return { badge: 'NEWS', color: 'bg-gray-600 text-white', icon: '📰' };
   };
 
   // Get ownership display
@@ -389,22 +364,27 @@ export function PlayerModal({
           )}
 
           {/* News/Availability indicator */}
-          {player.news && (
-            <div className="mt-3">
-              {(() => {
-                const status = getAvailabilityStatus(player.news);
-                return (
-                  <div className="flex items-start gap-2">
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${status.color} flex items-center gap-1`}>
-                      <span>{status.icon}</span>
-                      <span>{status.badge}</span>
-                    </span>
-                    <p className="text-sm text-gray-300 flex-1">{player.news}</p>
+          {(player.news || (player.fpl_status && player.fpl_status !== 'a')) && (() => {
+            const status = getAvailabilityStatus(player);
+            if (!status) return null;
+            const newsTimestamp = player.news_added || player.fpl_news_added;
+            return (
+              <div className="mt-3">
+                <div className="flex items-start gap-2">
+                  <span className={`px-2 py-1 rounded text-xs font-bold ${status.color} flex items-center gap-1 whitespace-nowrap`}>
+                    <span>{status.icon}</span>
+                    <span>{status.badge}</span>
+                  </span>
+                  <div className="flex-1">
+                    {player.news && <p className="text-sm text-gray-300">{player.news}</p>}
+                    {newsTimestamp && (
+                      <p className="text-xs text-gray-500 mt-0.5">{timeAgo(newsTimestamp)}</p>
+                    )}
                   </div>
-                );
-              })()}
-            </div>
-          )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Season Stats - Only show if we have meaningful data */}

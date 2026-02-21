@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { USER_ID } from '../config/constants';
 import { getSleeperPositionStyle } from '../constants/positionColors';
+import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 
 // Progress Ring component for visual stats
@@ -278,7 +279,10 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
     : 100;
 
   // Get players with injury/news
-  const playersWithNews = myPlayers.filter(p => p.news && p.news.length > 0);
+  const playersWithNews = myPlayers.filter(p =>
+    (p.news && p.news.length > 0) ||
+    (p.fpl_status && p.fpl_status !== 'a')
+  );
 
   // Calculate predicted points for this GW
   const predictedPoints = myPlayers.reduce((sum, p) => sum + getPlayerPoints(p), 0);
@@ -519,32 +523,48 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
               <span>📰 Player News ({playersWithNews.length})</span>
             </h3>
             <div className="space-y-2">
-              {playersWithNews.map(player => (
-                <div key={player.sleeper_id} className="flex items-start gap-3 text-sm">
-                  <PlayerAvatar player={player} size="md" />
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
-                    {player.position}
-                  </span>
-                  <div className="flex-1">
-                    <button
-                      onClick={() => onPlayerClick?.(player)}
-                      className={`font-medium hover:underline transition-colors text-left ${getPositionTextColor(player.position)}`}
-                    >
-                      {player.name}
-                    </button>
-                    <p className="text-xs text-gray-400 mt-0.5">{player.news}</p>
+              {playersWithNews.map(player => {
+                const statusBadge = player.fpl_status ? getFPLStatusBadge(player.fpl_status) : null;
+                const newsTimestamp = player.news_added || player.fpl_news_added;
+                return (
+                  <div key={player.sleeper_id} className="flex items-start gap-3 text-sm">
+                    <PlayerAvatar player={player} size="md" />
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
+                      {player.position}
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => onPlayerClick?.(player)}
+                          className={`font-medium hover:underline transition-colors text-left ${getPositionTextColor(player.position)}`}
+                        >
+                          {player.name}
+                        </button>
+                        {statusBadge && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${statusBadge.color}`}>
+                            {statusBadge.badge}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {player.news && <p className="text-xs text-gray-400">{player.news}</p>}
+                        {newsTimestamp && (
+                          <span className="text-[10px] text-gray-600">{timeAgo(newsTimestamp)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      (player.chance_next_round ?? player.chance_of_playing_next_round ?? 100) < 50
+                        ? 'text-red-400'
+                        : (player.chance_next_round ?? player.chance_of_playing_next_round ?? 100) < 75
+                          ? 'text-orange-400'
+                          : 'text-cyan-400'
+                    }`}>
+                      {player.chance_next_round ?? player.chance_of_playing_next_round ?? 100}%
+                    </span>
                   </div>
-                  <span className={`text-xs font-medium ${
-                    (player.chance_next_round ?? player.chance_of_playing_next_round ?? 100) < 50
-                      ? 'text-red-400'
-                      : (player.chance_next_round ?? player.chance_of_playing_next_round ?? 100) < 75
-                        ? 'text-orange-400'
-                        : 'text-cyan-400'
-                  }`}>
-                    {player.chance_next_round ?? player.chance_of_playing_next_round ?? 100}%
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

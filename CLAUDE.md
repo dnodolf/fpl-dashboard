@@ -16,7 +16,7 @@ npm run lint        # Run ESLint checks
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v3.6 - Scoring Consistency Standardization
+**Current Version**: v3.7 - FPL Injury & Status News Integration
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -41,7 +41,8 @@ app/
 │   ├── playerMatchingService.js      # Opta ID-based matching (98% success)
 │   ├── formationOptimizerService.js  # Lineup optimization algorithms
 │   ├── v3ScoringService.js           # V3 Sleeper scoring with FPL conversion
-│   └── scoringConversionService.js   # Pure FFH data extraction (no conversion)
+│   ├── scoringConversionService.js   # Pure FFH data extraction (no conversion)
+│   └── fplNewsService.js             # FPL bootstrap-static news/status fetcher
 ├── components/                    # UI components
 │   ├── DashboardHeader.js            # Top nav bar, tabs, scoring toggle
 │   ├── GameweekDisplay.js            # Clickable gameweek status widget
@@ -66,6 +67,7 @@ app/
 ├── utils/                         # Utility functions
 │   ├── predictionUtils.js            # Centralized scoring utilities
 │   ├── gameweekStyles.js             # Gameweek status color utilities
+│   ├── newsUtils.js                  # timeAgo() and getFPLStatusBadge() helpers
 │   └── cacheManager.js              # Client-side caching with compression
 └── page.js                       # Main dashboard (~620 lines)
 ```
@@ -75,7 +77,8 @@ app/
 **Primary Data Sources:**
 1. **Sleeper API**: Authoritative source for player positions, league data, rosters
 2. **Fantasy Football Hub (FFH)**: Predictions and analytics (with graceful fallback)
-3. **Hardcoded Schedule**: Complete 2025-26 Premier League gameweek dates
+3. **FPL Official API**: Player injury/status news via `bootstrap-static` endpoint (graceful fallback)
+4. **Hardcoded Schedule**: Complete 2025-26 Premier League gameweek dates
 
 **Position Authority**: Sleeper position data takes absolute precedence over FFH data to ensure 100% accuracy with Sleeper app.
 
@@ -124,7 +127,19 @@ app/
   - **V3 Mode**: Sleeper-adjusted predictions with optimal position-based conversion ratios (validated as best-performing)
 - Interactive player comparison modals with detailed statistics
 
-### Player Modal (NEW in v3.4)
+### Player News & Injury Status (NEW in v3.7)
+- **FPL Official API integration**: Real-time injury and availability data from `bootstrap-static`
+- **Status badges**: INJURED 🏥 / DOUBTFUL ⚠️ / SUSPENDED 🚫 / UNAVAILABLE ❌ / NOT IN SQUAD ➖
+- **Relative timestamps**: News shown as "2h ago", "3d ago" etc. via `timeAgo()` utility
+- **Color-coded news icons** in Players tab: red for injured/suspended, orange for doubtful
+- **Tooltip with news + timestamp** on hover in Players tab table
+- **Home tab news feed**: Expanded to include all non-available players with inline badges
+- **PlayerModal**: FPL status badge + timestamp below player name
+- **Graceful fallback**: FPL API failure silently skipped, no impact on other features
+- **Matching**: Uses existing `ffh_id` field (FPL element ID) for exact match — no name matching needed
+- **FPL status codes**: `a`=available (hidden), `i`=injured, `d`=doubtful, `s`=suspended, `u`=unavailable, `n`=not in squad
+
+### Player Modal (v3.4)
 - **Detailed player view** accessible by clicking any player in the dashboard
 - **Header Stats**: Season total points, current GW prediction, season average, minutes prediction
 - **FFH/V3 Toggle**: Switch between scoring modes within the modal
@@ -270,7 +285,7 @@ async function importServices() {
 
 ## Current Status
 
-**Production Ready**: v3.4 represents enhanced player details and comparison visualizations with:
+**Production Ready**: v3.7 represents real-time player injury/status integration with:
 - ✅ 100% reliable gameweek system (hardcoded)
 - ✅ 98% player matching accuracy
 - ✅ 100% position accuracy (Sleeper authority)
@@ -282,8 +297,24 @@ async function importServices() {
 - ✅ Detailed player modal with charts and fixture analysis
 - ✅ Optimized caching with compression and smart cleanup
 - ✅ Clean console logging with duplicate prevention
+- ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v3.7 - FPL Injury & Status News Integration (February 2025)
+- **New Service**: `app/services/fplNewsService.js` — fetches FPL `bootstrap-static` API, 15-min server-side cache, returns null on failure
+- **New Utilities**: `app/utils/newsUtils.js`
+  - `timeAgo(isoTimestamp)` — converts timestamps to relative strings ("2h ago", "3d ago")
+  - `getFPLStatusBadge(fplStatus)` — returns badge label, Tailwind color class, and icon per status code
+- **API Integration**: `app/api/integrated-players/route.js`
+  - FPL fetch added to `Promise.all` alongside Sleeper and FFH for zero-latency overhead
+  - Merges `fpl_status`, `fpl_news`, `fpl_news_added` onto players via exact `ffh_id` match
+  - Overrides `chance_next_round` when FPL has data
+- **PlayerModal**: FPL status badge + `timeAgo` timestamp displayed below player name header
+- **HomeTabContent**: News feed expands to all `fpl_status !== 'a'` players; inline badge + timestamp per entry
+- **page.js (Players tab)**: News icon 📰 color-coded red (injured/suspended), orange (doubtful); tooltip shows news text · timestamp
+- **Matching strategy**: Uses existing `ffh_id` field (stores FPL element ID) — exact match, no name fuzzy-matching needed
+- **FPL status codes**: `a`=available (no badge shown), `i`=injured, `d`=doubtful, `s`=suspended, `u`=unavailable, `n`=not in squad
 
 ### Codebase Cleanup & Component Extraction (February 2025)
 - **page.js reduced from ~1,550 to ~620 lines** by extracting inline components:

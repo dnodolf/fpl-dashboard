@@ -304,11 +304,12 @@ async function integratePlayersWithOptaMatching(currentGameweek) {
   }
   const services = await importServices(); // Will throw if any service fails
   
-  // Fetch data from both sources - BOTH must succeed
-  // Data sources fetched above
-  const [sleeperData, ffhData] = await Promise.all([
+  // Fetch data from all sources in parallel
+  const { fetchFPLNewsData } = await import('../../services/fplNewsService.js');
+  const [sleeperData, ffhData, fplNewsMap] = await Promise.all([
     fetchSleeperData(), // Will throw if fails
-    fetchFFHData()      // Will throw if fails
+    fetchFFHData(),     // Will throw if fails
+    fetchFPLNewsData()  // Returns null on failure (graceful)
   ]);
 
   if (process.env.NODE_ENV === 'development') {
@@ -398,6 +399,37 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
     console.log(`  - Successfully matched: ${matchCount}`);
     console.log(`  - Enhancement errors: ${enhancementErrors}`);
     console.log(`  - Match rate: ${((matchCount / sleeperPlayersArray.length) * 100).toFixed(1)}%`);
+  }
+
+  // Merge FPL Official API news data into matched players
+  if (fplNewsMap) {
+    let fplNewsMatched = 0;
+    for (const player of matchedPlayers) {
+      const fplId = player.ffh_id;
+      if (fplId && fplNewsMap[fplId]) {
+        const fplData = fplNewsMap[fplId];
+        player.fpl_status = fplData.fpl_status;
+        player.fpl_news = fplData.fpl_news;
+        player.fpl_news_added = fplData.fpl_news_added;
+        player.fpl_chance_this_round = fplData.fpl_chance_this_round;
+        player.fpl_chance_next_round = fplData.fpl_chance_next_round;
+
+        if (fplData.fpl_chance_next_round !== null && fplData.fpl_chance_next_round !== undefined) {
+          player.chance_next_round = fplData.fpl_chance_next_round;
+          player.chance_of_playing_next_round = fplData.fpl_chance_next_round;
+        }
+
+        if (fplData.fpl_news && fplData.fpl_news.trim() !== '') {
+          player.news = fplData.fpl_news;
+          player.news_added = fplData.fpl_news_added;
+          player.news_source = 'fpl';
+        }
+        fplNewsMatched++;
+      }
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📰 FPL News: Merged data for ${fplNewsMatched}/${matchedPlayers.length} players`);
+    }
   }
 
   // Verify we have meaningful data

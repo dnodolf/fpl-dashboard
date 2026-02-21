@@ -7,7 +7,7 @@ class CacheService {
     // Cache duration strategies
     this.cacheDurations = {
       'ffh-players': 10 * 60 * 1000,        // 10 minutes - predictions change
-      'sleeper-rosters': 60 * 60 * 1000,    // 1 hour - rosters change less frequently  
+      'sleeper-rosters': 1 * 60 * 1000,    // 1 minute - rosters can change frequently  
       'player-matches': 24 * 60 * 60 * 1000, // 24 hours - matches rarely change
       'scoring-ratios': 7 * 24 * 60 * 60 * 1000, // 7 days - scoring systems stable
       'sheets-data': 5 * 60 * 1000          // 5 minutes - manual updates

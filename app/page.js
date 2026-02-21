@@ -21,6 +21,7 @@ import { OptimizerStatsCard } from './components/stats/OptimizerStatsCard';
 import { PlayerModal } from './components/PlayerModal';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from './utils/predictionUtils';
 import { getSleeperPositionStyle, getPositionColors } from './constants/positionColors';
+import { timeAgo } from './utils/newsUtils';
 
 // ----------------- MAIN DASHBOARD COMPONENT -----------------
 export default function FPLDashboard() {
@@ -466,11 +467,21 @@ export default function FPLDashboard() {
                                   >
                                     {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
                                   </button>
-                                  {player.news && player.news.trim() !== '' && (
-                                    <span className="text-orange-400 hover:text-orange-300 cursor-pointer transition-colors" title={player.news}>
-                                      📰
-                                    </span>
-                                  )}
+                                  {(player.news?.trim() || (player.fpl_status && player.fpl_status !== 'a')) && (() => {
+                                    const statusColor = player.fpl_status === 'i' || player.fpl_status === 's'
+                                      ? 'text-red-400 hover:text-red-300'
+                                      : player.fpl_status === 'd'
+                                        ? 'text-orange-400 hover:text-orange-300'
+                                        : 'text-orange-400 hover:text-orange-300';
+                                    const newsText = player.news?.trim() || '';
+                                    const timestamp = player.news_added ? timeAgo(player.news_added) : '';
+                                    const tooltip = [newsText, timestamp].filter(Boolean).join(' · ');
+                                    return (
+                                      <span className={`${statusColor} cursor-pointer transition-colors`} title={tooltip || 'Status alert'}>
+                                        📰
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                                 {player.injury_status && (
                                   <div className="text-xs text-red-600">🏥 {player.injury_status}</div>
