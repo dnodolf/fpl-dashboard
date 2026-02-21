@@ -34,5 +34,26 @@ export function convertToV3Points(ffhPoints, position) {
   return ffhPoints * getV3ConversionRatio(position);
 }
 
+/**
+ * Get the best available conversion ratio using calibration data.
+ * Priority: per-player factor > calibrated position ratio > hardcoded ratio
+ *
+ * @param {string} position - Player position (GKP, DEF, MID, FWD)
+ * @param {string} sleeperId - Sleeper player ID (for per-player lookup)
+ * @param {Object|null} calibrationData - Output from computeCalibration()
+ * @returns {number} Best available conversion ratio
+ */
+export function getCalibrationAwareRatio(position, sleeperId, calibrationData) {
+  if (!calibrationData?.calibrated) {
+    return V3_CONVERSION_RATIOS[position] || 1.0;
+  }
+  // Per-player factor takes priority when available
+  if (sleeperId && calibrationData.playerFactors?.[sleeperId]) {
+    return calibrationData.playerFactors[sleeperId];
+  }
+  // Fall back to calibrated position-level ratio
+  return calibrationData.positionRatios?.[position] ?? V3_CONVERSION_RATIOS[position] ?? 1.0;
+}
+
 // Legacy export for backwards compatibility
 export const FALLBACK_CONVERSION_RATIOS = V3_CONVERSION_RATIOS;

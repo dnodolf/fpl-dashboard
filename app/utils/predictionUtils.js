@@ -25,7 +25,8 @@ export function getNextNGameweeksTotal(player, scoringMode, currentGW, numGamewe
     if (prediction) {
       const ffhPoints = prediction.predicted_pts || 0;
       const gwPoints = scoringMode === 'v3'
-        ? convertToV3Points(ffhPoints, player.position)
+        // Prefer server-computed v3_pts (calibrated); fall back to static ratio
+        ? (prediction.v3_pts !== undefined ? prediction.v3_pts : convertToV3Points(ffhPoints, player.position))
         : ffhPoints;
       totalPoints += gwPoints;
     }
@@ -78,7 +79,8 @@ export function getNextNGameweeksDetails(player, scoringMode, currentGW, numGame
     if (prediction) {
       const ffhPoints = prediction.predicted_pts || 0;
       const points = scoringMode === 'v3'
-        ? convertToV3Points(ffhPoints, player.position)
+        // Prefer server-computed v3_pts (calibrated); fall back to static ratio
+        ? (prediction.v3_pts !== undefined ? prediction.v3_pts : convertToV3Points(ffhPoints, player.position))
         : ffhPoints;
 
       details.push({

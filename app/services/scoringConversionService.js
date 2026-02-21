@@ -77,14 +77,23 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const gameweekPredictions = extractAllGameweekPredictions(ffhData);
     const allGameweekPredictions = gameweekPredictions.all || [];
 
-    // Calculate season totals - PURE FFH DATA (no multipliers)
-    const ffhSeasonPrediction = ffhData.season_prediction ||
-                                ffhData.range_prediction ||
-                                ffhData.predicted_pts ||
-                                allGameweekPredictions.reduce((sum, gw) => sum + gw.predicted_pts, 0) ||
-                                0;
+    // Dev diagnostic: log results count for first few players to verify FFH returns historical data
+    if (process.env.NODE_ENV === 'development' && Math.random() < 0.005) {
+      const resultsCount = allGameweekPredictions.filter(p => p.source === 'results').length;
+      const predictionsCount = allGameweekPredictions.filter(p => p.source === 'predictions').length;
+      console.log(`📊 FFH data for ${ffhData.web_name || 'player'}: ${predictionsCount} predictions, ${resultsCount} results (raw results array: ${ffhData.results?.length || 0} entries)`);
+    }
 
-    const ffhSeasonAvg = ffhSeasonPrediction / 38;
+    // Calculate season totals from FUTURE predictions only (source:'predictions').
+    // ffhData.season_prediction covers GW1-38 including past weeks — using it as "ROS points"
+    // is misleading for players whose future predictions are all zero (e.g. injured/transferred).
+    const futurePredictions = allGameweekPredictions.filter(p => p.source === 'predictions');
+    const ffhSeasonPrediction = futurePredictions.length > 0
+      ? futurePredictions.reduce((sum, gw) => sum + gw.predicted_pts, 0)
+      : (ffhData.season_prediction || ffhData.range_prediction || ffhData.predicted_pts || 0);
+
+    const remainingGWs = Math.max(futurePredictions.length, 1);
+    const ffhSeasonAvg = ffhSeasonPrediction / remainingGWs;
 
     // Create gameweek predictions object - PURE FFH DATA
     const ffhGwPredictions = {};
@@ -147,6 +156,8 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
 
       // PURE FFH DATA - Preserve original fields for direct mapping
       predictions: ffhData.predictions || [],
+      // Processed past-GW results for V3 calibration (source: 'results' entries)
+      ffh_gw_results: allGameweekPredictions.filter(p => p.source === 'results'),
       season_prediction_avg: ffhData.season_prediction_avg || 0,
       news: ffhData.player?.news || ffhData.news || '',
       chance_next_round: chanceOfPlaying,

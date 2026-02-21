@@ -8,14 +8,19 @@ import { extractAllGameweekPredictions, extractAllGameweekMinutes } from '../../
 import { fetchSleeperScoringSettings } from '../../services/scoringConversionService.js';
 import { cacheService } from '../../services/cacheService.js';
 
-async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek) {
+async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek, calibrationData = null) {
   try {
     if (process.env.NODE_ENV === 'development') {
       console.log(`🚀 V3 Sleeper Scoring: Converting ${matchedPlayers.length} players to Sleeper league scoring`);
+      if (calibrationData?.calibrated) {
+        console.log(`🎯 Using calibrated ratios (${calibrationData.sampleCount} samples, confidence=${calibrationData.confidence})`);
+      } else {
+        console.log(`⚠️ Using hardcoded V3 ratios (no calibration data)`);
+      }
     }
 
-    // Use our simplified v3ScoringService with FPL→Sleeper conversion
-    const enhancedPlayers = await v3ScoringService.applyV3Scoring(matchedPlayers, currentGameweek);
+    // Use v3ScoringService with calibration data for dynamic ratios
+    const enhancedPlayers = await v3ScoringService.applyV3Scoring(matchedPlayers, currentGameweek, calibrationData);
 
     // Calculate stats
     const playersWithV3 = enhancedPlayers.filter(p => p.v3_season_total > 0);
@@ -424,6 +429,15 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
           player.news_added = fplData.fpl_news_added;
           player.news_source = 'fpl';
         }
+
+        // Store FPL official model's expected points for V3 current GW blending
+        if (fplData.ep_next !== null && fplData.ep_next !== undefined) {
+          player.ep_next = fplData.ep_next;
+        }
+        if (fplData.ep_this !== null && fplData.ep_this !== undefined) {
+          player.ep_this = fplData.ep_this;
+        }
+
         fplNewsMatched++;
       }
     }
@@ -485,14 +499,27 @@ export async function POST(request) {
       throw new Error('Cannot proceed without current gameweek information');
     }
 
-    // Fresh data integration
-    const players = await integratePlayersWithOptaMatching(currentGameweek); // Pass it here
+    // Fetch player data + matchup history in parallel (matchup fetch doesn't depend on players)
+    const { fetchSleeperMatchupHistory } = await import('../../services/sleeperMatchupService.js');
+    const [players, matchupData] = await Promise.all([
+      integratePlayersWithOptaMatching(currentGameweek),
+      fetchSleeperMatchupHistory(currentGameweek.number) // Returns null on failure (graceful)
+    ]);
 
-    // Enhanced player processing with V3 predictions
+    // Compute calibrated V3 ratios from historical Sleeper vs FPL data
+    const { computeCalibration } = await import('../../services/calibrationService.js');
+    const calibrationData = computeCalibration(matchupData, players);
+
+    // Merge ep_next from FPL bootstrap-static into players (for current GW blend)
+    // fplNewsMap was already fetched inside integratePlayersWithOptaMatching — re-use via player fields
+    // ep_next is already on player.ep_next after the FPL news merge in integratePlayersWithOptaMatching
+    // (no extra step needed — the merge loop below handles it if ep_next was added to fplNewsMap)
+
+    // Enhanced player processing with V3 predictions + calibration
     if (process.env.NODE_ENV === 'development') {
       console.log('🚀 Starting V3 prediction enhancement...');
     }
-    const v3EnhancedResult = await enhancePlayersWithV3Predictions(players, currentGameweek);
+    const v3EnhancedResult = await enhancePlayersWithV3Predictions(players, currentGameweek, calibrationData);
 
 const finalPlayers = v3EnhancedResult.players;
 const v3Statistics = v3EnhancedResult.v3Stats;
@@ -512,6 +539,18 @@ const responseData = {
   players: finalPlayers,
   count: finalPlayers.length,
   timestamp: new Date().toISOString(),
+
+  // Calibration metadata — surfaced to UI for transparency
+  calibration: {
+    active: calibrationData.calibrated,
+    sampleCount: calibrationData.sampleCount,
+    gwsAnalyzed: calibrationData.gwsAnalyzed,
+    confidence: calibrationData.confidence,
+    source: calibrationData.source,
+    positionRatios: calibrationData.positionRatios,
+    playerFactorsCount: Object.keys(calibrationData.playerFactors || {}).length,
+    fallbackReason: calibrationData.fallbackReason || null
+  },
 
   // V3 Enhancement Statistics
   v3Enhancement: {

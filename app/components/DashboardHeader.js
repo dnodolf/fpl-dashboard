@@ -4,7 +4,7 @@ import { getDataFreshnessStatus } from '../utils/cacheManager';
 import CacheManager from '../utils/cacheManager';
 import { AppLogo } from './common/AppLogo';
 
-const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode }) => {
+const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
 
   return (
@@ -51,6 +51,24 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                 </button>
               </div>
             </div>
+
+            {/* Calibration status chip */}
+            {calibration && (
+              <span
+                className={`hidden sm:inline text-xs px-2 py-1 rounded-full font-medium ${
+                  calibration.active
+                    ? 'bg-green-900/60 text-green-400 border border-green-700'
+                    : 'bg-gray-700 text-gray-500 border border-gray-600'
+                }`}
+                title={
+                  calibration.active
+                    ? `V3 ratios calibrated from ${calibration.sampleCount} real GW samples across ${calibration.gwsAnalyzed} gameweeks. Confidence: ${calibration.confidence}. GKP:${calibration.positionRatios?.GKP} DEF:${calibration.positionRatios?.DEF} MID:${calibration.positionRatios?.MID} FWD:${calibration.positionRatios?.FWD}`
+                    : `Using hardcoded V3 ratios — ${calibration.fallbackReason || 'calibration data unavailable'}`
+                }
+              >
+                {calibration.active ? `🎯 Cal: ${calibration.gwsAnalyzed}GW` : '⚠️ Uncal'}
+              </span>
+            )}
 
             {/* Data Freshness + Update Button */}
             <div className="flex items-center gap-2">

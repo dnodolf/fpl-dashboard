@@ -16,9 +16,10 @@ export function extractAllGameweekPredictions(ffhPlayer) {
   // Step 1: Process the 'predictions' array (future/upcoming gameweeks)
   if (ffhPlayer.predictions && Array.isArray(ffhPlayer.predictions)) {
     ffhPlayer.predictions.forEach(pred => {
-      if (pred.gw && pred.predicted_pts) {
+      // Use != null (not falsy) so 0-pt entries (injured/suspended players) are included
+      if (pred.gw && pred.predicted_pts != null) {
         const pts = typeof pred.predicted_pts === 'object' ?
-                    pred.predicted_pts.predicted_pts : pred.predicted_pts;
+                    (pred.predicted_pts?.predicted_pts ?? 0) : pred.predicted_pts;
         const mins = pred.predicted_mins || pred.xmins || 0;
 
         if (typeof pts === 'number' && pts >= 0) {
@@ -36,12 +37,15 @@ export function extractAllGameweekPredictions(ffhPlayer) {
   // Step 2: Process the 'results' array (current/completed gameweeks)
   // Results take PRIORITY over predictions for the same gameweek
   if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
+    // Accept season 2025 (start year) or 2026 (end year) for the 2025-26 PL season,
+    // or no season field at all (some FFH responses omit it)
     ffhPlayer.results
-      .filter(result => result.season === 2025) // Only current season
+      .filter(result => !result.season || result.season === 2025 || result.season === 2026)
       .forEach(result => {
-        if (result.gw && result.predicted_pts) {
+        // Use != null (not falsy) so 0-pt results are included
+        if (result.gw && result.predicted_pts != null) {
           const pts = typeof result.predicted_pts === 'object' ?
-                      result.predicted_pts.predicted_pts : result.predicted_pts;
+                      (result.predicted_pts?.predicted_pts ?? 0) : result.predicted_pts;
           const mins = result.predicted_mins || result.xmins || 0;
 
           if (typeof pts === 'number' && pts >= 0) {
@@ -96,7 +100,7 @@ export function extractAllGameweekMinutes(ffhPlayer) {
   // Process results array (overrides predictions)
   if (ffhPlayer.results && Array.isArray(ffhPlayer.results)) {
     ffhPlayer.results
-      .filter(result => result.season === 2025)
+      .filter(result => !result.season || result.season === 2025 || result.season === 2026)
       .forEach(result => {
         if (result.gw) {
           const mins = result.predicted_mins || result.xmins || 0;

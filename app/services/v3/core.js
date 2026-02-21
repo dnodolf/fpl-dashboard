@@ -4,7 +4,7 @@
  */
 
 import { getPlayerArchetype } from '../playerArchetypeService.js';
-import { FALLBACK_CONVERSION_RATIOS } from './conversionRatios.js';
+import { FALLBACK_CONVERSION_RATIOS, getCalibrationAwareRatio } from './conversionRatios.js';
 import {
   applyPlayingTimeAdjustment,
   calculateFormMomentum,
@@ -29,7 +29,7 @@ import {
  * 5. Playing time confidence (rotation risk)
  * 6. Final V3 prediction
  */
-export async function calculateV3Prediction(player, currentGameweek) {
+export async function calculateV3Prediction(player, currentGameweek, calibrationData = null) {
   try {
     if (!currentGameweek?.number) {
       console.error('❌ V3 Scoring: No currentGameweek provided');
@@ -38,22 +38,36 @@ export async function calculateV3Prediction(player, currentGameweek) {
 
     const position = player.position || 'MID';
 
-    // Get position-based conversion ratio (validated approach - simple ratio only)
-    // This matches convertToV3Points() for consistency across all V3 calculations
+    // Use calibration-aware ratio: per-player > calibrated position > hardcoded
+    // Falls back to archetype ratio if no calibration data available
     const archetypeInfo = getPlayerArchetype(player);
-    const ratio = archetypeInfo.ratio;
+    const ratio = calibrationData
+      ? getCalibrationAwareRatio(position, player.sleeper_id, calibrationData)
+      : archetypeInfo.ratio;
 
     // Use FFH FPL predictions as base
     const fplSeasonTotal = player.predicted_points || 0;
     const fplSeasonAvg = player.season_prediction_avg || 0;
     const fplCurrentGW = player.current_gw_prediction || 0;
 
-    // Convert to Sleeper points using position ratio ONLY
-    // This is the validated approach from CLAUDE.md (2.78 MAE, 1.3% improvement)
-    // Removing form/fixture/injury/minutes adjustments for consistency with convertToV3Points()
+    // Convert to Sleeper points using ratio
     const v3SeasonTotal = fplSeasonTotal * ratio;
     const v3SeasonAvg = fplSeasonAvg * ratio;
-    const v3CurrentGW = fplCurrentGW * ratio;
+
+    // For current GW: blend with FPL's official ep_next model if available
+    // Two independent models blended typically outperform either alone
+    let v3CurrentGW = fplCurrentGW * ratio;
+    if (player.ep_next && player.ep_next > 0 && fplCurrentGW > 0) {
+      const ep_next_v3 = player.ep_next * ratio;
+      v3CurrentGW = v3CurrentGW * 0.65 + ep_next_v3 * 0.35;
+    }
+
+    // Embed v3_pts on each prediction entry so client-side utilities can use
+    // calibrated values without needing access to calibration data
+    const predictionsWithV3 = player.predictions?.map(pred => ({
+      ...pred,
+      v3_pts: (pred.predicted_pts || 0) * ratio
+    })) || player.predictions;
 
     // Determine confidence based on FFH data availability
     let confidence = 'none';
@@ -108,12 +122,16 @@ export async function calculateV3Prediction(player, currentGameweek) {
     }
 
     return {
+      // Updated predictions array with v3_pts embedded per GW
+      predictions: predictionsWithV3,
       v3_season_total: Math.round(v3SeasonTotal * 100) / 100,
       v3_season_avg: Math.round(v3SeasonAvg * 100) / 100,
       v3_current_gw: Math.round(v3CurrentGW * 100) / 100,
-      v3_calculation_source: 'fpl_simple_ratio_conversion',
+      v3_calculation_source: calibrationData?.calibrated ? 'calibrated_sleeper_data' : 'fpl_simple_ratio_conversion',
       v3_confidence: confidence,
       v3_conversion_ratio: ratio,
+      v3_calibrated: calibrationData?.calibrated || false,
+      v3_calibration_source: calibrationData?.source || 'none',
       v3_archetype: archetypeInfo.archetype,
       v3_archetype_source: archetypeInfo.source,
       // THIS WEEK matchup data for start/sit decisions
@@ -149,7 +167,7 @@ export async function calculateV3Prediction(player, currentGameweek) {
 /**
  * Apply V3 scoring to all players
  */
-export async function applyV3Scoring(players, currentGameweek) {
+export async function applyV3Scoring(players, currentGameweek, calibrationData = null) {
   if (!Array.isArray(players)) {
     if (process.env.NODE_ENV === 'development') {
       console.warn('applyV3Scoring: players is not an array');
@@ -180,7 +198,7 @@ export async function applyV3Scoring(players, currentGameweek) {
   // Process players in parallel - now lightweight since no external fetches
   const enhancedPlayers = await Promise.all(
     players.map(async (player) => {
-      const v3Results = await calculateV3Prediction(player, currentGameweek);
+      const v3Results = await calculateV3Prediction(player, currentGameweek, calibrationData);
 
       if (v3Results.v3_current_gw > 0) {
         playersWithPredictions++;

@@ -47,6 +47,9 @@ export async function fetchFPLNewsData() {
         fpl_news_added: el.news_added || null,
         fpl_chance_this_round: el.chance_of_playing_this_round,
         fpl_chance_next_round: el.chance_of_playing_next_round,
+        // Official FPL model's own expected points — independent of FFH, useful for blending
+        ep_next: el.ep_next ? parseFloat(el.ep_next) : null,
+        ep_this: el.ep_this ? parseFloat(el.ep_this) : null,
       };
       if (el.news && el.news.trim() !== '') newsCount++;
     });
