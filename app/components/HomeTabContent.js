@@ -1,7 +1,7 @@
 // app/components/HomeTabContent.js
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { USER_ID } from '../config/constants';
 import { getSleeperPositionStyle } from '../constants/positionColors';
@@ -137,6 +137,58 @@ const GradientCard = ({ children, gradient = 'from-blue-500 to-purple-500', clas
   </div>
 );
 
+// Luck Meter component - horizontal gauge from unlucky (red/left) to lucky (green/right)
+const LuckMeter = ({ luckScore, minLuck, maxLuck }) => {
+  const scaleMin = Math.min(minLuck, -4);
+  const scaleMax = Math.max(maxLuck, 4);
+  const range = scaleMax - scaleMin;
+
+  // Position as percentage (0% = left/unlucky, 100% = right/lucky)
+  const position = ((luckScore - scaleMin) / range) * 100;
+  const clampedPosition = Math.max(3, Math.min(97, position));
+
+  // Zero line position
+  const zeroPosition = ((0 - scaleMin) / range) * 100;
+
+  const getColor = (score) => {
+    if (score <= -2) return 'text-red-400';
+    if (score < 0) return 'text-orange-400';
+    if (score < 2) return 'text-yellow-400';
+    return 'text-green-400';
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-xs text-gray-500">
+        <span>Unlucky</span>
+        <span>Lucky</span>
+      </div>
+
+      {/* Gauge bar */}
+      <div className="relative h-4 rounded-full bg-gradient-to-r from-red-900/60 via-gray-700 to-green-900/60 border border-gray-600">
+        {/* Zero/fair center line */}
+        <div
+          className="absolute top-0 bottom-0 w-px bg-gray-500"
+          style={{ left: `${zeroPosition}%` }}
+        />
+        {/* Marker */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-blue-400 shadow-lg shadow-blue-500/30 z-10"
+          style={{ left: `${clampedPosition}%` }}
+        />
+      </div>
+
+      {/* Score label */}
+      <div className="text-center">
+        <span className={`text-2xl font-bold ${getColor(luckScore)}`}>
+          {luckScore > 0 ? '+' : ''}{luckScore.toFixed(1)}
+        </span>
+        <span className="text-sm text-gray-400 ml-2">expected wins differential</span>
+      </div>
+    </div>
+  );
+};
+
 // Position-themed text color helper
 const getPositionTextColor = (position) => {
   switch (position) {
@@ -154,6 +206,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   const [standings, setStandings] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(true);
   const [standingsExpanded, setStandingsExpanded] = useState(false);
+  const [luckExpanded, setLuckExpanded] = useState(false);
 
   // Fetch optimizer data to check if lineup is optimized
   useEffect(() => {
@@ -256,6 +309,52 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   // Find user's league standing
   const userStanding = standings.find(s => s.displayName === USER_ID);
   const userRank = userStanding ? standings.indexOf(userStanding) + 1 : null;
+
+  // Luck analysis computation
+  const luckData = useMemo(() => {
+    if (!standings || standings.length === 0) return null;
+
+    // Sort by points for to get "strength" ranking
+    const byPoints = [...standings].sort((a, b) => b.pointsFor - a.pointsFor);
+
+    const teams = standings.map((team, winsRankIndex) => {
+      const totalGames = team.wins + team.losses + team.ties;
+      if (totalGames === 0) {
+        return { ...team, totalGames: 0, expectedWins: 0, luckScore: 0, pointsRank: 0, winsRank: 0, rankGap: 0, ppg: 0 };
+      }
+
+      // Pythagorean expected win rate
+      const expectedWinRate = team.pointsFor / (team.pointsFor + team.pointsAgainst);
+      const expectedWins = expectedWinRate * totalGames;
+      // Account for ties as half-wins
+      const actualWinEquivalent = team.wins + (team.ties * 0.5);
+      const luckScore = actualWinEquivalent - expectedWins;
+
+      // Rank positions
+      const pointsRank = byPoints.findIndex(t => t.roster_id === team.roster_id) + 1;
+      const winsRank = winsRankIndex + 1;
+      const rankGap = pointsRank - winsRank; // positive = unlucky
+
+      return {
+        ...team,
+        totalGames,
+        expectedWins: Math.round(expectedWins * 10) / 10,
+        luckScore: Math.round(luckScore * 10) / 10,
+        pointsRank,
+        winsRank,
+        rankGap,
+        ppg: Math.round((team.pointsFor / totalGames) * 10) / 10,
+      };
+    });
+
+    // Sort by luck score ascending (most unlucky first)
+    const sortedByLuck = [...teams].sort((a, b) => a.luckScore - b.luckScore);
+    const minLuck = Math.min(...teams.map(t => t.luckScore));
+    const maxLuck = Math.max(...teams.map(t => t.luckScore));
+    const userLuck = teams.find(t => t.displayName === USER_ID);
+
+    return { teams: sortedByLuck, userLuck, minLuck, maxLuck };
+  }, [standings]);
 
   // Count players by availability status
   const availabilityStats = {
@@ -632,6 +731,139 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
           })}
         </div>
       </div>
+
+      {/* Schedule Luck Analyzer — collapsible */}
+      {!loadingStandings && standings.length > 0 && luckData && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setLuckExpanded(!luckExpanded)}
+            className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-bold text-white">Schedule Luck Analyzer</h2>
+              {luckData.userLuck && (
+                <span className={`text-xs font-bold ${
+                  luckData.userLuck.luckScore <= -2 ? 'text-red-400'
+                    : luckData.userLuck.luckScore < 0 ? 'text-orange-400'
+                    : luckData.userLuck.luckScore < 2 ? 'text-yellow-400'
+                    : 'text-green-400'
+                }`}>
+                  {luckData.userLuck.luckScore > 0 ? '+' : ''}{luckData.userLuck.luckScore} luck
+                </span>
+              )}
+            </div>
+            <span className="text-gray-500 text-xs">{luckExpanded ? '▼' : '▶'}</span>
+          </button>
+
+          {luckExpanded && (
+            <div className="px-6 pb-6">
+              <p className="text-xs text-gray-500 mb-4">
+                Expected wins based on points scored vs points against
+              </p>
+
+              {/* User's Luck Meter */}
+              {luckData.userLuck && (
+                <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-sm font-medium text-blue-400">Your Luck</span>
+                    <span className="text-xs text-gray-500">
+                      {luckData.userLuck.wins}W from {luckData.userLuck.totalGames} games
+                      (expected {luckData.userLuck.expectedWins}W)
+                    </span>
+                  </div>
+                  <LuckMeter
+                    luckScore={luckData.userLuck.luckScore}
+                    minLuck={luckData.minLuck}
+                    maxLuck={luckData.maxLuck}
+                  />
+                </div>
+              )}
+
+              {/* League Luck Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-900">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">Manager</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">W-L</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">PF Rank</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">PPG</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">Exp W</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">Luck</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase w-28"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {luckData.teams.map((team, index) => {
+                      const isUser = team.displayName === USER_ID;
+                      const luckRange = (luckData.maxLuck - luckData.minLuck) || 1;
+                      const barPosition = ((team.luckScore - luckData.minLuck) / luckRange) * 100;
+                      const luckColor = team.luckScore <= -2 ? 'bg-red-500'
+                        : team.luckScore < 0 ? 'bg-orange-500'
+                        : team.luckScore < 2 ? 'bg-yellow-500'
+                        : 'bg-green-500';
+                      const textColor = team.luckScore <= -2 ? 'text-red-400'
+                        : team.luckScore < 0 ? 'text-orange-400'
+                        : team.luckScore < 2 ? 'text-yellow-400'
+                        : 'text-green-400';
+
+                      return (
+                        <tr
+                          key={team.roster_id}
+                          className={isUser
+                            ? 'bg-blue-900/30 border-l-4 border-blue-500'
+                            : 'hover:bg-gray-700/50'}
+                        >
+                          <td className="px-3 py-2 text-gray-500">{index + 1}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${isUser ? 'text-blue-400' : 'text-white'}`}>
+                                {team.displayName}
+                              </span>
+                              {isUser && (
+                                <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">You</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-center text-gray-300">
+                            {team.wins}-{team.losses}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="text-gray-300">#{team.pointsRank}</span>
+                            {team.rankGap !== 0 && (
+                              <span className={`ml-1 text-xs ${team.rankGap > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                ({team.rankGap > 0 ? '+' : ''}{team.rankGap})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-center text-gray-300">{team.ppg}</td>
+                          <td className="px-3 py-2 text-center text-gray-300">{team.expectedWins}</td>
+                          <td className={`px-3 py-2 text-center font-bold ${textColor}`}>
+                            {team.luckScore > 0 ? '+' : ''}{team.luckScore}
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="relative h-2 bg-gray-700 rounded-full w-full">
+                              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gray-500" />
+                              <div
+                                className={`absolute top-0 h-full rounded-full ${luckColor}`}
+                                style={{
+                                  left: barPosition < 50 ? `${barPosition}%` : '50%',
+                                  width: `${Math.abs(barPosition - 50)}%`,
+                                }}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
