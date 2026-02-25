@@ -86,7 +86,7 @@ function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null, onPlayerClick, currentGameweek = null }) => {
+const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null, onPlayerClick, currentGameweek = null, benchPlayers = null }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
@@ -286,29 +286,31 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   const layout = getFormationLayout(currentFormation);
   
   return (
-    <div className={`relative border-2 rounded-lg overflow-hidden ${
+    <div className={`border-2 rounded-lg overflow-hidden ${
       'bg-gray-800 border-gray-600'
-      } ${isOptimal ? 'ring-2 ring-green-500' : ''} h-[520px]`}>
-      
-      {/* Field Background */}
-      <div className="absolute inset-2 bg-gradient-to-b from-green-600 to-green-700 rounded-lg opacity-20"></div>
-      
-      {/* Formation and Points Header */}
-      <div className="absolute top-3 left-4 right-4 flex justify-between items-center z-20">
-        <span className={`text-sm font-medium text-gray-300`}>
-          {currentFormation}
-        </span>
-        <span className={`text-sm font-semibold ${
-          isOptimal 
-            ? 'text-green-400'
-            : 'text-blue-400'
-        }`}>
-          {totalPoints.toFixed(1)} pts
-        </span>
-      </div>
-      
-      {/* Formation Layout - PROPER FORMATION STRUCTURE */}
-      <div className="relative z-10 h-full flex flex-col justify-between py-8 px-4">
+      } ${isOptimal ? 'ring-2 ring-green-500' : ''}`}>
+
+      {/* Pitch area */}
+      <div className="relative">
+        {/* Field Background */}
+        <div className="absolute inset-2 bg-gradient-to-b from-green-600 to-green-700 rounded-lg opacity-20"></div>
+
+        {/* Formation and Points Header */}
+        <div className="absolute top-3 left-4 right-4 flex justify-between items-center z-20">
+          <span className={`text-sm font-medium text-gray-300`}>
+            {currentFormation}
+          </span>
+          <span className={`text-sm font-semibold ${
+            isOptimal
+              ? 'text-green-400'
+              : 'text-blue-400'
+          }`}>
+            {totalPoints.toFixed(1)} pts
+          </span>
+        </div>
+
+        {/* Formation Layout - PROPER FORMATION STRUCTURE */}
+        <div className="relative z-10 flex flex-col justify-between py-8 px-4" style={{ minHeight: '480px' }}>
         
         {/* Forwards - Show exactly layout.fwd players */}
         {layout.fwd > 0 && (
@@ -380,6 +382,19 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           )}
         </div>
       </div>
+      </div>
+
+      {/* Bench Players */}
+      {benchPlayers && benchPlayers.length > 0 && (
+        <div className="border-t border-gray-600 px-3 py-2">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wider text-center mb-1">Bench</div>
+          <div className="flex justify-center gap-1 flex-wrap">
+            {benchPlayers.map((player, idx) => (
+              <PlayerCard key={`bench-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} optimalLineup={optimalLineup} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -857,60 +872,79 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
       </div>
 
       {/* Lineup Comparison - Main Focus */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Current Lineup */}
-        <div className="space-y-4">
-          <div className="text-center">
-            <h3 className={`text-lg font-medium text-white`}>
-              Current Lineup
-            </h3>
-            <div className="flex items-center justify-center gap-2 mt-1">
-              <span className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white">
-                ACTIVE
-              </span>
-              <span className={`text-sm text-gray-400`}>
-                {current?.formation || 'N/A'} • {currentPoints.toFixed(1)} points
-              </span>
-            </div>
-          </div>
-          
-          <FormationVisualization
-            lineup={current}
-            optimalPlayerIds={optimalPlayerIdsForDisplay}
-            scoringMode={scoringMode}
-            optimalLineup={optimal}
-            onPlayerClick={onPlayerClick}
-            currentGameweek={currentGameweek?.number}
-          />
-        </div>
+      {(() => {
+        // Filter to only my roster players, then compute bench as roster minus starters
+        const myRoster = players?.filter(p => p.owned_by === USER_ID) || [];
+        const currentStarterIds = new Set(current?.players?.map(p => p.id || p.player_id || p.sleeper_id) || []);
+        const optimalStarterIds = new Set(optimal?.players?.map(p => p.id || p.player_id || p.sleeper_id) || []);
+        const currentBench = myRoster.filter(p => {
+          const pid = p.id || p.player_id || p.sleeper_id;
+          return !currentStarterIds.has(pid);
+        });
+        const optimalBench = myRoster.filter(p => {
+          const pid = p.id || p.player_id || p.sleeper_id;
+          return !optimalStarterIds.has(pid);
+        });
 
-        {/* Optimal Lineup */}
-        <div className="space-y-4">
-          <div className="text-center">
-            <h3 className={`text-lg font-medium text-white`}>
-              Optimal Lineup
-            </h3>
-            <div className="flex items-center justify-center gap-2 mt-1">
-              <span className="px-2 py-1 text-xs font-medium rounded bg-green-600 text-white">
-                RECOMMENDED
-              </span>
-              <span className={`text-sm text-gray-400`}>
-                {optimal?.formation || 'N/A'} • {optimalPoints.toFixed(1)} points
-              </span>
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Current Lineup */}
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className={`text-lg font-medium text-white`}>
+                  Current Lineup
+                </h3>
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white">
+                    ACTIVE
+                  </span>
+                  <span className={`text-sm text-gray-400`}>
+                    {current?.formation || 'N/A'} • {currentPoints.toFixed(1)} points
+                  </span>
+                </div>
+              </div>
+
+              <FormationVisualization
+                lineup={current}
+                optimalPlayerIds={optimalPlayerIdsForDisplay}
+                scoringMode={scoringMode}
+                optimalLineup={optimal}
+                onPlayerClick={onPlayerClick}
+                currentGameweek={currentGameweek?.number}
+                benchPlayers={currentBench}
+              />
+            </div>
+
+            {/* Optimal Lineup */}
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className={`text-lg font-medium text-white`}>
+                  Optimal Lineup
+                </h3>
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-green-600 text-white">
+                    RECOMMENDED
+                  </span>
+                  <span className={`text-sm text-gray-400`}>
+                    {optimal?.formation || 'N/A'} • {optimalPoints.toFixed(1)} points
+                  </span>
+                </div>
+              </div>
+              <FormationVisualization
+                lineup={optimal}
+                isOptimal={true}
+                optimalPlayerIds={optimalPlayerIdsForDisplay}
+                scoringMode={scoringMode}
+                currentLineup={current}
+                onPlayerClick={onPlayerClick}
+                currentGameweek={currentGameweek?.number}
+                benchPlayers={optimalBench}
+              />
             </div>
           </div>
-          <FormationVisualization
-            lineup={optimal}
-            isOptimal={true}
-            optimalPlayerIds={optimalPlayerIdsForDisplay}
-            scoringMode={scoringMode}
-            currentLineup={current}
-            onPlayerClick={onPlayerClick}
-            currentGameweek={currentGameweek?.number}
-          />
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Actionable Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

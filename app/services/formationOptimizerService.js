@@ -32,37 +32,39 @@ export class FormationOptimizerService {
       return 0;
     }
 
-    // Priority 0: V3 current gameweek prediction (if available)
-    if (player.v3_current_gw && player.v3_current_gw > 0) {
-      return player.v3_current_gw;
+    // Use scoring mode to pick the right field — respects FFH vs V3 toggle
+    if (this.scoringMode === 'v3') {
+      if (player.v3_current_gw && player.v3_current_gw > 0) {
+        return player.v3_current_gw;
+      }
+    } else {
+      // FFH mode: use pure FFH prediction, NOT v3
+      if (player.current_gw_prediction && player.current_gw_prediction > 0) {
+        return player.current_gw_prediction;
+      }
     }
 
-    // Priority 1: Use current gameweek Sleeper prediction
+    // Fallback chain (shared)
     if (player.current_gw_prediction && player.current_gw_prediction > 0) {
       return player.current_gw_prediction;
     }
-    
-    // Priority 2: Use next gameweek prediction
+
     if (player.next_gw_prediction && player.next_gw_prediction > 0) {
       return player.next_gw_prediction;
     }
-    
-    // Priority 3: V3 season average (if available)
-    if (player.v3_season_avg && player.v3_season_avg > 0) {
+
+    if (this.scoringMode === 'v3' && player.v3_season_avg && player.v3_season_avg > 0) {
       return player.v3_season_avg;
     }
-    
-    // Priority 4: Use predicted PPG
+
+    if (player.season_prediction_avg && player.season_prediction_avg > 0) {
+      return player.season_prediction_avg;
+    }
+
     if (player.predicted_ppg && player.predicted_ppg > 0) {
       return player.predicted_ppg;
     }
-    
-    // Priority 5: Use season average
-    if (player.sleeper_season_avg && player.sleeper_season_avg > 0) {
-      return player.sleeper_season_avg;
-    }
-    
-    // Priority 6: Use current PPG
+
     if (player.current_ppg && player.current_ppg > 0) {
       return player.current_ppg;
     }
@@ -369,7 +371,8 @@ export class FormationOptimizerService {
   /**
    * Analyze current roster and provide optimization recommendations
    */
-  async analyzeCurrentRoster(allPlayers, userId) {
+  async analyzeCurrentRoster(allPlayers, userId, scoringMode = 'ffh') {
+    this.scoringMode = scoringMode;
     try {
       if (process.env.NODE_ENV === 'development') {
         console.log(`🔍 Analyzing roster for ${userId}...`);

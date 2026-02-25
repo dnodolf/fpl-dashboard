@@ -4,7 +4,6 @@
 import { NextResponse } from 'next/server';
 import { FormationOptimizerService } from '../../services/formationOptimizerService.js';
 import { normalizePosition } from '../../../utils/positionUtils.js';
-import v3ScoringService from '../../services/v3ScoringService.js';
 import { transformPlayerForClient } from '../../utils/playerTransformUtils.js';
 import { cacheService } from '../../services/cacheService.js';
 import { USER_ID } from '../../config/constants';
@@ -87,19 +86,18 @@ export async function POST(request) {
       throw new Error('No player data available');
     }
 
-    // Apply v3 scoring if needed
+    // V3 scoring: players from integrated-players already have calibrated v3 fields
+    // (v3_current_gw, v3_season_total, v3_season_avg) baked in via calibrationService.
+    // Do NOT re-run applyV3Scoring here — it would overwrite calibrated values with
+    // hardcoded fallback ratios since we don't have calibration data in this route.
     if (scoringMode === 'v3') {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🚀 Applying v3 scoring to ${players.length} players`);
-      }
       if (!requestData.currentGameweek) {
         throw new Error('currentGameweek is required for v3 scoring mode');
       }
-      // Convert number to gameweek object if needed
-      const currentGameweek = typeof requestData.currentGameweek === 'number'
-        ? { number: requestData.currentGameweek }
-        : requestData.currentGameweek;
-      players = await v3ScoringService.applyV3Scoring(players, currentGameweek);
+      const v3Count = players.filter(p => p.v3_current_gw > 0).length;
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📊 V3 mode: ${v3Count} players already have calibrated v3 fields from integrated-players`);
+      }
     }
 
     if (process.env.NODE_ENV === 'development') {
@@ -116,7 +114,7 @@ export async function POST(request) {
       console.log('📊 Position distribution:', positionCounts);
       console.log('🎯 Analyzing current roster...');
     }
-    const analysis = await optimizerService.analyzeCurrentRoster(players, userId);
+    const analysis = await optimizerService.analyzeCurrentRoster(players, userId, scoringMode);
 
     if (analysis.error) {
       throw new Error(analysis.error);
