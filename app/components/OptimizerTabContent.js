@@ -6,6 +6,8 @@ import PropTypes from 'prop-types';
 import MyPlayersTable from './MyPlayersTable.js';
 import v3ScoringService from '../services/v3ScoringService.js';
 import { getSleeperPositionCardStyle, getPositionColors } from '../constants/positionColors';
+import { getDifficultyColor } from '../constants/designTokens';
+import { getFPLStatusBadge } from '../utils/newsUtils';
 import { USER_ID } from '../config/constants';
 import PlayerAvatar from './common/PlayerAvatar';
 
@@ -84,7 +86,7 @@ function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek
 }
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
-const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null, onPlayerClick }) => {
+const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null, onPlayerClick, currentGameweek = null }) => {
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
@@ -146,51 +148,56 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 
     // Check if this player is in current lineup (for showing correct indicators)
     const playerId = player.id || player.player_id || player.sleeper_id;
-    
+
     // For optimal lineup display: ✓ if player is ALSO in current, ✗ if player is NOT in current
     const currentPlayerIds = currentLineup?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
     const isInCurrentLineup = currentPlayerIds.includes(playerId);
-    
+
     // For current lineup display: Check if player is in optimal lineup (should be kept) or not (should be benched)
     const optimalPlayerIds = optimalLineup?.players?.map(p => p.id || p.player_id || p.sleeper_id) || [];
     const isInOptimalLineup = optimalPlayerIds.includes(playerId);
 
     // Extract predicted minutes
     const getPredictedMinutes = (player) => {
-      // Try current gameweek prediction first
       if (player.current_gameweek_prediction?.predicted_mins) {
         return Math.round(player.current_gameweek_prediction.predicted_mins);
       }
-      
-      // Try predictions array for current GW
       if (player.predictions && Array.isArray(player.predictions)) {
-        const firstPred = player.predictions[0];
-        if (firstPred?.xmins) {
-          return Math.round(firstPred.xmins);
-        }
+        const gwNum = currentGameweek?.number;
+        const gwPred = gwNum ? player.predictions.find(p => p.gw === gwNum) : player.predictions[0];
+        if (gwPred?.xmins != null) return Math.round(gwPred.xmins);
       }
-      
-      // Try other fields
       if (player.predicted_mins) return Math.round(player.predicted_mins);
       if (player.xmins) return Math.round(player.xmins);
-      
       return null;
     };
 
+    // Extract next opponent from predictions
+    const getNextOpponent = (player) => {
+      if (!player.predictions?.length) return null;
+      const gwNum = currentGameweek?.number;
+      const nextPred = gwNum ? player.predictions.find(p => p.gw === gwNum) : player.predictions[0];
+      if (!nextPred?.opp?.[0] || !Array.isArray(nextPred.opp[0])) return null;
+      const [code, full, difficulty] = nextPred.opp[0];
+      return { code: (code || '').toUpperCase(), isHome: (full || '').includes('(H)'), difficulty: difficulty || 3 };
+    };
+
     const predictedMinutes = getPredictedMinutes(player);
+    const opponent = getNextOpponent(player);
+    const fplBadge = player.fpl_status && player.fpl_status !== 'a' ? getFPLStatusBadge(player.fpl_status) : null;
 
     // Get position colors for subtle background
     const posColors = getPositionColors(player.position);
-    
+
     // Map position to subtle background color
     const positionBgMap = {
       GKP: 'bg-yellow-900/50 border-yellow-700/50',
-      DEF: 'bg-cyan-900/50 border-cyan-700/50', 
+      DEF: 'bg-cyan-900/50 border-cyan-700/50',
       MID: 'bg-pink-900/50 border-pink-700/50',
       FWD: 'bg-purple-900/50 border-purple-700/50'
     };
     const positionBg = positionBgMap[player.position?.toUpperCase()] || 'bg-gray-700 border-gray-600';
-    
+
     return (
       <button
         onClick={() => onPlayerClick?.(player)}
@@ -220,6 +227,16 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           </div>
         )}
 
+        {/* Injury/status indicator */}
+        {fplBadge && (
+          <div className={`absolute -top-1 -left-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${
+            player.fpl_status === 'i' || player.fpl_status === 's' ? 'bg-red-500' :
+            player.fpl_status === 'd' ? 'bg-orange-500' : 'bg-gray-500'
+          }`} title={`${fplBadge.badge}${player.fpl_news ? ': ' + player.fpl_news : ''}`}>
+            {fplBadge.icon}
+          </div>
+        )}
+
         {/* Player Avatar */}
         <PlayerAvatar player={player} size="xs" />
 
@@ -242,6 +259,18 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             return points.toFixed(1);
           })()}
         </div>
+
+        {/* Minutes + Opponent row */}
+        <div className="flex items-center gap-1 text-[9px] mt-0.5">
+          {predictedMinutes != null && (
+            <span className="text-gray-400">{predictedMinutes}m</span>
+          )}
+          {opponent && (
+            <span className={`px-1 rounded ${getDifficultyColor(opponent.difficulty)} text-[8px] font-medium`}>
+              {opponent.code}{opponent.isHome ? '(H)' : '(A)'}
+            </span>
+          )}
+        </div>
       </button>
     );
   };
@@ -259,7 +288,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   return (
     <div className={`relative border-2 rounded-lg overflow-hidden ${
       'bg-gray-800 border-gray-600'
-      } ${isOptimal ? 'ring-2 ring-green-500' : ''} h-[480px]`}>
+      } ${isOptimal ? 'ring-2 ring-green-500' : ''} h-[520px]`}>
       
       {/* Field Background */}
       <div className="absolute inset-2 bg-gradient-to-b from-green-600 to-green-700 rounded-lg opacity-20"></div>
@@ -356,7 +385,29 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 };
 
 // ----------------- ACTIONABLE RECOMMENDATIONS COMPONENT -----------------
-const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'ffh' }) => {
+const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'ffh', currentGameweek = null }) => {
+  // Extract opponent info from player predictions
+  const extractOpponent = (p) => {
+    if (!p.predictions?.length) return null;
+    const gwNum = currentGameweek;
+    const pred = gwNum ? p.predictions.find(pr => pr.gw === gwNum) : p.predictions[0];
+    if (!pred?.opp?.[0] || !Array.isArray(pred.opp[0])) return null;
+    const [code, full, difficulty] = pred.opp[0];
+    return { code: (code || '').toUpperCase(), isHome: (full || '').includes('(H)'), difficulty: difficulty || 3 };
+  };
+
+  // Extract predicted minutes
+  const extractMinutes = (p) => {
+    if (p.current_gameweek_prediction?.predicted_mins) return Math.round(p.current_gameweek_prediction.predicted_mins);
+    if (p.predictions?.length) {
+      const gwNum = currentGameweek;
+      const pred = gwNum ? p.predictions.find(pr => pr.gw === gwNum) : p.predictions[0];
+      if (pred?.xmins != null) return Math.round(pred.xmins);
+    }
+    if (p.predicted_mins) return Math.round(p.predicted_mins);
+    return null;
+  };
+
   // Get explicit bench and start recommendations by comparing current vs optimal
   const getExplicitChanges = () => {
     if (!current?.players || !optimal?.players) {
@@ -376,9 +427,12 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
         name: p.full_name || p.web_name || p.name,
         position: p.position,
         team: p.team_abbr || p.team,
-        points: pts
+        points: pts,
+        minutes: extractMinutes(p),
+        opponent: extractOpponent(p),
+        fplStatus: p.fpl_status
       };
-    }).sort((a, b) => a.points - b.points); // Sort by points (lowest first)
+    }).sort((a, b) => a.points - b.points);
 
     // Players to START: in optimal but NOT in current
     const toStart = optimal.players.filter(p => {
@@ -390,9 +444,12 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
         name: p.full_name || p.web_name || p.name,
         position: p.position,
         team: p.team_abbr || p.team,
-        points: pts
+        points: pts,
+        minutes: extractMinutes(p),
+        opponent: extractOpponent(p),
+        fplStatus: p.fpl_status
       };
-    }).sort((a, b) => b.points - a.points); // Sort by points (highest first)
+    }).sort((a, b) => b.points - a.points);
 
     // Calculate net gain
     const currentPts = current.players.reduce((sum, p) => {
@@ -448,9 +505,23 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                 <div key={idx} className="p-2 rounded-lg bg-red-900/20 border border-red-600/30">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="text-sm font-medium text-white">{player.name}</div>
+                      <div className="text-sm font-medium text-white flex items-center gap-1.5">
+                        {player.name}
+                        {player.fplStatus && player.fplStatus !== 'a' && (() => {
+                          const badge = getFPLStatusBadge(player.fplStatus);
+                          return badge ? <span className={`text-[9px] px-1 py-0.5 rounded ${badge.color}`}>{badge.badge}</span> : null;
+                        })()}
+                      </div>
                       <div className="text-xs text-gray-400">
                         {player.position} • {player.team}
+                        {player.opponent && (
+                          <span className="ml-1">
+                            vs <span className={`px-1 rounded ${getDifficultyColor(player.opponent.difficulty)} text-[10px]`}>
+                              {player.opponent.code}{player.opponent.isHome ? '(H)' : '(A)'}
+                            </span>
+                          </span>
+                        )}
+                        {player.minutes != null && <span className="ml-1 text-gray-500">{player.minutes}m</span>}
                       </div>
                     </div>
                     <div className="text-right">
@@ -475,9 +546,23 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                 <div key={idx} className="p-2 rounded-lg bg-green-900/20 border border-green-600/30">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="text-sm font-medium text-white">{player.name}</div>
+                      <div className="text-sm font-medium text-white flex items-center gap-1.5">
+                        {player.name}
+                        {player.fplStatus && player.fplStatus !== 'a' && (() => {
+                          const badge = getFPLStatusBadge(player.fplStatus);
+                          return badge ? <span className={`text-[9px] px-1 py-0.5 rounded ${badge.color}`}>{badge.badge}</span> : null;
+                        })()}
+                      </div>
                       <div className="text-xs text-gray-400">
                         {player.position} • {player.team}
+                        {player.opponent && (
+                          <span className="ml-1">
+                            vs <span className={`px-1 rounded ${getDifficultyColor(player.opponent.difficulty)} text-[10px]`}>
+                              {player.opponent.code}{player.opponent.isHome ? '(H)' : '(A)'}
+                            </span>
+                          </span>
+                        )}
+                        {player.minutes != null && <span className="ml-1 text-gray-500">{player.minutes}m</span>}
                       </div>
                     </div>
                     <div className="text-right">
@@ -796,6 +881,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
             scoringMode={scoringMode}
             optimalLineup={optimal}
             onPlayerClick={onPlayerClick}
+            currentGameweek={currentGameweek?.number}
           />
         </div>
 
@@ -821,6 +907,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
             scoringMode={scoringMode}
             currentLineup={current}
             onPlayerClick={onPlayerClick}
+            currentGameweek={currentGameweek?.number}
           />
         </div>
       </div>
@@ -833,6 +920,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
           optimal={optimal}
           recalculatedStats={recalculatedStats}
           scoringMode={scoringMode}
+          currentGameweek={currentGameweek?.number}
         />
         <FormationComparison
           allFormations={formations}

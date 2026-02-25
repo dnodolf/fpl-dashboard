@@ -39,7 +39,19 @@ export function transformPlayerForClient(player, optimizerService = null) {
 
     // FFH prediction fields
     current_gw_prediction: player.current_gw_prediction || null,
-    sleeper_season_avg: player.sleeper_season_avg || null
+    sleeper_season_avg: player.sleeper_season_avg || null,
+
+    // Predictions array (needed for opponent/fixture display)
+    predictions: player.predictions || null,
+
+    // Minutes predictions
+    predicted_mins: player.predicted_mins || null,
+    current_gameweek_prediction: player.current_gameweek_prediction || null,
+
+    // Availability and injury status
+    fpl_status: player.fpl_status || null,
+    fpl_news: player.fpl_news || null,
+    chance_next_round: player.chance_next_round ?? player.chance_of_playing_next_round ?? null
   };
 
   // Add calculated points if optimizer service provided
