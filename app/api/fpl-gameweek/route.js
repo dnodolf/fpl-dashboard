@@ -1,7 +1,27 @@
 // app/api/fpl-gameweek/route.js
-// Simplified gameweek API using only hardcoded schedule
+// Gameweek API using hardcoded schedule + live fixture counts from FPL
 
 import GameweekService from '../../services/gameweekService.js';
+
+// Fetch live fixture status from FPL API for a given gameweek
+async function fetchFixtureCounts(gwNumber) {
+  try {
+    const res = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${gwNumber}`, {
+      cache: 'no-store'
+    });
+    if (!res.ok) return null;
+    const fixtures = await res.json();
+    // Use finished_provisional (set at full-time) rather than finished (set when points are confirmed)
+    const finished = fixtures.filter(f => f.finished_provisional || f.finished).length;
+    const started = fixtures.filter(f => f.started && !f.finished_provisional && !f.finished).length;
+    const total = fixtures.length;
+    return { finished, started, remaining: total - finished - started, total };
+  } catch {
+    return null;
+  }
+}
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -12,6 +32,14 @@ export async function GET() {
     // Get gameweek data from our reliable hardcoded service
     const currentGameweek = await GameweekService.getCurrentGameweek();
     const upcomingGameweeks = await GameweekService.getUpcomingGameweeks();
+
+    // If GW is live, fetch actual fixture counts from FPL
+    if (currentGameweek.status === 'live') {
+      const fixtureCounts = await fetchFixtureCounts(currentGameweek.number);
+      if (fixtureCounts) {
+        currentGameweek.fixtureCounts = fixtureCounts;
+      }
+    }
 
     if (process.env.NODE_ENV === 'development') {
       console.log(`✅ Returning GW${currentGameweek.number} (${currentGameweek.status})`);

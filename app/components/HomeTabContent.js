@@ -206,6 +206,28 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   const [standings, setStandings] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(true);
   const [standingsExpanded, setStandingsExpanded] = useState(false);
+  const [fixtureCounts, setFixtureCounts] = useState(null);
+
+  // Fetch live fixture counts when GW is live
+  useEffect(() => {
+    if (currentGameweek?.status !== 'live') {
+      setFixtureCounts(null);
+      return;
+    }
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch('/api/fpl-gameweek', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.success && data.currentGameweek?.fixtureCounts) {
+          setFixtureCounts(data.currentGameweek.fixtureCounts);
+        }
+      } catch { /* silent */ }
+    };
+    fetchCounts();
+    // Refresh every 60 seconds while live
+    const interval = setInterval(fetchCounts, 60000);
+    return () => clearInterval(interval);
+  }, [currentGameweek?.status, currentGameweek?.number]);
   const [luckExpanded, setLuckExpanded] = useState(false);
 
   // Fetch optimizer data to check if lineup is optimized
@@ -388,8 +410,8 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
 
   return (
     <div className="space-y-6">
-      {/* Hero Header with Countdown */}
-      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-xl shadow-lg px-6 py-4 relative overflow-hidden">
+      {/* Hero Header with Countdown or Live Indicator */}
+      <div className={`bg-gradient-to-r ${currentGameweek?.status === 'live' ? 'from-red-700 via-red-600 to-orange-600' : 'from-blue-600 via-purple-600 to-indigo-600'} rounded-xl shadow-lg px-6 py-4 relative overflow-hidden`}>
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16" />
@@ -420,11 +442,44 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
             </div>
           </button>
 
-          {/* Countdown Timer */}
-          <div className="bg-black/20 backdrop-blur-sm rounded-lg px-4 py-2">
-            <p className="text-xs text-blue-200 mb-1 text-center">Deadline</p>
-            <CountdownTimer deadline={currentGameweek?.deadline} />
-          </div>
+          {/* Countdown Timer or Live Indicator */}
+          {currentGameweek?.status === 'live' ? (
+            <div className="bg-red-500/20 backdrop-blur-sm rounded-lg px-5 py-3 border border-red-500/30">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <div>
+                  <p className="text-lg font-bold text-white">
+                    {fixtureCounts
+                      ? fixtureCounts.finished === fixtureCounts.total
+                        ? 'All Matches Complete'
+                        : fixtureCounts.started > 0
+                          ? 'Matches In Progress'
+                          : 'Matches Today'
+                      : 'Matches In Progress'}
+                  </p>
+                  {fixtureCounts ? (
+                    <div className="flex items-center gap-3 text-xs mt-1">
+                      <span className="text-green-300">{fixtureCounts.finished} played</span>
+                      {fixtureCounts.started > 0 && (
+                        <span className="text-yellow-300">{fixtureCounts.started} live</span>
+                      )}
+                      <span className="text-red-200/70">{fixtureCounts.remaining} remaining</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-red-200/70">Loading fixtures...</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-black/20 backdrop-blur-sm rounded-lg px-4 py-2">
+              <p className="text-xs text-blue-200 mb-1 text-center">Deadline</p>
+              <CountdownTimer deadline={currentGameweek?.deadline} />
+            </div>
+          )}
         </div>
       </div>
 
