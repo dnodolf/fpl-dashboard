@@ -236,19 +236,7 @@ getEnhancedFallback() {
 
   // Get next few gameweeks for planning (with complete schedule)
   async getUpcomingGameweeks(count = 5) {
-    try {
-      // Try API first
-      const fplData = await this.fetchFPLData();
-      if (fplData.success && fplData.upcomingGameweeks) {
-        return fplData.upcomingGameweeks.slice(0, count);
-      }
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using fallback for upcoming gameweeks');
-      }
-    }
-
-    // Fallback to complete schedule
+    // Use hardcoded schedule directly (avoids circular API call when called server-side)
     const gameweekDates = this.getCompleteGameweekSchedule();
     const now = new Date();
     

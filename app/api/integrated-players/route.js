@@ -170,19 +170,25 @@ async function fetchSleeperData() {
       usersResponse.json()
     ]);
 
-    // Create ownership mapping
+    // Create ownership and starter mappings
     const ownershipMap = {};
+    const starterSet = new Set();
     const userMap = {};
-    
+
     usersData.forEach(user => {
       userMap[user.user_id] = user.display_name || user.username || 'Unknown';
     });
-    
+
     rostersData.forEach(roster => {
       const ownerName = userMap[roster.owner_id] || 'Unknown';
       if (roster.players && Array.isArray(roster.players)) {
         roster.players.forEach(playerId => {
           ownershipMap[playerId] = ownerName;
+        });
+      }
+      if (roster.starters && Array.isArray(roster.starters)) {
+        roster.starters.forEach(playerId => {
+          starterSet.add(playerId);
         });
       }
     });
@@ -194,6 +200,7 @@ async function fetchSleeperData() {
     return {
       players: playersData,
       ownership: ownershipMap,
+      starters: starterSet,
       totalPlayers: Object.keys(playersData).length
     };
   } catch (error) {
@@ -339,6 +346,7 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
       ...player,
       position,
       owned_by: sleeperData.ownership[id] || 'Free Agent',
+      is_starter: sleeperData.starters.has(id),
       fantasy_data_source: 'sleeper'
     };
   });

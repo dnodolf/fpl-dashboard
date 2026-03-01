@@ -4,28 +4,32 @@
  * Provides helper functions for team logos from Premier League CDN
  */
 
-// Mapping from team abbreviations to Premier League team IDs (2024-25 season)
+// Mapping from team abbreviations to Premier League team codes (2025-26 season)
 const TEAM_ID_MAP = {
   'ARS': 3,    // Arsenal
   'AVL': 7,    // Aston Villa
   'BOU': 91,   // Bournemouth
   'BRE': 94,   // Brentford
   'BHA': 36,   // Brighton
+  'BUR': 90,   // Burnley
   'CHE': 8,    // Chelsea
   'CRY': 31,   // Crystal Palace
   'EVE': 11,   // Everton
   'FUL': 54,   // Fulham
-  'IPS': 40,   // Ipswich Town
-  'LEI': 13,   // Leicester City
+  'LEE': 2,    // Leeds United
   'LIV': 14,   // Liverpool
   'MCI': 43,   // Manchester City
   'MUN': 1,    // Manchester United
   'NEW': 4,    // Newcastle United
   'NFO': 17,   // Nottingham Forest
-  'SOU': 20,   // Southampton
+  'SUN': 56,   // Sunderland
   'TOT': 6,    // Tottenham Hotspur
   'WHU': 21,   // West Ham United
   'WOL': 39,   // Wolverhampton Wanderers
+  // Relegated (kept for historical data)
+  'IPS': 40,   // Ipswich Town
+  'LEI': 13,   // Leicester City
+  'SOU': 20,   // Southampton
 };
 
 /**
@@ -63,21 +67,25 @@ export const TEAM_FULL_NAMES = {
   'BOU': 'Bournemouth',
   'BRE': 'Brentford',
   'BHA': 'Brighton',
+  'BUR': 'Burnley',
   'CHE': 'Chelsea',
   'CRY': 'Crystal Palace',
   'EVE': 'Everton',
   'FUL': 'Fulham',
-  'IPS': 'Ipswich Town',
-  'LEI': 'Leicester City',
+  'LEE': 'Leeds United',
   'LIV': 'Liverpool',
   'MCI': 'Manchester City',
   'MUN': 'Manchester United',
   'NEW': 'Newcastle United',
   'NFO': 'Nottingham Forest',
-  'SOU': 'Southampton',
+  'SUN': 'Sunderland',
   'TOT': 'Tottenham',
   'WHU': 'West Ham',
   'WOL': 'Wolves',
+  // Relegated (kept for historical data)
+  'IPS': 'Ipswich Town',
+  'LEI': 'Leicester City',
+  'SOU': 'Southampton',
 };
 
 /**

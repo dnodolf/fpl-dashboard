@@ -1,21 +1,67 @@
 // app/api/fpl-gameweek/route.js
-// Gameweek API using hardcoded schedule + live fixture counts from FPL
+// Gameweek API using hardcoded schedule + live fixture data from FPL
 
 import GameweekService from '../../services/gameweekService.js';
 
-// Fetch live fixture status from FPL API for a given gameweek
-async function fetchFixtureCounts(gwNumber) {
+// Fetch FPL team ID → abbreviation mapping from bootstrap-static
+let teamMapCache = null;
+async function getTeamMap() {
+  if (teamMapCache) return teamMapCache;
   try {
-    const res = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${gwNumber}`, {
-      cache: 'no-store'
+    const res = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/', {
+      cache: 'no-store',
+      headers: { 'User-Agent': 'FPL-Dashboard/1.0' }
     });
-    if (!res.ok) return null;
-    const fixtures = await res.json();
-    // Use finished_provisional (set at full-time) rather than finished (set when points are confirmed)
-    const finished = fixtures.filter(f => f.finished_provisional || f.finished).length;
-    const started = fixtures.filter(f => f.started && !f.finished_provisional && !f.finished).length;
-    const total = fixtures.length;
-    return { finished, started, remaining: total - finished - started, total };
+    if (!res.ok) return {};
+    const data = await res.json();
+    teamMapCache = {};
+    for (const team of (data.teams || [])) {
+      teamMapCache[team.id] = team.short_name;
+    }
+    // Cache for 1 hour then reset
+    setTimeout(() => { teamMapCache = null; }, 60 * 60 * 1000);
+    return teamMapCache;
+  } catch {
+    return {};
+  }
+}
+
+// Fetch live fixture data from FPL API for a given gameweek
+async function fetchFixtureData(gwNumber) {
+  try {
+    const [fixturesRes, teamMap] = await Promise.all([
+      fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${gwNumber}`, { cache: 'no-store' }),
+      getTeamMap()
+    ]);
+    if (!fixturesRes.ok) return null;
+    const fixtures = await fixturesRes.json();
+
+    // Build fixture details sorted by kickoff time
+    const fixtureList = fixtures
+      .sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time))
+      .map(f => {
+        const isFinished = f.finished_provisional || f.finished;
+        const isLive = f.started && !isFinished;
+        return {
+          homeTeam: teamMap[f.team_h] || `T${f.team_h}`,
+          awayTeam: teamMap[f.team_a] || `T${f.team_a}`,
+          homeScore: f.team_h_score,
+          awayScore: f.team_a_score,
+          kickoffTime: f.kickoff_time,
+          minutes: f.minutes,
+          status: isFinished ? 'finished' : isLive ? 'live' : 'upcoming'
+        };
+      });
+
+    // Compute counts from the detailed data
+    const finished = fixtureList.filter(f => f.status === 'finished').length;
+    const started = fixtureList.filter(f => f.status === 'live').length;
+    const total = fixtureList.length;
+
+    return {
+      counts: { finished, started, remaining: total - finished - started, total },
+      fixtures: fixtureList
+    };
   } catch {
     return null;
   }
@@ -33,11 +79,12 @@ export async function GET() {
     const currentGameweek = await GameweekService.getCurrentGameweek();
     const upcomingGameweeks = await GameweekService.getUpcomingGameweeks();
 
-    // If GW is live, fetch actual fixture counts from FPL
+    // If GW is live, fetch actual fixture data from FPL
     if (currentGameweek.status === 'live') {
-      const fixtureCounts = await fetchFixtureCounts(currentGameweek.number);
-      if (fixtureCounts) {
-        currentGameweek.fixtureCounts = fixtureCounts;
+      const fixtureData = await fetchFixtureData(currentGameweek.number);
+      if (fixtureData) {
+        currentGameweek.fixtureCounts = fixtureData.counts;
+        currentGameweek.fixtureList = fixtureData.fixtures;
       }
     }
 
