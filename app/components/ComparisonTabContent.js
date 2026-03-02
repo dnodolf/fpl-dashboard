@@ -1,28 +1,30 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { getScoringValue } from '../services/v3ScoringService.js';
 import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
+import { getSleeperPositionStyle } from '../constants/positionColors';
+import { getFPLStatusBadge } from '../utils/newsUtils';
 import ComparisonChart from './ComparisonChart';
 
 const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ffh', onPlayerClick, preSelectedPlayer1, onClearPreSelection }) => {
-  const [selectedPlayer1, setSelectedPlayer1] = useState(null);
-  const [selectedPlayer2, setSelectedPlayer2] = useState(null);
-  const [searchTerm1, setSearchTerm1] = useState('');
-  const [searchTerm2, setSearchTerm2] = useState('');
-  const [showSuggestions1, setShowSuggestions1] = useState(false);
-  const [showSuggestions2, setShowSuggestions2] = useState(false);
+  const [dropPlayer, setDropPlayer] = useState(null);
+  const [addPlayer, setAddPlayer] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showCharts, setShowCharts] = useState(false);
+  const [showFixtures, setShowFixtures] = useState(false);
+  const searchRef = useRef(null);
 
-  // Get my players for quick selection
+  // My players grouped by position
   const myPlayers = useMemo(() => {
     return players.filter(p =>
       p.owned_by === USER_ID || p.owned_by === 'You'
     ).sort((a, b) => {
-      // Sort by position then name
       const posOrder = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
       if (posOrder[a.position] !== posOrder[b.position]) {
         return posOrder[a.position] - posOrder[b.position];
@@ -31,566 +33,410 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
     });
   }, [players]);
 
-  // Handle pre-selected player from Compare button
+  // Handle pre-selected player from PlayerModal Compare button
   useEffect(() => {
-    if (preSelectedPlayer1 && !selectedPlayer1) {
-      setSelectedPlayer1(preSelectedPlayer1);
-      setSearchTerm1(preSelectedPlayer1.name || preSelectedPlayer1.full_name || '');
-      if (onClearPreSelection) {
-        onClearPreSelection();
+    if (preSelectedPlayer1) {
+      const isMyPlayer = preSelectedPlayer1.owned_by === USER_ID || preSelectedPlayer1.owned_by === 'You';
+      if (isMyPlayer) {
+        setDropPlayer(preSelectedPlayer1);
+      } else {
+        setAddPlayer(preSelectedPlayer1);
       }
+      onClearPreSelection?.();
     }
-  }, [preSelectedPlayer1, selectedPlayer1, onClearPreSelection]);
+  }, [preSelectedPlayer1, onClearPreSelection]);
 
-  // Filter players for auto-suggestions
-  const filteredPlayers1 = useMemo(() => {
-    if (!searchTerm1) return [];
-    return players.filter(player =>
-      player.name?.toLowerCase().includes(searchTerm1.toLowerCase()) ||
-      player.full_name?.toLowerCase().includes(searchTerm1.toLowerCase()) ||
-      player.web_name?.toLowerCase().includes(searchTerm1.toLowerCase()) ||
-      player.team_abbr?.toLowerCase().includes(searchTerm1.toLowerCase()) ||
-      player.team?.toLowerCase().includes(searchTerm1.toLowerCase())
-    ).slice(0, 10); // Show top 10 suggestions
-  }, [players, searchTerm1]);
-
-  const filteredPlayers2 = useMemo(() => {
-    if (!searchTerm2) return [];
-    return players.filter(player =>
-      player.name?.toLowerCase().includes(searchTerm2.toLowerCase()) ||
-      player.full_name?.toLowerCase().includes(searchTerm2.toLowerCase()) ||
-      player.web_name?.toLowerCase().includes(searchTerm2.toLowerCase()) ||
-      player.team_abbr?.toLowerCase().includes(searchTerm2.toLowerCase()) ||
-      player.team?.toLowerCase().includes(searchTerm2.toLowerCase())
-    ).slice(0, 10); // Show top 10 suggestions
-  }, [players, searchTerm2]);
-
-  // Helper functions for player selection
-  const selectPlayer1 = (player) => {
-    setSelectedPlayer1(player);
-    setSearchTerm1(player.name || player.full_name || '');
-    setShowSuggestions1(false);
-  };
-
-  const selectPlayer2 = (player) => {
-    setSelectedPlayer2(player);
-    setSearchTerm2(player.name || player.full_name || '');
-    setShowSuggestions2(false);
-  };
-
-  const handleSearch1Change = (value) => {
-    setSearchTerm1(value);
-    setShowSuggestions1(value.length > 0);
-    if (value.length === 0) {
-      setSelectedPlayer1(null);
-    }
-  };
-
-  const handleSearch2Change = (value) => {
-    setSearchTerm2(value);
-    setShowSuggestions2(value.length > 0);
-    if (value.length === 0) {
-      setSelectedPlayer2(null);
-    }
-  };
-
-  // Get comparison stats for a player
-  const getPlayerStats = (player) => {
-    if (!player) return null;
-
-    return {
-      // Basic Info
-      name: player.name || player.full_name || 'Unknown',
-      team: player.team_abbr || player.team || 'Unknown',
-      position: player.position || 'Unknown',
-
-      // Core Stats (using centralized utilities for consistency)
-      rosPoints: getScoringValue(player, 'season_total', scoringMode),
-      next5GW: getNextNGameweeksTotal(player, scoringMode, currentGameweek, 5),
-      avgMinsNext5: getAvgMinutesNextN(player, currentGameweek, 5),
-      ppgPredicted: getScoringValue(player, 'season_avg', scoringMode),
-      currentGW: getScoringValue(player, 'current_gw', scoringMode),
-
-      // V3 Enhanced (if available)
-      v3SeasonTotal: player.v3_season_total || 0,
-      v3SeasonAvg: player.v3_season_avg || 0,
-      v3CurrentGW: player.v3_current_gw || 0,
-      v3Confidence: player.v3_confidence || 'none',
-
-      // News
-      news: player.news || ''
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
     };
-  };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
-  const player1Stats = getPlayerStats(selectedPlayer1);
-  const player2Stats = getPlayerStats(selectedPlayer2);
+  // Search suggestions — free agents first, then owned by others
+  const suggestions = useMemo(() => {
+    if (!searchTerm || searchTerm.length < 2) return [];
+    const term = searchTerm.toLowerCase();
+    const matches = players.filter(p =>
+      (p.name?.toLowerCase().includes(term) ||
+       p.full_name?.toLowerCase().includes(term) ||
+       p.web_name?.toLowerCase().includes(term) ||
+       p.team_abbr?.toLowerCase().includes(term)) &&
+      p.player_id !== dropPlayer?.player_id
+    );
+    return matches.sort((a, b) => {
+      const aFree = !a.owned_by || a.owned_by === 'Free Agent';
+      const bFree = !b.owned_by || b.owned_by === 'Free Agent';
+      if (aFree !== bFree) return aFree ? -1 : 1;
+      return getScoringValue(b, 'season_total', scoringMode) - getScoringValue(a, 'season_total', scoringMode);
+    }).slice(0, 12);
+  }, [players, searchTerm, scoringMode, dropPlayer]);
 
-  // Helper function to extract fixtures for next 5 GWs and all remaining
+  // Compute verdict metrics
+  const metrics = useMemo(() => {
+    if (!dropPlayer || !addPlayer) return null;
+    const gw = currentGameweek?.number || 1;
+    return [
+      { label: 'Next GW', drop: getNextNGameweeksTotal(dropPlayer, scoringMode, gw, 1), add: getNextNGameweeksTotal(addPlayer, scoringMode, gw, 1) },
+      { label: 'Next 3 GW', drop: getNextNGameweeksTotal(dropPlayer, scoringMode, gw, 3), add: getNextNGameweeksTotal(addPlayer, scoringMode, gw, 3) },
+      { label: 'Next 5 GW', drop: getNextNGameweeksTotal(dropPlayer, scoringMode, gw, 5), add: getNextNGameweeksTotal(addPlayer, scoringMode, gw, 5) },
+      { label: 'Next 10 GW', drop: getNextNGameweeksTotal(dropPlayer, scoringMode, gw, 10), add: getNextNGameweeksTotal(addPlayer, scoringMode, gw, 10) },
+      { label: 'Rest of Season', drop: getScoringValue(dropPlayer, 'season_total', scoringMode), add: getScoringValue(addPlayer, 'season_total', scoringMode) },
+      { label: 'Avg Mins (Next 5)', drop: getAvgMinutesNextN(dropPlayer, gw, 5), add: getAvgMinutesNextN(addPlayer, gw, 5) },
+      { label: 'PPG', drop: getScoringValue(dropPlayer, 'season_avg', scoringMode), add: getScoringValue(addPlayer, 'season_avg', scoringMode) },
+    ];
+  }, [dropPlayer, addPlayer, scoringMode, currentGameweek]);
+
+  // Fixture data for detail panels
   const getPlayerFixtures = (player) => {
-    if (!player || !player.predictions || !currentGameweek) return { next5: [], remaining: [] };
+    if (!player?.predictions || !currentGameweek) return { next5: [], remaining: [] };
+    const currentGW = currentGameweek.number || 1;
 
-    const currentGW = currentGameweek.number || 15;
-    const predictions = player.predictions || [];
-
-    const allFixtures = predictions
+    const allFixtures = (player.predictions || [])
       .filter(p => p.gw > currentGW && p.gw <= TOTAL_GAMEWEEKS)
       .map(p => {
-        let opponent = 'TBD';
-        let opponentFull = 'TBD';
-        let difficulty = 3;
-        let isHome = true;
-
-        if (p.opp && Array.isArray(p.opp) && p.opp.length > 0) {
-          const oppData = p.opp[0];
-          if (Array.isArray(oppData) && oppData.length >= 3) {
-            opponent = (oppData[0] || 'TBD').toUpperCase();
-            opponentFull = oppData[1] || 'TBD';
-            difficulty = oppData[2] || 3;
-            isHome = opponentFull.includes('(H)');
-          }
+        let opponent = 'TBD', difficulty = 3, isHome = true;
+        if (p.opp?.[0] && Array.isArray(p.opp[0]) && p.opp[0].length >= 3) {
+          opponent = (p.opp[0][0] || 'TBD').toUpperCase();
+          isHome = (p.opp[0][1] || '').includes('(H)');
+          difficulty = p.opp[0][2] || 3;
         }
-
         const ffhPoints = p.predicted_pts || 0;
-        const predictedPoints = scoringMode === 'v3' ? convertToV3Points(ffhPoints, player.position) : ffhPoints;
-
         return {
           gw: p.gw,
           opponent,
-          opponentFull,
           isHome,
           difficulty,
           predictedMinutes: p.xmins || p.predicted_mins || 90,
-          predictedPoints
+          predictedPoints: scoringMode === 'v3' ? convertToV3Points(ffhPoints, player.position) : ffhPoints
         };
       });
 
-    return {
-      next5: allFixtures.slice(0, 5),
-      remaining: allFixtures
-    };
+    return { next5: allFixtures.slice(0, 5), remaining: allFixtures };
   };
 
-  const player1Fixtures = getPlayerFixtures(selectedPlayer1);
-  const player2Fixtures = getPlayerFixtures(selectedPlayer2);
+  const dropFixtures = getPlayerFixtures(dropPlayer);
+  const addFixtures = getPlayerFixtures(addPlayer);
 
-  // Helper function to compare values and show difference
-  const getComparisonClass = (val1, val2, reverse = false) => {
-    if (!val1 || !val2 || val1 === val2) return 'text-gray-300';
-    const better = reverse ? val1 < val2 : val1 > val2;
-    return better ? 'text-green-400' : 'text-red-400';
+  // Swap players
+  const handleSwap = () => {
+    const tmpDrop = dropPlayer;
+    const tmpAdd = addPlayer;
+    setDropPlayer(tmpAdd);
+    setAddPlayer(tmpDrop);
+    setSearchTerm('');
+    setShowSuggestions(false);
   };
 
-  const formatValue = (value, type = 'number') => {
-    if (value === null || value === undefined) return 'N/A';
-    if (type === 'decimal') return Number(value).toFixed(1);
-    if (type === 'currency') return `£${Number(value).toFixed(1)}m`;
-    if (type === 'percentage') return `${Number(value).toFixed(1)}%`;
-    return Number(value).toFixed(1);
+  // Player name helper
+  const pName = (p) => p?.web_name || p?.name || p?.full_name || 'Unknown';
+
+  // Status badge for selected player chip
+  const StatusBadge = ({ player }) => {
+    if (!player?.fpl_status || player.fpl_status === 'a') return null;
+    const badge = getFPLStatusBadge(player.fpl_status);
+    if (!badge) return null;
+    return <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${badge.color}`}>{badge.badge}</span>;
   };
+
+  // Verdict summary
+  const verdictSummary = useMemo(() => {
+    if (!metrics) return null;
+    let addWins = 0;
+    metrics.forEach(m => { if (m.add > m.drop) addWins++; });
+    return { addWins, dropWins: metrics.length - addWins, total: metrics.length };
+  }, [metrics]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-2">Player Comparison</h2>
-        <p className="text-gray-400">Compare two players side by side</p>
-      </div>
-
-      {/* Player Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Player 1 Selection */}
-        <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Player 1</h3>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Start typing a player name..."
-              value={searchTerm1}
-              onChange={(e) => handleSearch1Change(e.target.value)}
-              onFocus={() => setShowSuggestions1(searchTerm1.length > 0)}
-              className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
-            />
-
-            {/* Auto-suggestions dropdown */}
-            {showSuggestions1 && filteredPlayers1.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {filteredPlayers1.map(player => (
-                  <div
-                    key={player.player_id}
-                    onClick={() => selectPlayer1(player)}
-                    className="px-3 py-2 hover:bg-gray-600 cursor-pointer border-b border-gray-600 last:border-b-0"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-white font-medium">
-                          {player.name || player.full_name}
-                        </div>
-                        <div className="text-gray-400 text-sm">
-                          {player.position} • {player.team_abbr || player.team}
-                        </div>
-                      </div>
-                      <div className="text-gray-400 text-xs">
-                        {getScoringValue(player, 'season_total', scoringMode).toFixed(1)} pts
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* My Players dropdown */}
-            {!selectedPlayer1 && myPlayers.length > 0 && (
-              <div className="mt-3">
-                <label className="block text-sm text-gray-400 mb-1">Or select from your team:</label>
-                <select
-                  onChange={(e) => {
-                    const player = myPlayers.find(p => p.player_id === e.target.value);
-                    if (player) selectPlayer1(player);
-                  }}
-                  value=""
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+    <div className="space-y-4">
+      {/* Selection Bar */}
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+        <div className="flex flex-col md:flex-row items-stretch gap-3">
+          {/* Left: Your Player (dropdown) */}
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide">Your Player (Drop)</label>
+            {dropPlayer ? (
+              <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2 border border-blue-500/50">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(dropPlayer.position)}`}>
+                  {dropPlayer.position}
+                </span>
+                <span className="text-white font-medium text-sm flex-1 truncate">{pName(dropPlayer)}</span>
+                <span className="text-gray-500 text-xs">{dropPlayer.team_abbr}</span>
+                <StatusBadge player={dropPlayer} />
+                <button
+                  onClick={() => setDropPlayer(null)}
+                  className="text-gray-500 hover:text-red-400 ml-1 text-sm"
                 >
-                  <option value="">-- Choose a player --</option>
-                  {myPlayers.map(player => (
-                    <option key={player.player_id} value={player.player_id}>
-                      {player.name || player.full_name} • {player.position} • {player.team_abbr || player.team}
-                    </option>
-                  ))}
-                </select>
+                  ✕
+                </button>
               </div>
-            )}
-
-            {/* Selected player display */}
-            {selectedPlayer1 && (
-              <div className="mt-3 p-3 bg-gray-700 rounded border-l-4 border-blue-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-white font-medium">{selectedPlayer1.name || selectedPlayer1.full_name}</div>
-                    <div className="text-gray-400 text-sm">{selectedPlayer1.position} • {selectedPlayer1.team_abbr || selectedPlayer1.team}</div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedPlayer1(null);
-                      setSearchTerm1('');
-                      setShowSuggestions1(false);
-                    }}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
+            ) : (
+              <select
+                onChange={(e) => {
+                  const player = myPlayers.find(p => p.player_id === e.target.value);
+                  if (player) setDropPlayer(player);
+                }}
+                value=""
+                className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
+              >
+                <option value="">Select from your team...</option>
+                {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                  const posPlayers = myPlayers.filter(p => p.position === pos);
+                  if (posPlayers.length === 0) return null;
+                  return (
+                    <optgroup key={pos} label={pos}>
+                      {posPlayers.map(p => (
+                        <option key={p.player_id} value={p.player_id}>
+                          {pName(p)} — {p.team_abbr} ({getScoringValue(p, 'season_total', scoringMode).toFixed(0)} pts)
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
             )}
           </div>
-        </div>
 
-        {/* Player 2 Selection */}
-        <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Player 2</h3>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Start typing a player name..."
-              value={searchTerm2}
-              onChange={(e) => handleSearch2Change(e.target.value)}
-              onFocus={() => setShowSuggestions2(searchTerm2.length > 0)}
-              className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
-            />
+          {/* Swap button */}
+          <div className="flex items-end justify-center pb-1">
+            <button
+              onClick={handleSwap}
+              disabled={!dropPlayer && !addPlayer}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white rounded-lg border border-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm"
+              title="Swap players"
+            >
+              ⇄
+            </button>
+          </div>
 
-            {/* Auto-suggestions dropdown */}
-            {showSuggestions2 && filteredPlayers2.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {filteredPlayers2.map(player => (
-                  <div
-                    key={player.player_id}
-                    onClick={() => selectPlayer2(player)}
-                    className="px-3 py-2 hover:bg-gray-600 cursor-pointer border-b border-gray-600 last:border-b-0"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-white font-medium">
-                          {player.name || player.full_name}
-                        </div>
-                        <div className="text-gray-400 text-sm">
-                          {player.position} • {player.team_abbr || player.team}
-                        </div>
-                      </div>
-                      <div className="text-gray-400 text-xs">
-                        {getScoringValue(player, 'season_total', scoringMode).toFixed(1)} pts
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* My Players dropdown */}
-            {!selectedPlayer2 && myPlayers.length > 0 && (
-              <div className="mt-3">
-                <label className="block text-sm text-gray-400 mb-1">Or select from your team:</label>
-                <select
-                  onChange={(e) => {
-                    const player = myPlayers.find(p => p.player_id === e.target.value);
-                    if (player) selectPlayer2(player);
-                  }}
-                  value=""
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+          {/* Right: Replacement (search) */}
+          <div className="flex-1" ref={searchRef}>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide">Replacement (Add)</label>
+            {addPlayer ? (
+              <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2 border border-green-500/50">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(addPlayer.position)}`}>
+                  {addPlayer.position}
+                </span>
+                <span className="text-white font-medium text-sm flex-1 truncate">{pName(addPlayer)}</span>
+                <span className="text-gray-500 text-xs">{addPlayer.team_abbr}</span>
+                <StatusBadge player={addPlayer} />
+                <button
+                  onClick={() => { setAddPlayer(null); setSearchTerm(''); }}
+                  className="text-gray-500 hover:text-red-400 ml-1 text-sm"
                 >
-                  <option value="">-- Choose a player --</option>
-                  {myPlayers.map(player => (
-                    <option key={player.player_id} value={player.player_id}>
-                      {player.name || player.full_name} • {player.position} • {player.team_abbr || player.team}
-                    </option>
-                  ))}
-                </select>
+                  ✕
+                </button>
               </div>
-            )}
-
-            {/* Selected player display */}
-            {selectedPlayer2 && (
-              <div className="mt-3 p-3 bg-gray-700 rounded border-l-4 border-green-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-white font-medium">{selectedPlayer2.name || selectedPlayer2.full_name}</div>
-                    <div className="text-gray-400 text-sm">{selectedPlayer2.position} • {selectedPlayer2.team_abbr || selectedPlayer2.team}</div>
+            ) : (
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search for a player..."
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setShowSuggestions(e.target.value.length >= 2); }}
+                  onFocus={() => { if (searchTerm.length >= 2) setShowSuggestions(true); }}
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none text-sm"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-20 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-xl max-h-72 overflow-y-auto">
+                    {suggestions.map(player => {
+                      const isFree = !player.owned_by || player.owned_by === 'Free Agent';
+                      return (
+                        <button
+                          key={player.player_id}
+                          onClick={() => { setAddPlayer(player); setSearchTerm(''); setShowSuggestions(false); }}
+                          className="w-full px-3 py-2 hover:bg-gray-600 text-left border-b border-gray-600/50 last:border-b-0 flex items-center gap-2"
+                        >
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
+                            {player.position}
+                          </span>
+                          <span className="text-white text-sm font-medium flex-1 truncate">
+                            {pName(player)}
+                          </span>
+                          <span className="text-gray-500 text-xs">{player.team_abbr}</span>
+                          {isFree ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/50 text-green-400">FA</span>
+                          ) : (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-600 text-gray-400">{player.owned_by}</span>
+                          )}
+                          <span className="text-gray-400 text-xs w-12 text-right">
+                            {getScoringValue(player, 'season_total', scoringMode).toFixed(0)}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedPlayer2(null);
-                      setSearchTerm2('');
-                      setShowSuggestions2(false);
-                    }}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    ✕
-                  </button>
-                </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Comparison Results */}
-      {player1Stats && player2Stats && (
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
-          <div className="bg-gray-700 px-6 py-4 border-b border-gray-600">
-            <h3 className="text-xl font-semibold text-white">Comparison Results</h3>
+      {/* Verdict Table */}
+      {metrics && verdictSummary && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          {/* Table Header */}
+          <div className="grid grid-cols-4 gap-0 bg-gray-900 text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <div className="px-4 py-3">Metric</div>
+            <div className="px-4 py-3 text-right">{pName(dropPlayer)}</div>
+            <div className="px-4 py-3 text-right">{pName(addPlayer)}</div>
+            <div className="px-4 py-3 text-right">Diff</div>
           </div>
 
-          <div className="p-6">
-            {/* Player Headers */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center">
-                <div className="text-xl font-bold text-white">{player1Stats.name}</div>
-                <div className="text-sm text-gray-400">{player1Stats.position} • {player1Stats.team}</div>
-                {player1Stats.news && (
-                  <span className="text-orange-400 text-sm" title={player1Stats.news}>📰</span>
-                )}
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-semibold text-gray-400">VS</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-white">{player2Stats.name}</div>
-                <div className="text-sm text-gray-400">{player2Stats.position} • {player2Stats.team}</div>
-                {player2Stats.news && (
-                  <span className="text-orange-400 text-sm" title={player2Stats.news}>📰</span>
-                )}
-              </div>
-            </div>
-
-            {/* Stats Comparison */}
-            <div className="space-y-3">
-              {/* Core Predictions */}
-              <div className="bg-gray-700 rounded p-4">
-                <h4 className="text-white font-semibold mb-3">Core Predictions</h4>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div className={`text-right ${getComparisonClass(player1Stats.rosPoints, player2Stats.rosPoints)}`}>
-                      {formatValue(player1Stats.rosPoints)}
-                    </div>
-                    <div className="text-center text-gray-400">ROS Points</div>
-                    <div className={`text-left ${getComparisonClass(player2Stats.rosPoints, player1Stats.rosPoints)}`}>
-                      {formatValue(player2Stats.rosPoints)}
-                    </div>
+          {/* Metric Rows */}
+          <div className="divide-y divide-gray-700/50">
+            {metrics.map((m) => {
+              const diff = m.add - m.drop;
+              const addBetter = diff > 0.05;
+              const dropBetter = diff < -0.05;
+              const isMinutes = m.label.includes('Mins');
+              return (
+                <div key={m.label} className="grid grid-cols-4 gap-0 text-sm">
+                  <div className="px-4 py-2.5 text-gray-400 font-medium">{m.label}</div>
+                  <div className={`px-4 py-2.5 text-right font-mono ${dropBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
+                    {isMinutes ? m.drop.toFixed(0) : m.drop.toFixed(1)}
                   </div>
-
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div className={`text-right ${getComparisonClass(player1Stats.next5GW, player2Stats.next5GW)}`}>
-                      {formatValue(player1Stats.next5GW)}
-                    </div>
-                    <div className="text-center text-gray-400">Next 5 GW</div>
-                    <div className={`text-left ${getComparisonClass(player2Stats.next5GW, player1Stats.next5GW)}`}>
-                      {formatValue(player2Stats.next5GW)}
-                    </div>
+                  <div className={`px-4 py-2.5 text-right font-mono ${addBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
+                    {isMinutes ? m.add.toFixed(0) : m.add.toFixed(1)}
                   </div>
-
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div className={`text-right ${getComparisonClass(player1Stats.avgMinsNext5, player2Stats.avgMinsNext5)}`}>
-                      {formatValue(player1Stats.avgMinsNext5)}
-                    </div>
-                    <div className="text-center text-gray-400">Avg Mins Next 5</div>
-                    <div className={`text-left ${getComparisonClass(player2Stats.avgMinsNext5, player1Stats.avgMinsNext5)}`}>
-                      {formatValue(player2Stats.avgMinsNext5)}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div className={`text-right ${getComparisonClass(player1Stats.ppgPredicted, player2Stats.ppgPredicted)}`}>
-                      {formatValue(player1Stats.ppgPredicted, 'decimal')}
-                    </div>
-                    <div className="text-center text-gray-400">PPG Predicted</div>
-                    <div className={`text-left ${getComparisonClass(player2Stats.ppgPredicted, player1Stats.ppgPredicted)}`}>
-                      {formatValue(player2Stats.ppgPredicted, 'decimal')}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div className={`text-right ${getComparisonClass(player1Stats.currentGW, player2Stats.currentGW)}`}>
-                      {formatValue(player1Stats.currentGW, 'decimal')}
-                    </div>
-                    <div className="text-center text-gray-400">Current GW</div>
-                    <div className={`text-left ${getComparisonClass(player2Stats.currentGW, player1Stats.currentGW)}`}>
-                      {formatValue(player2Stats.currentGW, 'decimal')}
-                    </div>
+                  <div className={`px-4 py-2.5 text-right font-mono font-bold ${
+                    addBetter ? 'text-green-400' : dropBetter ? 'text-red-400' : 'text-gray-500'
+                  }`}>
+                    {addBetter ? '+' : ''}{isMinutes ? diff.toFixed(0) : diff.toFixed(1)}
                   </div>
                 </div>
-              </div>
+              );
+            })}
+          </div>
 
-              {/* V3 Enhanced (if available) */}
-              {scoringMode === 'v3' && (player1Stats.v3SeasonTotal > 0 || player2Stats.v3SeasonTotal > 0) && (
-                <div className="bg-gray-700 rounded p-4">
-                  <h4 className="text-white font-semibold mb-3">V3 Enhanced Predictions</h4>
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className={`text-right ${getComparisonClass(player1Stats.v3SeasonTotal, player2Stats.v3SeasonTotal)}`}>
-                        {formatValue(player1Stats.v3SeasonTotal)}
-                      </div>
-                      <div className="text-center text-gray-400">V3 Season Total</div>
-                      <div className={`text-left ${getComparisonClass(player2Stats.v3SeasonTotal, player1Stats.v3SeasonTotal)}`}>
-                        {formatValue(player2Stats.v3SeasonTotal)}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className={`text-right ${getComparisonClass(player1Stats.v3SeasonAvg, player2Stats.v3SeasonAvg)}`}>
-                        {formatValue(player1Stats.v3SeasonAvg, 'decimal')}
-                      </div>
-                      <div className="text-center text-gray-400">V3 Season Avg</div>
-                      <div className={`text-left ${getComparisonClass(player2Stats.v3SeasonAvg, player1Stats.v3SeasonAvg)}`}>
-                        {formatValue(player2Stats.v3SeasonAvg, 'decimal')}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="text-right text-gray-300">{player1Stats.v3Confidence}</div>
-                      <div className="text-center text-gray-400">V3 Confidence</div>
-                      <div className="text-left text-gray-300">{player2Stats.v3Confidence}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-            {/* Next 5 Gameweeks Bar Charts - Side by Side */}
-            {player1Fixtures.next5.length > 0 && player2Fixtures.next5.length > 0 && (
-              <div className="mt-6 grid grid-cols-2 gap-6">
-                <ComparisonChart fixtures={player1Fixtures.next5} barColor="bg-blue-500" />
-                <ComparisonChart fixtures={player2Fixtures.next5} barColor="bg-green-500" />
-              </div>
-            )}
-
-            {/* Rest of Season Fixtures Tables - Side by Side */}
-            {player1Fixtures.remaining.length > 0 && player2Fixtures.remaining.length > 0 && (
-              <div className="mt-6 grid grid-cols-2 gap-6">
-                {/* Player 1 Fixtures */}
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="text-white font-semibold mb-3">
-                    Rest of Season ({player1Fixtures.remaining.length} fixtures)
-                  </h4>
-                  <div className="overflow-y-auto max-h-96">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-gray-700">
-                        <tr className="border-b border-gray-600">
-                          <th className="text-left py-2 px-2 text-gray-400 font-medium">GW</th>
-                          <th className="text-left py-2 px-2 text-gray-400 font-medium">Opp</th>
-                          <th className="text-center py-2 px-2 text-gray-400 font-medium">Diff</th>
-                          <th className="text-right py-2 px-2 text-gray-400 font-medium">Pts</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {player1Fixtures.remaining.map((fixture) => (
-                          <tr key={fixture.gw} className="border-b border-gray-600 hover:bg-gray-600">
-                            <td className="py-2 px-2 text-white font-medium">{fixture.gw}</td>
-                            <td className="py-2 px-2 text-white">
-                              {fixture.isHome ? 'vs ' : '@ '}{fixture.opponent}
-                            </td>
-                            <td className="py-2 px-2 text-center">
-                              <span className={`inline-block w-6 h-6 ${getDifficultyColor(fixture.difficulty)} rounded text-white text-xs font-bold flex items-center justify-center`}>
-                                {fixture.difficulty}
-                              </span>
-                            </td>
-                            <td className="py-2 px-2 text-right text-white font-bold">
-                              {fixture.predictedPoints.toFixed(1)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Player 2 Fixtures */}
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="text-white font-semibold mb-3">
-                    Rest of Season ({player2Fixtures.remaining.length} fixtures)
-                  </h4>
-                  <div className="overflow-y-auto max-h-96">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-gray-700">
-                        <tr className="border-b border-gray-600">
-                          <th className="text-left py-2 px-2 text-gray-400 font-medium">GW</th>
-                          <th className="text-left py-2 px-2 text-gray-400 font-medium">Opp</th>
-                          <th className="text-center py-2 px-2 text-gray-400 font-medium">Diff</th>
-                          <th className="text-right py-2 px-2 text-gray-400 font-medium">Pts</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {player2Fixtures.remaining.map((fixture) => (
-                          <tr key={fixture.gw} className="border-b border-gray-600 hover:bg-gray-600">
-                            <td className="py-2 px-2 text-white font-medium">{fixture.gw}</td>
-                            <td className="py-2 px-2 text-white">
-                              {fixture.isHome ? 'vs ' : '@ '}{fixture.opponent}
-                            </td>
-                            <td className="py-2 px-2 text-center">
-                              <span className={`inline-block w-6 h-6 ${getDifficultyColor(fixture.difficulty)} rounded text-white text-xs font-bold flex items-center justify-center`}>
-                                {fixture.difficulty}
-                              </span>
-                            </td>
-                            <td className="py-2 px-2 text-right text-white font-bold">
-                              {fixture.predictedPoints.toFixed(1)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
+          {/* Verdict Summary */}
+          <div className={`px-4 py-3 border-t border-gray-700 flex items-center justify-between ${
+            verdictSummary.addWins > verdictSummary.dropWins
+              ? 'bg-green-900/20'
+              : verdictSummary.dropWins > verdictSummary.addWins
+                ? 'bg-red-900/20'
+                : 'bg-gray-700/30'
+          }`}>
+            <span className="text-sm font-bold text-white">
+              {verdictSummary.addWins > verdictSummary.dropWins
+                ? `Replacement wins ${verdictSummary.addWins}/${verdictSummary.total} metrics`
+                : verdictSummary.dropWins > verdictSummary.addWins
+                  ? `Your player wins ${verdictSummary.dropWins}/${verdictSummary.total} metrics`
+                  : 'Even — tied across metrics'}
+            </span>
+            <span className={`text-xs font-bold px-2 py-1 rounded ${
+              verdictSummary.addWins > verdictSummary.dropWins
+                ? 'bg-green-600 text-white'
+                : verdictSummary.dropWins > verdictSummary.addWins
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-600 text-gray-300'
+            }`}>
+              {verdictSummary.addWins > verdictSummary.dropWins
+                ? 'ADD'
+                : verdictSummary.dropWins > verdictSummary.addWins
+                  ? 'KEEP'
+                  : 'TOSS-UP'}
+            </span>
           </div>
         </div>
       )}
 
       {/* Empty State */}
-      {(!selectedPlayer1 || !selectedPlayer2) && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">⚖️</div>
-          <h3 className="text-xl font-semibold text-white mb-2">Select Two Players to Compare</h3>
-          <p className="text-gray-400">Choose players from the dropdowns above to see a detailed comparison</p>
+      {(!dropPlayer || !addPlayer) && (
+        <div className="text-center py-10">
+          <div className="text-5xl mb-3">⚖️</div>
+          <h3 className="text-lg font-semibold text-white mb-1">Compare Two Players</h3>
+          <p className="text-gray-500 text-sm">
+            {!dropPlayer && !addPlayer
+              ? 'Select a player from your team and search for a replacement'
+              : !dropPlayer
+                ? 'Select a player from your team on the left'
+                : 'Search for a replacement on the right'}
+          </p>
+        </div>
+      )}
+
+      {/* Collapsible: Next 5 GW Charts */}
+      {dropPlayer && addPlayer && dropFixtures.next5.length > 0 && addFixtures.next5.length > 0 && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowCharts(!showCharts)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+          >
+            <span className="text-sm font-bold text-white">Next 5 GW Charts</span>
+            <span className="text-gray-500 text-xs">{showCharts ? '▼' : '▶'}</span>
+          </button>
+          {showCharts && (
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-xs text-gray-400 mb-2 text-center">{pName(dropPlayer)}</p>
+                  <ComparisonChart fixtures={dropFixtures.next5} barColor="bg-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-2 text-center">{pName(addPlayer)}</p>
+                  <ComparisonChart fixtures={addFixtures.next5} barColor="bg-green-500" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collapsible: Rest of Season Fixtures */}
+      {dropPlayer && addPlayer && dropFixtures.remaining.length > 0 && addFixtures.remaining.length > 0 && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowFixtures(!showFixtures)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+          >
+            <span className="text-sm font-bold text-white">Rest of Season Fixtures</span>
+            <span className="text-gray-500 text-xs">{showFixtures ? '▼' : '▶'}</span>
+          </button>
+          {showFixtures && (
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-2 gap-6">
+                {[{ player: dropPlayer, fixtures: dropFixtures.remaining }, { player: addPlayer, fixtures: addFixtures.remaining }].map(({ player, fixtures }, idx) => (
+                  <div key={idx} className="bg-gray-700/50 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-700 text-xs font-medium text-gray-400">
+                      {pName(player)} — {fixtures.length} fixtures
+                    </div>
+                    <div className="overflow-y-auto max-h-80">
+                      <table className="w-full text-xs">
+                        <thead className="sticky top-0 bg-gray-700">
+                          <tr className="border-b border-gray-600">
+                            <th className="text-left py-1.5 px-2 text-gray-400">GW</th>
+                            <th className="text-left py-1.5 px-2 text-gray-400">Opp</th>
+                            <th className="text-center py-1.5 px-2 text-gray-400">FDR</th>
+                            <th className="text-right py-1.5 px-2 text-gray-400">Pts</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {fixtures.map(f => (
+                            <tr key={f.gw} className="border-b border-gray-600/50 hover:bg-gray-600/30">
+                              <td className="py-1.5 px-2 text-white">{f.gw}</td>
+                              <td className="py-1.5 px-2 text-white">{f.isHome ? 'vs ' : '@ '}{f.opponent}</td>
+                              <td className="py-1.5 px-2 text-center">
+                                <span className={`inline-flex items-center justify-center w-5 h-5 ${getDifficultyColor(f.difficulty)} rounded text-white text-[10px] font-bold`}>
+                                  {f.difficulty}
+                                </span>
+                              </td>
+                              <td className="py-1.5 px-2 text-right text-white font-bold">{f.predictedPoints.toFixed(1)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -20,9 +20,9 @@ class SleeperApiService {
   // Get all rosters with ownership data
   async getRosters() {
     try {
-      const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/rosters`);
+      const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/rosters`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
+
       const rosters = await response.json();
       const users = await this.getUsers();
       
@@ -41,7 +41,7 @@ class SleeperApiService {
   // Get league users
   async getUsers() {
     try {
-      const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/users`);
+      const response = await fetch(`${this.baseUrl}/league/${this.leagueId}/users`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
