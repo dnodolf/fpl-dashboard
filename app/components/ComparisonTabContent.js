@@ -97,7 +97,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
     const currentGW = currentGameweek.number || 1;
 
     const allFixtures = (player.predictions || [])
-      .filter(p => p.gw > currentGW && p.gw <= TOTAL_GAMEWEEKS)
+      .filter(p => p.gw >= currentGW && p.gw <= TOTAL_GAMEWEEKS)
       .map(p => {
         let opponent = 'TBD', difficulty = 3, isHome = true;
         if (p.opp?.[0] && Array.isArray(p.opp[0]) && p.opp[0].length >= 3) {

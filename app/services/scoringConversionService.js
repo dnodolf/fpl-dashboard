@@ -154,8 +154,22 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       ffh_team: ffhTeam,
       ffh_position_id: ffhData.position_id,
 
-      // PURE FFH DATA - Preserve original fields for direct mapping
-      predictions: ffhData.predictions || [],
+      // Predictions array: raw FFH predictions (have opp data for fixtures),
+      // but ensure the current GW is included even if FFH moved it to results
+      predictions: (() => {
+        const raw = ffhData.predictions || [];
+        const hasCurrentGW = raw.some(p => p.gw === currentGameweek);
+        if (hasCurrentGW || !currentGameweek) return raw;
+        // Current GW missing (FFH moved it to results) — inject it back
+        const currentGwEntry = allGameweekPredictions.find(p => p.gw === currentGameweek);
+        if (!currentGwEntry) return raw;
+        // Also check raw results for opp data
+        const resultEntry = (ffhData.results || []).find(r => r.gw === currentGameweek);
+        return [
+          { gw: currentGameweek, predicted_pts: currentGwEntry.predicted_pts, predicted_mins: currentGwEntry.predicted_mins, xmins: currentGwEntry.predicted_mins, opp: resultEntry?.opp || null, source: 'injected' },
+          ...raw
+        ];
+      })(),
       // Processed past-GW results for V3 calibration (source: 'results' entries)
       ffh_gw_results: allGameweekPredictions.filter(p => p.source === 'results'),
       season_prediction_avg: ffhData.season_prediction_avg || 0,

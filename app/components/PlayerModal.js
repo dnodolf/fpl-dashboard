@@ -48,12 +48,12 @@ export function PlayerModal({
     return player?.predicted_points || 0;
   }, [player?.v3_season_total, player?.predicted_points, localScoringMode]);
 
-  // Get next 5 gameweeks for chart (excluding current live GW)
+  // Get next 5 gameweeks for chart (including current GW if still has predictions)
   const next5Fixtures = useMemo(() => {
     if (!predictions || predictions.length === 0) return [];
 
     return predictions
-      .filter(p => p.gw > currentGW && p.gw <= currentGW + 5)
+      .filter(p => p.gw >= currentGW && p.gw <= currentGW + 5)
       .slice(0, 5)
       .map(p => {
         // Extract opponent data from FFH nested array format: opp: [["AVL", "Aston Villa (H)", 3]]
@@ -88,12 +88,12 @@ export function PlayerModal({
       });
   }, [predictions, currentGW, localScoringMode, player?.position]);
 
-  // Get all remaining fixtures for table (from next GW onwards)
+  // Get all remaining fixtures for table (including current GW if predictions exist)
   const remainingFixtures = useMemo(() => {
     if (!predictions || predictions.length === 0) return [];
 
     return predictions
-      .filter(p => p.gw > currentGW && p.gw <= TOTAL_GAMEWEEKS)
+      .filter(p => p.gw >= currentGW && p.gw <= TOTAL_GAMEWEEKS)
       .map(p => {
         // Extract opponent data from FFH nested array format: opp: [["AVL", "Aston Villa (H)", 3]]
         let opponent = 'TBD';

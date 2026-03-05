@@ -87,14 +87,13 @@ export default function TransferPairRecommendations({
           const next1Gain = next1Add - next1Drop;
 
           // Use centralized utility for Next 3 and Next 5 calculations
-          const nextGW = currentGameweek + 1;
-
-          const next3Drop = getNextNGameweeksTotal(dropPlayer, scoringMode, nextGW, 3);
-          const next3Add = getNextNGameweeksTotal(addPlayer, scoringMode, nextGW, 3);
+          // Start from current GW (includes live GW if predictions exist)
+          const next3Drop = getNextNGameweeksTotal(dropPlayer, scoringMode, currentGameweek, 3);
+          const next3Add = getNextNGameweeksTotal(addPlayer, scoringMode, currentGameweek, 3);
           const next3Gain = next3Add - next3Drop;
 
-          const next5Drop = getNextNGameweeksTotal(dropPlayer, scoringMode, nextGW, 5);
-          const next5Add = getNextNGameweeksTotal(addPlayer, scoringMode, nextGW, 5);
+          const next5Drop = getNextNGameweeksTotal(dropPlayer, scoringMode, currentGameweek, 5);
+          const next5Add = getNextNGameweeksTotal(addPlayer, scoringMode, currentGameweek, 5);
           const next5Gain = next5Add - next5Drop;
 
           // Calculate risk score
