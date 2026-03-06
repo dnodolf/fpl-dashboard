@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { USER_ID } from '../../config/constants';
+import { getNextNGameweeksTotal } from '../../utils/predictionUtils';
 
 export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { number: 15 } }) {
   const [rawData, setRawData] = useState(null); // Store raw API data
@@ -60,25 +61,14 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
 
     const { current, optimal } = rawData;
 
-    // Calculate points using the same logic as OptimizerTabContent
+    // Calculate points using predictions array for consistency
+    const gw = currentGameweek?.number || 1;
     const currentPoints = current?.players ? current.players.reduce((sum, player) => {
-      let points = 0;
-      if (scoringMode === 'v3') {
-        points = player.v3_current_gw || 0;
-      } else {
-        points = player.current_gw_prediction || 0;
-      }
-      return sum + points;
+      return sum + getNextNGameweeksTotal(player, scoringMode, gw, 1);
     }, 0) : 0;
 
     const optimalPoints = optimal?.players ? optimal.players.reduce((sum, player) => {
-      let points = 0;
-      if (scoringMode === 'v3') {
-        points = player.v3_current_gw || 0;
-      } else {
-        points = player.current_gw_prediction || 0;
-      }
-      return sum + points;
+      return sum + getNextNGameweeksTotal(player, scoringMode, gw, 1);
     }, 0) : 0;
 
     // Calculate optimal player stats

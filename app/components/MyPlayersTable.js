@@ -4,6 +4,7 @@ import v3ScoringService from '../services/v3ScoringService.js';
 import { getPositionBadgeWithBorder } from '../constants/positionColors';
 import { USER_ID } from '../config/constants';
 import { getDifficultyColor } from '../constants/designTokens';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 
 const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [], onPlayerClick }) => {
@@ -27,13 +28,8 @@ const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scori
 
   // Enhanced data extraction functions
   const getPlayerPredictedPoints = (player) => {
-    // Use explicit field-based logic to match optimizer components
-    if (scoringMode === 'v3') {
-      const points = player.v3_current_gw || 0;
-      return points;
-    } else {
-      return player.current_gw_prediction || 0;
-    }
+    const gw = currentGameweek?.number || 1;
+    return getNextNGameweeksTotal(player, scoringMode, gw, 1);
   };
   
 

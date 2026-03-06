@@ -8,6 +8,7 @@ import v3ScoringService from '../services/v3ScoringService.js';
 import { getSleeperPositionCardStyle, getPositionColors } from '../constants/positionColors';
 import { getDifficultyColor } from '../constants/designTokens';
 import { getFPLStatusBadge } from '../utils/newsUtils';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { USER_ID } from '../config/constants';
 import PlayerAvatar from './common/PlayerAvatar';
 
@@ -84,6 +85,12 @@ function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek
 
   return { ...data, refetch: fetchOptimizerData };
 }
+
+// Helper: get current GW points consistently from predictions array
+const getGWPoints = (player, scoringMode, currentGameweek) => {
+  const gw = currentGameweek?.number || currentGameweek || 1;
+  return getNextNGameweeksTotal(player, scoringMode, gw, 1);
+};
 
 // ----------------- FORMATION VISUALIZATION COMPONENT - PROPER LAYOUTS -----------------
 const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = [], scoringMode = 'ffh', currentLineup = null, optimalLineup = null, onPlayerClick, currentGameweek = null, benchPlayers = null }) => {
@@ -252,12 +259,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             ? (isInCurrentLineup ? 'text-green-400' : 'text-blue-400')
             : (isInOptimalLineup ? 'text-green-400' : 'text-red-400')
         }`}>
-          {(() => {
-            const points = scoringMode === 'v3'
-              ? (player.v3_current_gw || 0)
-              : (player.current_gw_prediction || 0);
-            return points.toFixed(1);
-          })()}
+          {getGWPoints(player, scoringMode, currentGameweek).toFixed(1)}
         </div>
 
         {/* Minutes + Opponent row */}
@@ -278,10 +280,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   const currentFormation = lineup.formation || 'Unknown';
   // Recalculate total points based on current scoring mode
   const totalPoints = lineup.players ? lineup.players.reduce((sum, player) => {
-    const points = scoringMode === 'v3'
-      ? (player.v3_current_gw || 0)
-      : (player.current_gw_prediction || 0);
-    return sum + points;
+    return sum + getGWPoints(player, scoringMode, currentGameweek);
   }, 0) : (lineup.points || lineup.totalPoints || 0);
   const layout = getFormationLayout(currentFormation);
   
@@ -436,42 +435,36 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
     const toBench = current.players.filter(p => {
       const id = p.id || p.player_id || p.sleeper_id;
       return !optimalIds.has(id);
-    }).map(p => {
-      const pts = scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0);
-      return {
-        name: p.full_name || p.web_name || p.name,
-        position: p.position,
-        team: p.team_abbr || p.team,
-        points: pts,
-        minutes: extractMinutes(p),
-        opponent: extractOpponent(p),
-        fplStatus: p.fpl_status
-      };
-    }).sort((a, b) => a.points - b.points);
+    }).map(p => ({
+      name: p.full_name || p.web_name || p.name,
+      position: p.position,
+      team: p.team_abbr || p.team,
+      points: getGWPoints(p, scoringMode, currentGameweek),
+      minutes: extractMinutes(p),
+      opponent: extractOpponent(p),
+      fplStatus: p.fpl_status
+    })).sort((a, b) => a.points - b.points);
 
     // Players to START: in optimal but NOT in current
     const toStart = optimal.players.filter(p => {
       const id = p.id || p.player_id || p.sleeper_id;
       return !currentIds.has(id);
-    }).map(p => {
-      const pts = scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0);
-      return {
-        name: p.full_name || p.web_name || p.name,
-        position: p.position,
-        team: p.team_abbr || p.team,
-        points: pts,
-        minutes: extractMinutes(p),
-        opponent: extractOpponent(p),
-        fplStatus: p.fpl_status
-      };
-    }).sort((a, b) => b.points - a.points);
+    }).map(p => ({
+      name: p.full_name || p.web_name || p.name,
+      position: p.position,
+      team: p.team_abbr || p.team,
+      points: getGWPoints(p, scoringMode, currentGameweek),
+      minutes: extractMinutes(p),
+      opponent: extractOpponent(p),
+      fplStatus: p.fpl_status
+    })).sort((a, b) => b.points - a.points);
 
     // Calculate net gain
     const currentPts = current.players.reduce((sum, p) => {
-      return sum + (scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0));
+      return sum + getGWPoints(p, scoringMode, currentGameweek);
     }, 0);
     const optimalPts = optimal.players.reduce((sum, p) => {
-      return sum + (scoringMode === 'v3' ? (p.v3_current_gw || 0) : (p.current_gw_prediction || 0));
+      return sum + getGWPoints(p, scoringMode, currentGameweek);
     }, 0);
     const netGain = optimalPts - currentPts;
 
@@ -596,7 +589,7 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
 };
 
 // ----------------- FORMATION COMPARISON COMPONENT - FIXED LAYOUT -----------------
-const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'ffh' }) => {
+const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'ffh', currentGameweek = null }) => {
   if (!allFormations || allFormations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
@@ -620,13 +613,7 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
     }
     
     const recalculatedPoints = formation.players.reduce((sum, player) => {
-      let points = 0;
-      if (scoringMode === 'v3') {
-        points = player.v3_current_gw || 0;
-      } else {
-        points = player.current_gw_prediction || 0;
-      }
-      return sum + points;
+      return sum + getGWPoints(player, scoringMode, currentGameweek);
     }, 0);
     
     return { ...formation, recalculatedPoints };
@@ -774,25 +761,13 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
     return id;
   }) || [];
   
-  // Recalculate points based on current scoring mode - use explicit field logic
+  // Recalculate points based on current scoring mode - use predictions array for consistency
   const currentPoints = current?.players ? current.players.reduce((sum, player) => {
-    let points = 0;
-    if (scoringMode === 'v3') {
-      points = player.v3_current_gw || 0;
-    } else {
-      points = player.current_gw_prediction || 0;
-    }
-    return sum + points;
+    return sum + getGWPoints(player, scoringMode, currentGameweek);
   }, 0) : (stats.currentPoints || 0);
 
   const optimalPoints = optimal?.players ? optimal.players.reduce((sum, player) => {
-    let points = 0;
-    if (scoringMode === 'v3') {
-      points = player.v3_current_gw || 0;
-    } else {
-      points = player.current_gw_prediction || 0;
-    }
-    return sum + points;
+    return sum + getGWPoints(player, scoringMode, currentGameweek);
   }, 0) : (stats.optimalPoints || 0);
 
   // Recalculate all stats based on new point values
@@ -960,6 +935,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
           allFormations={formations}
           currentFormation={current?.formation}
           scoringMode={scoringMode}
+          currentGameweek={currentGameweek}
         />
       </div>
 

@@ -159,13 +159,10 @@ export default function CheatSheetTabContent({
           avgMinutes = Math.round(totalMinutes / predictions.length);
         }
       } else if (timeframe === 'next1' || (timeframe === 'custom' && customGames === 1)) {
-        // Next 1 gameweek - use pre-calculated fields for consistency with Start/Sit tab
-        displayPoints = scoringMode === 'v3'
-          ? (player.v3_current_gw || 0)
-          : (player.current_gw_prediction || 0);
-
-        // Get minutes for current gameweek
-        avgMinutes = player.predicted_mins || 0;
+        // Next 1 gameweek - use predictions array for consistency across all components
+        const currentGW = currentGameweek?.number || 15;
+        displayPoints = getNextNGameweeksTotal(player, scoringMode, currentGW, 1);
+        avgMinutes = Math.round(getAvgMinutesNextN(player, currentGW, 1));
       } else {
         // Next N gameweeks (5 or custom with N > 1) - use centralized utility for consistency
         const currentGW = currentGameweek?.number || 15;
@@ -191,7 +188,8 @@ export default function CheatSheetTabContent({
     POSITIONS.forEach(pos => {
       let positionPlayers = playersWithPoints.filter(p => p.position === pos);
 
-      // Sort by display points (descending)
+      // Remove players with 0 points and sort by display points (descending)
+      positionPlayers = positionPlayers.filter(p => p.displayPoints >= 0.05);
       positionPlayers.sort((a, b) => b.displayPoints - a.displayPoints);
 
       // Apply filtering if hideOthers is enabled

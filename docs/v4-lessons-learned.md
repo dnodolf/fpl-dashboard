@@ -37,8 +37,8 @@ V4 was an attempt to improve upon V3's Sleeper scoring predictions using ensembl
 ## Key Findings
 
 ### 1. Simplicity Wins
-- V3's simple position multipliers (GKP 0.90x, DEF 1.15x, MID 1.05x, FWD 0.97x) are **already optimal**
-- Testing alternative multipliers (±2-30%) all performed worse
+- V3's position-based approach is **already optimal** for this dataset size
+- Original hardcoded multipliers (GKP 0.90x, DEF 1.15x, MID 1.05x, FWD 0.97x) were later replaced with calibrated ratios from Sleeper stats API (3190 samples, GW1-26) which showed all positions score MORE in Sleeper than FFH predicts
 - Adding complexity (ML, consensus) added variance, not signal
 
 ### 2. Small Sample Size

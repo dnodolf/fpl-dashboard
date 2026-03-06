@@ -71,7 +71,7 @@ Uses predicted points vs season average to estimate difficulty:
 
 ### Form Trend Calculation
 
-Compares current gameweek prediction to season average:
+Compares current gameweek prediction (via `getNextNGameweeksTotal` with N=1) to season average:
 - **📈 Hot**: Current GW >10% above season average
 - **➡️ Steady**: Current GW within ±10% of season average
 - **📉 Cold**: Current GW >10% below season average

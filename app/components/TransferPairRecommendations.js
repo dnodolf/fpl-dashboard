@@ -77,13 +77,8 @@ export default function TransferPairRecommendations({
           const netGain = addScore - dropScore;
 
           // Calculate short-term gains using centralized utility for consistency
-          // Next 1 GW uses pre-calculated fields
-          const next1Drop = scoringMode === 'v3'
-            ? (dropPlayer.v3_current_gw || 0)
-            : (dropPlayer.current_gw_prediction || 0);
-          const next1Add = scoringMode === 'v3'
-            ? (addPlayer.v3_current_gw || 0)
-            : (addPlayer.current_gw_prediction || 0);
+          const next1Drop = getNextNGameweeksTotal(dropPlayer, scoringMode, currentGameweek, 1);
+          const next1Add = getNextNGameweeksTotal(addPlayer, scoringMode, currentGameweek, 1);
           const next1Gain = next1Add - next1Drop;
 
           // Use centralized utility for Next 3 and Next 5 calculations
@@ -206,9 +201,7 @@ export default function TransferPairRecommendations({
   function getFormIndicator(player, mode) {
     if (!player) return '➡️';
 
-    const currentGW = mode === 'v3'
-      ? (player.v3_current_gw || 0)
-      : (player.current_gw_prediction || 0);
+    const currentGW = getNextNGameweeksTotal(player, mode, currentGameweek, 1);
 
     const seasonAvg = mode === 'v3'
       ? (player.v3_season_avg || 0)

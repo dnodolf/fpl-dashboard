@@ -7,6 +7,7 @@ import { USER_ID } from '../config/constants';
 import { getSleeperPositionStyle } from '../constants/positionColors';
 import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import { getTeamLogoUrl } from '../utils/teamImage';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 
 // Progress Ring component for visual stats
@@ -289,11 +290,10 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   // Get my players
   const myPlayers = players.filter(p => p.owned_by === USER_ID);
 
-  // Helper to get current GW points
+  // Helper to get current GW points - use predictions array for consistency
+  const currentGW = currentGameweek?.number || 1;
   const getPlayerPoints = (player) => {
-    return scoringMode === 'v3'
-      ? (player.v3_current_gw || 0)
-      : (player.current_gw_prediction || 0);
+    return getNextNGameweeksTotal(player, scoringMode, currentGW, 1);
   };
 
   // Calculate playersToSwap locally (same logic as OptimizerTabContent)

@@ -33,7 +33,7 @@ export function PlayerModal({
   const predictions = player?.predictions || [];
   const seasonTotal = localScoringMode === 'v3' ? player?.v3_season_total : player?.predicted_points;
   const seasonAvg = localScoringMode === 'v3' ? player?.v3_season_avg : player?.season_prediction_avg;
-  const currentGWPrediction = localScoringMode === 'v3' ? player?.v3_current_gw : player?.current_gw_prediction;
+  const currentGWPrediction = getNextNGameweeksTotal(player, localScoringMode, currentGW, 1);
 
   // Calculate next 5 GW total using centralized utility
   const next5GWTotal = useMemo(() => {
@@ -72,9 +72,11 @@ export function PlayerModal({
           }
         }
 
-        // Get predicted points - FFH uses predicted_pts, V3 converts on the fly
+        // Get predicted points - use embedded v3_pts for calibrated values
         const ffhPoints = p.predicted_pts || 0;
-        const predictedPoints = localScoringMode === 'v3' ? convertToV3Points(ffhPoints, player?.position) : ffhPoints;
+        const predictedPoints = localScoringMode === 'v3'
+          ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player?.position))
+          : ffhPoints;
 
         return {
           gw: p.gw,
@@ -111,9 +113,11 @@ export function PlayerModal({
           }
         }
 
-        // Get predicted points - FFH uses predicted_pts, V3 converts on the fly
+        // Get predicted points - use embedded v3_pts for calibrated values
         const ffhPoints = p.predicted_pts || 0;
-        const predictedPoints = localScoringMode === 'v3' ? convertToV3Points(ffhPoints, player?.position) : ffhPoints;
+        const predictedPoints = localScoringMode === 'v3'
+          ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player?.position))
+          : ffhPoints;
 
         return {
           gw: p.gw,
@@ -139,7 +143,9 @@ export function PlayerModal({
 
     const avgPoints = recentGames.reduce((sum, p) => {
       const ffhPoints = p.predicted_pts || 0;
-      const points = localScoringMode === 'v3' ? convertToV3Points(ffhPoints, player?.position) : ffhPoints;
+      const points = localScoringMode === 'v3'
+        ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player?.position))
+        : ffhPoints;
       return sum + points;
     }, 0) / recentGames.length;
 

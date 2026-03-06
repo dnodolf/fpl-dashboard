@@ -1,162 +1,182 @@
 # Fantasy FC Playbook
 
-## 🚀 Project Overview
+## Project Overview
 
 **Fantasy FC Playbook** is a production-ready Next.js 14 application that bridges Sleeper Fantasy Football league management with advanced predictive analytics. The system achieves 98% player matching accuracy through Opta ID matching and provides comprehensive fantasy football analytics with 100% reliable gameweek tracking.
 
-**Current Version:** 3.1 - Player Comparison & Performance Optimization
+**Current Version:** 3.8 - Scoring Consistency & Comparison Redesign
 **Status:** Production Ready
-**Last Updated:** January 2025
+**Last Updated:** March 2025
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🎯 Player Data Integration
+### Player Data Integration
 - **98% Match Accuracy** via Opta ID-based player matching between Sleeper and Fantasy Football Hub
-- **Intelligent V3 Scoring**: Minutes-weighted predictions with gameweek summation methodology
-- **Rotation Risk Modeling**: Heavy penalties for low playing time predictions (30 mins = 90% reduction)
+- **Calibrated V3 Scoring**: Position-based FPL-to-Sleeper conversion with per-player calibration
 - **Position Authority**: Sleeper position data takes absolute precedence (100% accuracy)
 - **Smart Fallback**: Graceful degradation to Sleeper-only mode when external APIs fail
 
-### ⚡ Formation Optimizer
+### Formation Optimizer (Start/Sit)
 - **6 Formation Options**: 3-5-2, 4-4-2, 4-5-1, 3-4-3, 4-3-3, 5-4-1
 - **Mathematical Optimization**: Constraint-based algorithms for optimal lineups
-- **Real-time Analysis**: Current vs. optimal formation comparison with efficiency metrics
-- **Visual Formation Display**: Interactive formation diagrams with player positioning
+- **Actionable Recommendations**: Explicit "bench X, start Y" with net point gain
+- **Visual Formation Display**: Interactive pitch diagrams with player positioning
+- **Bench Player Cards**: See bench players with predicted points alongside formation
 
-### 🔄 Enhanced Transfer Analysis Engine
-- **Gameweek Range Analysis**: Customizable projection periods (current GW to GW 38)
-- **Position-Based Recommendations**: Smart transfer suggestions with net gain calculations
-- **Form Analysis**: Predicted performance trends with visual indicators (📈📉➡️)
-- **Fixture Difficulty Visualization**: Color-coded tiles showing difficulty ratings (1-5)
-- **Interactive Comparison**: Detailed player vs. player analysis modals
-- **Intelligent Controls**: Intuitive gameweek range selection and position filtering
-- **Pure Predictions**: Rankings based on unmodified prediction data for accuracy
+### Enhanced Transfer Analysis
+- **Smart Transfer Pairing**: "Drop Player X, Add Player Y" recommendations with net gain
+  - Position-aware matching (GKP-for-GKP, outfield flexibility)
+  - Top 10 recommendations ranked by season points improvement
+  - Form indicators and fixture difficulty visualization
+- **Gameweek Range Analysis**: Customizable projection periods
+- **Pure Predictions**: Rankings based on unmodified prediction data
 
-### 🆚 Player Comparison (NEW in v3.1)
-- **Side-by-Side Analysis**: Complete player comparison with intelligent auto-suggestions
-- **Smart Search**: Real-time fuzzy matching with dropdown suggestions showing player stats
-- **Comprehensive Metrics**: ROS Points, Next 5 GW, PPG Predicted, V3 enhanced scoring
-- **Visual Indicators**: Color-coded better/worse performance comparisons
-- **Clean Interface**: Focused on prediction data without market noise
-- **News Integration**: 📰 icons for player injury/status updates
+### Player Comparison (Redesigned in v3.8)
+- **Drop/Add workflow**: Left slot for roster players (grouped by position), right slot for free agents
+- **Verdict table**: 7 time horizons (Next 1/3/5/10 GW, ROS, Avg Mins, PPG) with color-coded winner
+- **Collapsible detail panels**: Next 5 GW charts and full fixture tables
+- **Swap button**: Quick player slot reversal
 
-### 📅 Hardcoded Gameweek System
+### Cheat Sheet
+- **Position-based rankings**: GKP, DEF, MID, FWD columns
+- **Timeframe options**: Next GW, Next 5, Rest of Season, Custom N
+- **Ownership filtering**: Show your players + top free agents, or all players
+- **Predicted minutes**: Shown per player for availability insight
+
+### Player News & Injury Status (v3.7)
+- **FPL Official API integration**: Real-time injury and availability data
+- **Status badges**: INJURED / DOUBTFUL / SUSPENDED / UNAVAILABLE / NOT IN SQUAD
+- **Relative timestamps**: "2h ago", "3d ago" via `timeAgo()` utility
+- **Graceful fallback**: FPL API failure silently skipped
+
+### Player Modal (v3.4)
+- **Detailed player view**: Click any player for stats, predictions, fixtures
+- **Next 5 GW Chart**: Bar chart with opponent and difficulty display
+- **Rest of Season Table**: Full fixture list with color-coded difficulty
+- **Compare Button**: Quick navigation to Comparison tab with pre-selection
+
+### Hardcoded Gameweek System
 - **100% Reliability**: Complete 2025-26 Premier League schedule embedded
 - **Zero Dependencies**: Works offline, immune to external API failures
-- **Instant Performance**: Sub-millisecond gameweek detection
-- **Clean Display**: Shows essential gameweek information without clutter
+- **Live GW Support**: Current GW predictions preserved when gameweek goes live
 
 ---
 
-## 🛠 Technology Stack
+## Technology Stack
 
 ### Frontend
 - **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS with custom Sleeper-inspired dark theme design system
+- **Styling**: Tailwind CSS with custom Sleeper-inspired dark theme
 - **State Management**: React hooks and context with local storage persistence
-- **UI/UX**: Dark theme interface, responsive design, accessibility features
 
 ### Backend
 - **API Layer**: Next.js API routes with intelligent caching and error handling
-- **Services**: 13 specialized service classes for different functionalities
+- **Services**: Specialized service classes for matching, scoring, optimization
 - **Caching**: Multi-level strategy (client: 30min, server: 15min) with smart compression
-- **Error Handling**: Comprehensive fallback mechanisms
-- **Performance**: Intelligent cache compression reducing storage from 7MB to 3MB
 
 ### Data Sources
 - **Sleeper API**: Primary source for league data, rosters, ownership (authoritative)
-- **Fantasy Football Hub**: Secondary source for predictions and analytics (with fallback)
+- **Fantasy Football Hub**: Predictions and analytics (with fallback)
+- **FPL Official API**: Player injury/status news via `bootstrap-static` endpoint
 - **Hardcoded Schedule**: 2025-26 Premier League gameweek dates (100% reliable)
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ### Service Layer
 ```
 app/services/
-├── gameweekService.js           # Hardcoded 2025-26 schedule (100% reliable)
-├── playerMatchingService.js     # Opta ID matching (98% success rate)
-├── formationOptimizerService.js # Mathematical lineup optimization
-├── scoringConversionService.js  # FPL→Sleeper point conversion
-├── v3ScoringService.js         # Enhanced predictive scoring
-└── [8 additional services]     # Specialized functionality modules
-```
-
-### API Endpoints
-```
-app/api/
-├── integrated-players/         # Main data integration with fallback handling
-├── optimizer/                  # Formation optimization algorithms
-├── fpl-gameweek/              # Hardcoded gameweek service
-└── [5 additional endpoints]    # Supporting functionality
++-- gameweekService.js           # Hardcoded 2025-26 schedule
++-- playerMatchingService.js     # Opta ID matching (98% success)
++-- formationOptimizerService.js # Mathematical lineup optimization
++-- scoringConversionService.js  # FFH data extraction and player enhancement
++-- v3ScoringService.js          # V3 Sleeper scoring orchestration
++-- v3/core.js                   # Calibrated position ratios + v3_pts embedding
++-- v3/conversionRatios.js       # Static fallback ratios
++-- fplNewsService.js            # FPL injury/status fetcher
++-- sleeperApiService.js         # Sleeper API with no-cache fetching
++-- calibrationService.js        # Per-player FFH-to-Sleeper calibration
++-- sleeperMatchupService.js     # Sleeper stats API for calibration
++-- cacheService.js              # Server-side cache management
 ```
 
 ### Component Architecture
 ```
 app/components/
-├── OptimizerTabContent.js      # Formation optimization interface
-├── TransferTabContent.js       # Transfer analysis with comparison modals
-├── ComparisonTabContent.js     # Player comparison with auto-suggestions
-├── MyPlayersTable.js          # Advanced player analytics table
-└── [Additional components]     # Supporting UI elements
++-- DashboardHeader.js            # Top nav, tabs, scoring toggle
++-- GameweekDisplay.js            # Clickable gameweek status widget
++-- HomeTabContent.js             # Home dashboard with team health, news, fixtures
++-- OptimizerTabContent.js        # Start/Sit with formation visualization
++-- TransferTabContent.js         # Transfer analysis
++-- TransferPairRecommendations.js # Smart drop/add pairing
++-- ComparisonTabContent.js       # Drop/Add player comparison with verdict table
++-- CheatSheetTabContent.js       # Position-based rankings
++-- PlayerModal.js                # Detailed player modal with charts
++-- MyPlayersTable.js             # Player analytics table (memoized)
++-- MatchingTabContent.js         # Opta matching stats
++-- ComparisonChart.js            # Reusable bar chart
++-- ErrorBoundary.js              # React error boundary
+```
+
+### Utilities
+```
+app/utils/
++-- predictionUtils.js   # getNextNGameweeksTotal(), getAvgMinutesNextN() - SINGLE SOURCE OF TRUTH
++-- newsUtils.js         # timeAgo(), getFPLStatusBadge()
++-- gameweekStyles.js    # Gameweek status color utilities
++-- cacheManager.js      # Client-side caching with compression
++-- ffhDataUtils.js      # FFH data extraction (predictions + results merging)
 ```
 
 ---
 
-## 📊 Performance Characteristics
+## Scoring System
 
-### Reliability Metrics
-- **Player Matching**: 98% accuracy via Opta ID system
-- **Position Accuracy**: 100% (Sleeper authority system)
-- **Gameweek Detection**: 100% reliability (hardcoded system)
-- **API Uptime**: Graceful fallback ensures service continuity
+### Dual Scoring Modes
+- **FFH Mode**: Pure Fantasy Premier League predictions from Fantasy Football Hub
+- **V3 Mode**: Sleeper-adjusted predictions with calibrated position-based conversion ratios
 
-### Performance Metrics
-- **Data Integration**: <2 seconds for complete player dataset
-- **Cache Hit Rate**: ~80% reducing API calls and improving response times
-- **Optimization Speed**: Real-time formation analysis
-- **Error Recovery**: Automatic fallback maintains functionality
+### V3 Calibration
+Position-based multipliers derived from Sleeper stats API (3190 samples, GW1-26):
+- Calibrated per-player when sufficient data exists
+- Falls back to position archetype ratios
+- `v3_pts` embedded on each prediction entry for consistent client-side access
 
----
-
-## 🎮 User Experience
-
-### Dashboard Tabs
-1. **Players**: Comprehensive player analytics with advanced filtering and search
-2. **Matching**: Player data integration status and debugging tools
-3. **Optimizer**: Formation optimization with visual recommendations and efficiency tracking
-4. **Transfers**: Transfer analysis with gameweek range selection and comparison tools
-5. **Comparison**: Side-by-side player comparison with intelligent auto-suggestions
-
-### Key UI Features
-- **Responsive Design**: Mobile-optimized interface
-- **Dark Theme**: Consistent dark mode styling for optimal contrast
-- **Interactive Controls**: Gameweek range inputs, position filters, search functionality
-- **Visual Feedback**: Color-coded performance indicators and optimization status
-- **Accessibility**: Screen reader support and keyboard navigation
+### Scoring Consistency (v3.8)
+All components use a single scoring path:
+- **Current GW**: `getNextNGameweeksTotal(player, scoringMode, currentGW, 1)` from predictions array
+- **Next N GWs**: `getNextNGameweeksTotal(player, scoringMode, currentGW, N)`
+- **Per-GW in charts**: `prediction.v3_pts` (calibrated, embedded per entry)
+- **Season totals**: Pre-calculated `predicted_points` / `v3_season_total`
 
 ---
 
-## 🚀 Getting Started
+## Dashboard Tabs
+
+1. **Home**: Team overview, league standings, team health widget, player news feed, live fixture schedule
+2. **Players**: Comprehensive player table with filtering, search, and pagination
+3. **Start/Sit**: Formation optimizer with visual pitch, actionable swap recommendations
+4. **Transfers**: Transfer pair recommendations with net gain analysis
+5. **Comparison**: Drop/Add player comparison with 7-metric verdict table
+6. **Cheat Sheet**: Position-based rankings with timeframe selection
+7. **Matching**: Player data integration status and Opta matching stats
+
+---
+
+## Getting Started
 
 ### Prerequisites
 - Node.js 18+
-- npm or yarn
+- npm
 - Sleeper Fantasy Football league
 - Fantasy Football Hub API access (optional - fallback available)
 
 ### Installation
 ```bash
-# Clone the repository
-git clone [repository-url]
-
-# Install dependencies
 npm install
-
-# Set up environment variables
 cp .env.example .env.local
 # Add your Sleeper League ID and FFH API credentials
 ```
@@ -170,133 +190,66 @@ FFH_BEARER_TOKEN=your_ffh_bearer_token
 
 ### Development
 ```bash
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linting
-npm run lint
+npm run dev     # Start development server (http://localhost:3000)
+npm run build   # Build for production
+npm start       # Start production server
+npm run lint    # Run ESLint checks
 ```
 
 ---
 
-## 🔧 Configuration
+## Performance
 
-### Position Color System
-- **GKP**: Yellow (#f0be4d)
-- **DEF**: Cyan (#63c0d6)
-- **MID**: Pink (#f38699)
-- **FWD**: Purple (#a8427f)
-
-### Caching Strategy
-- **Client-side**: 30-minute cache for user data with smart compression
-- **Server-side**: 15-minute cache for API responses
-- **Gameweek**: Instant response (hardcoded, no caching needed)
-- **Performance**: Automatic cleanup when localStorage quota exceeded
+- **Player Matching**: 98% accuracy via Opta ID system
+- **Position Accuracy**: 100% (Sleeper authority)
+- **Gameweek Detection**: 100% (hardcoded schedule)
+- **Data Integration**: <2 seconds for complete dataset
+- **Cache Hit Rate**: ~80% during normal usage
+- **V3 Scoring**: Instant (no network overhead)
 
 ---
 
-## 📈 Recent Updates
+## Error Handling
 
-### v3.1 - Player Comparison & Performance Optimization
-- **Player Comparison Tab**: Complete side-by-side player analysis with intelligent auto-suggestions
-- **Smart Search**: Real-time fuzzy matching with dropdown suggestions showing player stats
-- **Performance Optimization**: Intelligent cache compression reducing storage from 7MB to 3MB
-- **Storage Management**: Automatic cleanup when localStorage quota exceeded
-- **Console Deduplication**: Eliminated duplicate logging from React re-renders
-- **Hardcoded Gameweek Schedule**: Complete 2025-26 Premier League fixture integration
-- **Clean UI**: Removed unnecessary market data from comparison for focus on predictions
-
-### v3.0 - Enhanced UI & Intelligent Predictive Scoring
-- Streamlined gameweek range controls with intuitive number input navigation
-- Improved transfer tab user experience with position-consistent filtering
-- **Revolutionary V3 Scoring**: Minutes-weighted predictions eliminate rotation risk overvaluation
-- **Gameweek Summation**: Individual gameweek predictions summed for realistic season totals
-- **Dark Theme Exclusive**: Comprehensive light mode removal for better contrast and simplified codebase
-- Enhanced console logging with smart deduplication
-- Robust error handling and compilation fixes
-
-### v2.9 - UI Refinements & Player Display
-- Simplified player name displays for better readability
-- Clean, single-line player names in optimization tables
-- Improved visual hierarchy and information density
-
-### v2.8 - Hardcoded Gameweek System
-- Eliminated gameweek detection failures through embedded schedule
-- 100% reliability for 2025-26 Premier League season
-- Sub-millisecond response times for gameweek information
-
----
-
-## 🔮 Roadmap
-
-### Near-term Improvements
-- Enhanced transfer prediction algorithms
-- Advanced fixture difficulty analysis
-- Mobile optimization for comparison modals
-- Expanded formation visualization options
-
-### Long-term Vision
-- Multi-league support
-- Community features and league comparisons
-- Advanced statistical analysis and projections
-- Transfer history tracking and analysis
-
----
-
-## 🛡 Error Handling & Reliability
-
-### Fallback Mechanisms
 - **FFH API Failure**: Automatic fallback to Sleeper-only mode
+- **FPL API Failure**: Silently skipped, no impact on other features
 - **Position Conflicts**: Sleeper data takes absolute precedence
 - **Gameweek Issues**: Eliminated through hardcoded system
-- **Performance Degradation**: Multi-level caching ensures responsiveness
-
-### Monitoring & Debugging
-- **Smart Console Logging**: Comprehensive logging with intelligent deduplication
-- **Cache Performance Metrics**: Hit rate monitoring and storage size tracking
-- **API Response Monitoring**: Response time and error detection
-- **Formation Detection Debug**: Constraint violation details
-- **Transfer Analysis Logging**: Calculation debugging with detailed output
-- **Storage Management**: Automatic cleanup and compression logging
+- **Stale Data**: `cache: 'no-store'` on Sleeper API fetches
+- **Storage Quota**: Automatic cache cleanup and compression
 
 ---
 
-## 🤝 Contributing
+## Recent Updates
 
-### Development Workflow
-1. Create feature branch from `main`
-2. Implement changes with comprehensive testing
-3. Update documentation for new features
-4. Submit pull request with detailed description
+### v3.8 - Scoring Consistency & Comparison Redesign (March 2025)
+- Fixed scoring discrepancies across all tabs (unified to predictions array)
+- Redesigned comparison tab for drop/add decisions with 7-metric verdict table
+- Live GW prediction preservation (current GW no longer disappears when live)
+- Team health widget uses FPL status codes for accurate availability
+- Cheat sheet: minutes for Next GW, zero-point player filtering
+- Stale standings fix via no-cache Sleeper API fetches
 
-### Code Standards
-- Follow existing architecture patterns
-- Maintain service-oriented design
-- Implement proper error handling
-- Add comprehensive logging
-- Update documentation
+### v3.7 - FPL Injury & Status News Integration (February 2025)
+- Real-time injury/status data from FPL `bootstrap-static` API
+- Status badges, relative timestamps, color-coded news icons
+- Graceful fallback on FPL API failure
 
----
+### v3.6 - Scoring Consistency Standardization (January 2025)
+- Centralized scoring utilities in `predictionUtils.js`
+- V3 scoring simplified to position ratios only
 
-## 📄 License
+### v3.5 - Smart Transfer Pair Recommendations (January 2025)
+- "Drop X, Add Y" pairing algorithm with net season points gain
+- Position-aware matching, form indicators, fixture difficulty
 
-This project is private and proprietary. All rights reserved.
+### v3.4 - Player Modal & Comparison Visualizations (December 2024)
+- Detailed player modal with charts and fixture analysis
+- Side-by-side comparison with bar charts and fixture tables
 
----
-
-## 🙋‍♂️ Support
-
-For technical issues or feature requests:
-1. Check the troubleshooting section in `/docs/projectDocumentation.md`
-2. Review console logs for detailed error information
-3. Verify environment configuration
-4. Test with fallback modes if external APIs are unavailable
+### v3.2 - V3 Sleeper Scoring (January 2025)
+- Position-based FPL-to-Sleeper conversion system
+- Validated against 175 actual GW results (2.78 MAE)
 
 ---
 

@@ -112,7 +112,9 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
           isHome,
           difficulty,
           predictedMinutes: p.xmins || p.predicted_mins || 90,
-          predictedPoints: scoringMode === 'v3' ? convertToV3Points(ffhPoints, player.position) : ffhPoints
+          predictedPoints: scoringMode === 'v3'
+            ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player.position))
+            : ffhPoints
         };
       });
 

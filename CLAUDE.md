@@ -16,7 +16,7 @@ npm run lint        # Run ESLint checks
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v3.7 - FPL Injury & Status News Integration
+**Current Version**: v3.8 - Scoring Consistency & Comparison Redesign
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -51,7 +51,7 @@ app/
 │   ├── OptimizerTabContent.js        # Formation optimization interface
 │   ├── TransferTabContent.js         # Transfer recommendations with smart pairing
 │   ├── TransferPairRecommendations.js # Smart "Drop X, Add Y" transfer system
-│   ├── ComparisonTabContent.js       # Player comparison interface
+│   ├── ComparisonTabContent.js       # Drop/Add player comparison with verdict table
 │   ├── PlayerModal.js                # Detailed player modal with charts & fixtures
 │   ├── MyPlayersTable.js            # Player analytics table (memoized)
 │   ├── ErrorBoundary.js             # React error boundary (class component)
@@ -154,24 +154,15 @@ app/
 - **Compare Button**: Quick navigation to Comparison tab with player pre-selected
 - **Responsive Design**: Adapts to different screen sizes with proper mobile support
 
-### Player Comparison (Enhanced in v3.4)
-- **Side-by-side comparison** of any two players with intelligent auto-suggestions
-- **Real-time search** with fuzzy matching by name, team, or position
-- **Smart suggestions dropdown** showing top 10 matches with player stats preview
-- **My Players Dropdown**: Quick selection from your team below search fields
-- **Comprehensive metrics** including ROS Points, Next 5 GW, PPG Predicted, V3 scoring
-- **Visual comparison** with color-coded better/worse indicators
-- **Next 5 GW Charts**: Side-by-side bar charts (Player 1 blue, Player 2 green)
-  - Dynamic Y-axis with grid lines
-  - Point predictions above each bar
-  - Opponent labels below X-axis
-- **Rest of Season Tables**: Side-by-side fixture tables showing all remaining gameweeks
-  - Scrollable with max-height and sticky headers
-  - Color-coded difficulty badges (1-5 scale)
-  - Predicted points for each fixture
-- **Clean interface** focused on prediction data without market noise
-- **News integration** with 📰 icons for player injury/status updates
+### Player Comparison (Redesigned in v3.8)
+- **Drop/Add workflow**: Left slot for roster players (grouped by position), right slot for free agents
+- **Verdict table**: 7 time horizons (Next 1/3/5/10 GW, ROS, Avg Mins, PPG) with color-coded winner
+- **Collapsible detail panels**: Next 5 GW charts and full fixture tables expand on demand
+- **Smart search**: Free agents sorted first, with fuzzy matching by name/team/position
+- **Swap button**: Quick player slot reversal
 - **Pre-selection Support**: Navigate from PlayerModal via Compare button
+- **Consistent scoring**: Uses `getNextNGameweeksTotal()` for all point calculations
+- **News integration** with icons for player injury/status updates
 
 ## Environment Configuration
 
@@ -285,7 +276,7 @@ async function importServices() {
 
 ## Current Status
 
-**Production Ready**: v3.7 represents real-time player injury/status integration with:
+**Production Ready**: v3.8 represents scoring consistency and comparison redesign with:
 - ✅ 100% reliable gameweek system (hardcoded)
 - ✅ 98% player matching accuracy
 - ✅ 100% position accuracy (Sleeper authority)
@@ -300,6 +291,25 @@ async function importServices() {
 - ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v3.8 - Scoring Consistency & Comparison Redesign (March 2025)
+- **Scoring Consistency Fix**: Eliminated discrepancies where same player showed different points across tabs
+  - Root cause: Three different scoring paths (pre-calculated fields, `getNextNGameweeksTotal()`, `convertToV3Points()`)
+  - Fix: All components now use `getNextNGameweeksTotal()` for current GW points and `prediction.v3_pts` for per-GW chart values
+  - Files standardized: HomeTabContent, CheatSheetTabContent, OptimizerTabContent, PlayerModal, ComparisonTabContent, TransferPairRecommendations, MyPlayersTable, OptimizerStatsCard
+  - Pre-calculated `current_gw_prediction` / `v3_current_gw` fields still exist on player objects but are no longer used in display components
+- **Comparison Tab Redesign**: Complete rewrite for drop/add decisions
+  - Left slot: dropdown of roster players grouped by position
+  - Right slot: search with free agents prioritized
+  - Verdict table with 7 time horizons (Next 1/3/5/10 GW, ROS, Avg Mins, PPG)
+  - Collapsible detail panels for charts and fixture tables
+  - Swap button for quick slot reversal
+- **Live GW Prediction Preservation**: Current GW predictions no longer disappear when GW goes live
+  - `scoringConversionService.js`: Injects current GW back into predictions array from results when FFH moves it
+  - Multiple components: Changed `gw > currentGW` to `gw >= currentGW` for fixture filters
+- **Team Health Widget Fix**: Uses FPL status codes (`fpl_status`) instead of just `chance_next_round`
+- **Cheat Sheet Improvements**: Minutes shown for Next GW, zero-point players hidden
+- **Stale Standings Fix**: Added `cache: 'no-store'` to Sleeper API fetches in `sleeperApiService.js`
 
 ### v3.7 - FPL Injury & Status News Integration (February 2025)
 - **New Service**: `app/services/fplNewsService.js` — fetches FPL `bootstrap-static` API, 15-min server-side cache, returns null on failure
@@ -345,11 +355,13 @@ async function importServices() {
   - `OptimizerTabContent.js` - Removed dead v4 mode code
   - `PlayerModal.js` - Uses pre-calculated fields for ROS points
   - `TransferPairRecommendations.js` - Uses centralized utility instead of custom function
-- **Scoring Field Standards**:
-  - Current GW: `current_gw_prediction` (FFH) / `v3_current_gw` (V3)
+- **Scoring Field Standards** (updated in v3.8 — all GW points now use predictions array):
+  - Current GW: Use `getNextNGameweeksTotal(player, scoringMode, currentGW, 1)` everywhere
   - Season Total: `predicted_points` (FFH) / `v3_season_total` (V3)
   - Season Average: `season_prediction_avg` (FFH) / `v3_season_avg` (V3)
   - Next N GWs: Use `getNextNGameweeksTotal()` utility with predictions array
+  - Per-GW in charts: Use `prediction.v3_pts` (calibrated, embedded on each entry)
+  - NEVER use pre-calculated `current_gw_prediction` / `v3_current_gw` in display components
 
 ### v3.5 - Smart Transfer Pair Recommendations (January 2025)
 - **TransferPairRecommendations Component**: New intelligent transfer suggestion system (`app/components/TransferPairRecommendations.js`)
@@ -478,8 +490,11 @@ async function importServices() {
   - Use state lifting for pre-selection (comparisonPlayer1)
   - Always provide cleanup handlers (onClearPreSelection) to prevent state leakage
 - **Scoring Consistency**: CRITICAL - All components must use the same scoring approach
-  - Use pre-calculated fields (`v3_current_gw`, `predicted_points`, etc.) for single values
-  - Use centralized utilities (`getNextNGameweeksTotal()`) for gameweek range calculations
+  - Current GW points: ALWAYS use `getNextNGameweeksTotal(player, scoringMode, currentGW, 1)`
+  - Per-GW points in charts/tables: Use `prediction.v3_pts` (calibrated, embedded per prediction entry)
+  - Season totals: Use `predicted_points` (FFH) / `v3_season_total` (V3) pre-calculated fields
+  - NEVER use `current_gw_prediction` or `v3_current_gw` in display components (they can diverge from predictions array)
+  - NEVER use `convertToV3Points()` for display — use embedded `prediction.v3_pts` instead
   - NEVER create custom scoring functions in components - use `app/utils/predictionUtils.js`
   - V3 conversion: position ratio ONLY (no form/fixture/injury adjustments)
 
@@ -517,12 +532,15 @@ Position-based multipliers applied to FFH FPL predictions:
    - All tables, charts, and recommendations update dynamically
    - Centralized utilities apply conversion ratios consistently
 
-3. **Scoring Field Selection**:
-   - FFH mode: Uses `predicted_points`, `season_prediction_avg`, `current_gw_prediction`
-   - V3 mode: Uses `v3_season_total`, `v3_season_avg`, `v3_current_gw`
+3. **Scoring Field Selection** (updated v3.8):
+   - Current GW: Use `getNextNGameweeksTotal(player, scoringMode, currentGW, 1)` — reads from predictions array
+   - Season totals: `predicted_points` (FFH) / `v3_season_total` (V3) — pre-calculated fields OK here
+   - Season averages: `season_prediction_avg` (FFH) / `v3_season_avg` (V3)
    - Next N GWs: Use `getNextNGameweeksTotal()` from `app/utils/predictionUtils.js`
+   - Per-GW in charts: Use `prediction.v3_pts` (calibrated ratio embedded per entry in `v3/core.js`)
 
 **IMPORTANT**: V3 scoring uses ONLY position ratios. Complex adjustments (form, fixture, injury, minutes) were removed in v3.6 as they caused inconsistencies and did not improve accuracy.
+**IMPORTANT**: Never use `current_gw_prediction` / `v3_current_gw` pre-calculated fields in display components — they can diverge from the predictions array (the single source of truth). This was fixed in v3.8.
 
 ### Key Files
 
