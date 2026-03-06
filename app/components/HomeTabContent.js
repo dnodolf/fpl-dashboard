@@ -387,14 +387,17 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   // Count players by availability status
   const availabilityStats = {
     healthy: myPlayers.filter(p => {
+      if (p.fpl_status && p.fpl_status !== 'a') return false;
       const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
       return chance >= 75;
     }).length,
     doubtful: myPlayers.filter(p => {
+      if (p.fpl_status === 'd') return true;
       const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
       return chance >= 25 && chance < 75;
     }).length,
     out: myPlayers.filter(p => {
+      if (p.fpl_status && p.fpl_status !== 'a' && p.fpl_status !== 'd') return true;
       const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
       return chance < 25;
     }).length
