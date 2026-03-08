@@ -19,7 +19,8 @@ export function usePlayerData() {
     enhanced: false,
     integrated: false,
     integration: null,
-    calibration: null
+    calibration: null,
+    modelAccuracy: null
   });
 
   const fetchData = async (type = 'auto', forceRefresh = false, useCache = true) => {
@@ -80,7 +81,8 @@ export function usePlayerData() {
           ownershipCount: result.count || result.players.length,
           integrated: true,
           integration: result.stats,
-          calibration: result.calibration || null
+          calibration: result.calibration || null,
+          modelAccuracy: result.modelAccuracy || null
         };
 
         CacheManager.set(newData);

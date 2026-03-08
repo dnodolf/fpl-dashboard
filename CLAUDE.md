@@ -10,13 +10,14 @@ npm run dev          # Start development server (http://localhost:3000)
 npm run build        # Build for production
 npm start           # Start production server
 npm run lint        # Run ESLint checks
+npm run check:scoring # Scoring consistency lint (catches banned field usage)
 ```
 
 ## Project Overview
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v3.8 - Scoring Consistency & Comparison Redesign
+**Current Version**: v3.9 - V4 Ensemble Model & Scoring Integrity
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -292,6 +293,30 @@ async function importServices() {
 
 ## Recent Technical Updates
 
+### v3.9 - V4 Ensemble Model & Scoring Integrity (March 2025)
+- **V4 Ensemble Scoring**: New scoring mode blending V3 predictions with Sleeper projections
+  - `app/services/sleeperProjectionsService.js` — fetches Sleeper projections for GWs via `/v1/projections/clubsoccer:epl/regular/2025/{gw}`
+  - `app/services/v4/core.js` — blends V3 (75%) with Sleeper projections (25%), embeds `v4_pts` per prediction
+  - `v4_season_total`, `v4_season_avg` pre-calculated; falls back to V3 for players without Sleeper data (~1300)
+  - V4 toggle button (amber) added to DashboardHeader and PlayerModal
+  - `predictionUtils.js` updated: `v4_pts → v3_pts → ffhPoints` fallback chain
+  - `getScoringValue()` in `v3/core.js` updated for V4 field mapping
+  - All tabs work with V4 via existing `getNextNGameweeksTotal()` and `getScoringValue()` utilities
+- **Optimizer Start/Sit Fix**: `formationOptimizerService.js` was using stale pre-calculated fields (`v3_current_gw`, `current_gw_prediction`) instead of predictions array
+  - Rewrote `getPlayerPoints()` to use `getNextNGameweeksTotal()` — same as all display components
+  - Added `currentGW` parameter threading from API route through to optimizer service
+  - Now correctly picks highest-predicted players for all scoring modes (FFH/V3/V4)
+- **Scoring Consistency Lint**: New automated check `npm run check:scoring` (`scripts/scoring-consistency-check.js`)
+  - Scans display components for banned field usage patterns
+  - Catches `current_gw_prediction`, `v3_current_gw` reads and `convertToV3Points()` calls
+  - Exits with error code 1 on violations — can be added to CI
+- **Removed `convertToV3Points()` from all display code**: PlayerModal, ComparisonTabContent, predictionUtils
+  - Replaced with nullish coalescing: `v4_pts ?? v3_pts ?? ffhPoints`
+  - `convertToV3Points()` used hardcoded ratios that differ from calibrated values — unsafe for display
+- **Model Accuracy Badges**: Sleeper projections MAE badge in DashboardHeader (backtest: 2.993 MAE, 6263 samples GW1-29)
+  - V3/V4 MAE badges placeholder for forward tracking (not yet implemented)
+- **Backtest Script**: `scripts/backtestV4.js` — comprehensive model comparison against actual Sleeper scores
+
 ### v3.8 - Scoring Consistency & Comparison Redesign (March 2025)
 - **Scoring Consistency Fix**: Eliminated discrepancies where same player showed different points across tabs
   - Root cause: Three different scoring paths (pre-calculated fields, `getNextNGameweeksTotal()`, `convertToV3Points()`)
@@ -491,12 +516,13 @@ async function importServices() {
   - Always provide cleanup handlers (onClearPreSelection) to prevent state leakage
 - **Scoring Consistency**: CRITICAL - All components must use the same scoring approach
   - Current GW points: ALWAYS use `getNextNGameweeksTotal(player, scoringMode, currentGW, 1)`
-  - Per-GW points in charts/tables: Use `prediction.v3_pts` (calibrated, embedded per prediction entry)
-  - Season totals: Use `predicted_points` (FFH) / `v3_season_total` (V3) pre-calculated fields
+  - Per-GW points in charts/tables: Use `prediction.v3_pts` / `prediction.v4_pts` (embedded per prediction entry)
+  - Season totals: Use `predicted_points` (FFH) / `v3_season_total` (V3) / `v4_season_total` (V4) pre-calculated fields
   - NEVER use `current_gw_prediction` or `v3_current_gw` in display components (they can diverge from predictions array)
-  - NEVER use `convertToV3Points()` for display — use embedded `prediction.v3_pts` instead
+  - NEVER use `convertToV3Points()` for display — it uses hardcoded ratios that differ from calibrated values
   - NEVER create custom scoring functions in components - use `app/utils/predictionUtils.js`
   - V3 conversion: position ratio ONLY (no form/fixture/injury adjustments)
+  - Run `npm run check:scoring` to catch violations automatically
 
 ---
 

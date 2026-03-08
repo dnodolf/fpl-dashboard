@@ -2,6 +2,7 @@
 // Updated to use unified position utilities - SLEEPER AUTHORITY
 
 import { normalizePosition } from '../../utils/positionUtils.js';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils.js';
 
 export class FormationOptimizerService {
   constructor() {
@@ -19,7 +20,8 @@ export class FormationOptimizerService {
   };
 
   /**
-   * Get player's predicted points - enhanced with multiple fallback strategies including v3 scoring
+   * Get player's predicted points using predictions array (single source of truth).
+   * Uses getNextNGameweeksTotal() for consistency with all other components.
    */
   getPlayerPoints(player) {
     // CRITICAL: Check player availability first - if unavailable, return 0
@@ -28,62 +30,24 @@ export class FormationOptimizerService {
                            100;
 
     if (chanceOfPlaying !== null && chanceOfPlaying !== undefined && chanceOfPlaying < 25) {
-      // Player is out/suspended - don't use them regardless of predictions
       return 0;
     }
 
-    // Use scoring mode to pick the right field — respects FFH vs V3 toggle
-    if (this.scoringMode === 'v3') {
-      if (player.v3_current_gw && player.v3_current_gw > 0) {
-        return player.v3_current_gw;
-      }
-    } else {
-      // FFH mode: use pure FFH prediction, NOT v3
-      if (player.current_gw_prediction && player.current_gw_prediction > 0) {
-        return player.current_gw_prediction;
-      }
+    // Primary: Use predictions array via getNextNGameweeksTotal (same as all display components)
+    if (this.currentGW && player.predictions?.length) {
+      const pts = getNextNGameweeksTotal(player, this.scoringMode, this.currentGW, 1);
+      if (pts > 0) return pts;
     }
 
-    // Fallback chain (shared)
-    if (player.current_gw_prediction && player.current_gw_prediction > 0) {
-      return player.current_gw_prediction;
+    // Fallback for players without predictions array: use season averages
+    if (this.scoringMode === 'v4' || this.scoringMode === 'v3') {
+      if (player.v3_season_avg && player.v3_season_avg > 0) return player.v3_season_avg;
     }
-
-    if (player.next_gw_prediction && player.next_gw_prediction > 0) {
-      return player.next_gw_prediction;
-    }
-
-    if (this.scoringMode === 'v3' && player.v3_season_avg && player.v3_season_avg > 0) {
-      return player.v3_season_avg;
-    }
-
     if (player.season_prediction_avg && player.season_prediction_avg > 0) {
       return player.season_prediction_avg;
     }
 
-    if (player.predicted_ppg && player.predicted_ppg > 0) {
-      return player.predicted_ppg;
-    }
-
-    if (player.current_ppg && player.current_ppg > 0) {
-      return player.current_ppg;
-    }
-    
-    // Priority 6: Extract from gameweek predictions JSON
-    if (player.sleeper_gw_predictions) {
-      try {
-        const gwPreds = JSON.parse(player.sleeper_gw_predictions);
-        const values = Object.values(gwPreds);
-        if (values.length > 0) {
-          const avg = values.reduce((a, b) => a + b, 0) / values.length;
-          if (avg > 0) return Math.round(avg * 100) / 100;
-        }
-      } catch (e) {
-        // Continue to fallback
-      }
-    }
-    
-    return 0; // Default to 0 if no predictions available
+    return 0;
   }
 
   /**
@@ -371,8 +335,9 @@ export class FormationOptimizerService {
   /**
    * Analyze current roster and provide optimization recommendations
    */
-  async analyzeCurrentRoster(allPlayers, userId, scoringMode = 'ffh') {
+  async analyzeCurrentRoster(allPlayers, userId, scoringMode = 'ffh', currentGW = null) {
     this.scoringMode = scoringMode;
+    this.currentGW = currentGW;
     try {
       if (process.env.NODE_ENV === 'development') {
         console.log(`🔍 Analyzing roster for ${userId}...`);

@@ -37,9 +37,9 @@ function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
 
-      // Validate currentGameweek if using v3 scoring
-      if (scoringMode === 'v3' && !currentGameweek?.number) {
-        throw new Error('Current gameweek data is required for v3 scoring mode');
+      // Validate currentGameweek if using v3/v4 scoring
+      if ((scoringMode === 'v3' || scoringMode === 'v4') && !currentGameweek?.number) {
+        throw new Error('Current gameweek data is required for v3/v4 scoring mode');
       }
 
       const response = await fetch('/api/optimizer', {
@@ -733,8 +733,8 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
 
 // ----------------- MAIN OPTIMIZER TAB CONTENT - ENHANCED -----------------
 export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlayerClick }) => {
-  // Don't render if gameweek data isn't loaded for v3 scoring
-  if (scoringMode === 'v3' && !currentGameweek?.number) {
+  // Don't render if gameweek data isn't loaded for v3/v4 scoring
+  if ((scoringMode === 'v3' || scoringMode === 'v4') && !currentGameweek?.number) {
     return (
       <div className={`p-8 text-center text-gray-300`}>
         <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>

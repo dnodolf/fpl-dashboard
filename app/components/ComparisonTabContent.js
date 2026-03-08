@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { getScoringValue } from '../services/v3ScoringService.js';
 import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
-import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
 import { getSleeperPositionStyle } from '../constants/positionColors';
@@ -112,8 +111,10 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
           isHome,
           difficulty,
           predictedMinutes: p.xmins || p.predicted_mins || 90,
-          predictedPoints: scoringMode === 'v3'
-            ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player.position))
+          predictedPoints: scoringMode === 'v4'
+            ? (p.v4_pts ?? p.v3_pts ?? ffhPoints)
+            : scoringMode === 'v3'
+            ? (p.v3_pts ?? ffhPoints)
             : ffhPoints
         };
       });

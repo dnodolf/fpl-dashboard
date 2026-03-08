@@ -49,7 +49,7 @@ export default function FPLDashboard() {
   // Use gameweek hook for current gameweek data
   const currentGameweek = useGameweek();
 
-  const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration, calibration } = usePlayerData();
+  const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration, calibration, modelAccuracy } = usePlayerData();
 
   // Processed players with scoring mode applied
   const [processedPlayers, setProcessedPlayers] = useState([]);
@@ -307,6 +307,7 @@ export default function FPLDashboard() {
           scoringMode={scoringMode}
           setScoringMode={setScoringMode}
           calibration={calibration}
+          modelAccuracy={modelAccuracy}
         />
 
         {/* Main Content */}

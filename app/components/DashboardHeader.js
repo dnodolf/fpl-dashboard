@@ -4,7 +4,7 @@ import { getDataFreshnessStatus } from '../utils/cacheManager';
 import CacheManager from '../utils/cacheManager';
 import { AppLogo } from './common/AppLogo';
 
-const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration }) => {
+const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration, modelAccuracy }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
 
   return (
@@ -49,8 +49,29 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                 >
                   🚀 V3
                 </button>
+                <button
+                  onClick={() => setScoringMode('v4')}
+                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    scoringMode === 'v4'
+                      ? 'bg-amber-500 text-white hover:bg-amber-600'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                  title="V4 Ensemble (75% V3 + 25% Sleeper projections)"
+                >
+                  ⚡ V4
+                </button>
               </div>
             </div>
+
+            {/* Model accuracy badge */}
+            {modelAccuracy && (
+              <span
+                className="hidden sm:inline text-xs px-2 py-1 rounded-full font-medium bg-gray-700 text-gray-300 border border-gray-600"
+                title={`Sleeper Projections MAE: ${modelAccuracy.sleeper_proj?.mae ?? '?'} (${modelAccuracy.sleeper_proj?.samples ?? 0} samples). Lower MAE = more accurate prediction of actual Sleeper scores.`}
+              >
+                Sleeper MAE: {modelAccuracy.sleeper_proj?.mae?.toFixed(1) ?? '?'}
+              </span>
+            )}
 
             {/* Calibration status chip */}
             {calibration && (

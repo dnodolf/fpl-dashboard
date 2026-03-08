@@ -52,7 +52,9 @@ const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scori
 
   const getPlayerPPG = (player) => {
     // Use pre-calculated fields for season average
-    if (scoringMode === 'v3') {
+    if (scoringMode === 'v4') {
+      return player.v4_season_avg || player.v3_season_avg || 0;
+    } else if (scoringMode === 'v3') {
       return player.v3_season_avg || 0;
     } else {
       // FFH mode: use FFH's season_prediction_avg
@@ -260,7 +262,7 @@ const getSleeperPositionBadgeColor = (position) => {
                   onClick={() => handleSort('predicted_points')}
                   className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
-                  Predicted Points {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_points')}
+                  Predicted Points {scoringMode === 'v4' ? '⚡' : scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_points')}
                 </th>
                 <th
                   onClick={() => handleSort('predicted_minutes')}
@@ -273,7 +275,7 @@ const getSleeperPositionBadgeColor = (position) => {
                     onClick={() => handleSort('ppg_value')}
                     className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                   >
-                    PPG {scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
+                    PPG {scoringMode === 'v4' ? '⚡' : scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
                   </th>
                 )}
                 <th

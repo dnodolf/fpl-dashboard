@@ -16,7 +16,7 @@ const SLEEPER_SEASON = '2025';                  // 2025-26 PL season uses season
  * Fetch this league's scoring settings (pos_* keys with non-zero values).
  * Used to compute fantasy points from raw Sleeper player stats.
  */
-async function fetchLeagueScoringSettings(leagueId) {
+export async function fetchLeagueScoringSettings(leagueId) {
   const cacheKey = `sleeper-scoring-settings-${leagueId}`;
   const cached = cacheService.get(cacheKey);
   if (cached?.scoring) return cached.scoring;
@@ -47,7 +47,7 @@ async function fetchLeagueScoringSettings(leagueId) {
  * Compute fantasy points for a player in one GW from their raw Sleeper stats.
  * The pos_*_* stat keys map 1:1 to scoring setting keys — just multiply and sum.
  */
-function computePlayerFantasyPoints(playerStats, scoringSettings) {
+export function computePlayerFantasyPoints(playerStats, scoringSettings) {
   let total = 0;
   for (const [key, value] of Object.entries(playerStats)) {
     const weight = scoringSettings[key];

@@ -507,11 +507,13 @@ export async function POST(request) {
       throw new Error('Cannot proceed without current gameweek information');
     }
 
-    // Fetch player data + matchup history in parallel (matchup fetch doesn't depend on players)
+    // Fetch player data + matchup history + Sleeper projections in parallel
     const { fetchSleeperMatchupHistory } = await import('../../services/sleeperMatchupService.js');
-    const [players, matchupData] = await Promise.all([
+    const { fetchSleeperProjections } = await import('../../services/sleeperProjectionsService.js');
+    const [players, matchupData, sleeperProjectionsData] = await Promise.all([
       integratePlayersWithOptaMatching(currentGameweek),
-      fetchSleeperMatchupHistory(currentGameweek.number) // Returns null on failure (graceful)
+      fetchSleeperMatchupHistory(currentGameweek.number), // Returns null on failure (graceful)
+      fetchSleeperProjections(currentGameweek.number)       // Returns null on failure (graceful)
     ]);
 
     // Compute calibrated V3 ratios from historical Sleeper vs FPL data
@@ -529,11 +531,21 @@ export async function POST(request) {
     }
     const v3EnhancedResult = await enhancePlayersWithV3Predictions(players, currentGameweek, calibrationData);
 
-const finalPlayers = v3EnhancedResult.players;
+let finalPlayers = v3EnhancedResult.players;
 const v3Statistics = v3EnhancedResult.v3Stats;
 
 if (process.env.NODE_ENV === 'development') {
   console.log(`✅ Pipeline: V3 scoring applied to ${v3Statistics.v3Enhanced}/${v3Statistics.totalPlayers} players`);
+}
+
+// V4 Ensemble: blend V3 predictions with Sleeper projections (75/25)
+const { applyV4Scoring } = await import('../../services/v4/core.js');
+const sleeperProj = sleeperProjectionsData?.projections || null;
+finalPlayers = applyV4Scoring(finalPlayers, sleeperProj, currentGameweek.number);
+const v4PlayersWithData = finalPlayers.filter(p => p.v4_has_sleeper_data).length;
+
+if (process.env.NODE_ENV === 'development') {
+  console.log(`✅ Pipeline: V4 ensemble applied — ${v4PlayersWithData} players with Sleeper projection data`);
 }
 
 // Calculate matching statistics from V3 enhanced players
@@ -569,6 +581,23 @@ const responseData = {
     biggestWinners: v3Statistics.biggestWinners,
     positionBreakdown: v3Statistics.positionBreakdown,
     enhancementStatus: v3Statistics.error ? 'error' : 'success'
+  },
+
+  // V4 Ensemble Statistics
+  v4Enhancement: {
+    enabled: true,
+    playersWithSleeperData: v4PlayersWithData,
+    totalPlayers: finalPlayers.length,
+    coverage: Math.round((v4PlayersWithData / finalPlayers.length) * 100) + '%',
+    blendWeights: { v3: 0.75, sleeper: 0.25 },
+    sleeperProjectionsAvailable: !!sleeperProj
+  },
+
+  // Model accuracy metrics (Sleeper projection MAE from backtest; others tracking)
+  modelAccuracy: {
+    sleeper_proj: { mae: 2.993, samples: 6263, label: 'Sleeper Proj', source: 'backtest_gw1_29' },
+    v3: { mae: null, samples: 0, label: 'V3', source: 'tracking' },
+    v4: { mae: null, samples: 0, label: 'V4', source: 'tracking' }
   },
   
   stats: {

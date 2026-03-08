@@ -114,7 +114,8 @@ export async function POST(request) {
       console.log('📊 Position distribution:', positionCounts);
       console.log('🎯 Analyzing current roster...');
     }
-    const analysis = await optimizerService.analyzeCurrentRoster(players, userId, scoringMode);
+    const currentGW = requestData.currentGameweek;
+    const analysis = await optimizerService.analyzeCurrentRoster(players, userId, scoringMode, currentGW);
 
     if (analysis.error) {
       throw new Error(analysis.error);

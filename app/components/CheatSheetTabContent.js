@@ -148,7 +148,9 @@ export default function CheatSheetTabContent({
 
       if (timeframe === 'ros') {
         // Rest of season
-        displayPoints = scoringMode === 'v3'
+        displayPoints = scoringMode === 'v4'
+          ? (player.v4_season_total || player.v3_season_total || 0)
+          : scoringMode === 'v3'
           ? (player.v3_season_total || 0)
           : (player.predicted_points || 0);
 

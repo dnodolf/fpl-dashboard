@@ -9,7 +9,6 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
-import { convertToV3Points } from '../services/v3/conversionRatios';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
 import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
@@ -31,8 +30,12 @@ export function PlayerModal({
 
   // Get predictions data
   const predictions = player?.predictions || [];
-  const seasonTotal = localScoringMode === 'v3' ? player?.v3_season_total : player?.predicted_points;
-  const seasonAvg = localScoringMode === 'v3' ? player?.v3_season_avg : player?.season_prediction_avg;
+  const seasonTotal = localScoringMode === 'v4'
+    ? (player?.v4_season_total || player?.v3_season_total)
+    : localScoringMode === 'v3' ? player?.v3_season_total : player?.predicted_points;
+  const seasonAvg = localScoringMode === 'v4'
+    ? (player?.v4_season_avg || player?.v3_season_avg)
+    : localScoringMode === 'v3' ? player?.v3_season_avg : player?.season_prediction_avg;
   const currentGWPrediction = getNextNGameweeksTotal(player, localScoringMode, currentGW, 1);
 
   // Calculate next 5 GW total using centralized utility
@@ -42,11 +45,14 @@ export function PlayerModal({
 
   // ROS (Rest of Season) points - use pre-calculated fields for consistency
   const rosPoints = useMemo(() => {
+    if (localScoringMode === 'v4') {
+      return player?.v4_season_total || player?.v3_season_total || 0;
+    }
     if (localScoringMode === 'v3') {
       return player?.v3_season_total || 0;
     }
     return player?.predicted_points || 0;
-  }, [player?.v3_season_total, player?.predicted_points, localScoringMode]);
+  }, [player?.v4_season_total, player?.v3_season_total, player?.predicted_points, localScoringMode]);
 
   // Get next 5 gameweeks for chart (including current GW if still has predictions)
   const next5Fixtures = useMemo(() => {
@@ -74,8 +80,10 @@ export function PlayerModal({
 
         // Get predicted points - use embedded v3_pts for calibrated values
         const ffhPoints = p.predicted_pts || 0;
-        const predictedPoints = localScoringMode === 'v3'
-          ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player?.position))
+        const predictedPoints = localScoringMode === 'v4'
+          ? (p.v4_pts ?? p.v3_pts ?? ffhPoints)
+          : localScoringMode === 'v3'
+          ? (p.v3_pts ?? ffhPoints)
           : ffhPoints;
 
         return {
@@ -115,8 +123,10 @@ export function PlayerModal({
 
         // Get predicted points - use embedded v3_pts for calibrated values
         const ffhPoints = p.predicted_pts || 0;
-        const predictedPoints = localScoringMode === 'v3'
-          ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player?.position))
+        const predictedPoints = localScoringMode === 'v4'
+          ? (p.v4_pts ?? p.v3_pts ?? ffhPoints)
+          : localScoringMode === 'v3'
+          ? (p.v3_pts ?? ffhPoints)
           : ffhPoints;
 
         return {
@@ -143,8 +153,10 @@ export function PlayerModal({
 
     const avgPoints = recentGames.reduce((sum, p) => {
       const ffhPoints = p.predicted_pts || 0;
-      const points = localScoringMode === 'v3'
-        ? (p.v3_pts !== undefined ? p.v3_pts : convertToV3Points(ffhPoints, player?.position))
+      const points = localScoringMode === 'v4'
+        ? (p.v4_pts ?? p.v3_pts ?? ffhPoints)
+        : localScoringMode === 'v3'
+        ? (p.v3_pts ?? ffhPoints)
         : ffhPoints;
       return sum + points;
     }, 0) / recentGames.length;
@@ -503,6 +515,16 @@ export function PlayerModal({
               }`}
             >
               V3 Sleeper
+            </button>
+            <button
+              onClick={() => setLocalScoringMode('v4')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                localScoringMode === 'v4'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              V4 Ensemble
             </button>
           </div>
         </div>

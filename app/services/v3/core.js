@@ -257,17 +257,17 @@ export async function applyV3Scoring(players, currentGameweek, calibrationData =
  * Get the appropriate scoring values based on mode
  */
 export function getScoringValue(player, field, scoringMode = 'ffh') {
-  // V4 Ensemble mode - ML-enhanced predictions
+  // V4 Ensemble mode - V3 + Sleeper projections blend
   if (scoringMode === 'v4') {
     switch (field) {
       case 'season_total':
-        return player.v4_season_total || player.v3_season_total || player.sleeper_season_total || player.predicted_points || 0;
-      case 'season_avg':
-        return player.v4_season_avg || player.v3_season_avg || player.sleeper_season_avg || 0;
-      case 'current_gw':
-        return player.v4_current_gw || player.v3_current_gw || player.current_gw_prediction || 0;
       case 'points_ros':
-        return player.v4_season_total || player.v3_season_total || player.sleeper_season_total || player.predicted_points || 0;
+        return player.v4_season_total || player.v3_season_total || player.predicted_points || 0;
+      case 'season_avg':
+        return player.v4_season_avg || player.v3_season_avg || player.season_prediction_avg || 0;
+      case 'current_gw':
+        // Use predictions array via getNextNGameweeksTotal, not pre-calculated field
+        return player.v3_current_gw || player.current_gw_prediction || 0;
       default:
         return player[field] || 0;
     }
