@@ -114,6 +114,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             { id: 'transfers', label: 'Transfers' },
             { id: 'cheatsheet', label: 'Cheat Sheet' },
             { id: 'comparison', label: 'Comparison' },
+            { id: 'scout', label: 'Scout' },
             { id: 'players', label: 'Players' },
             { id: 'matching', label: 'Matching' }
           ].map((tab) => (

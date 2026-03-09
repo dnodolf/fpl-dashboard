@@ -8,6 +8,7 @@ import ComparisonTabContent from './components/ComparisonTabContent';
 import CheatSheetTabContent from './components/CheatSheetTabContent';
 import HomeTabContent from './components/HomeTabContent';
 import MatchingTabContent from './components/MatchingTabContent';
+import ScoutTabContent from './components/ScoutTabContent';
 import DashboardHeader from './components/DashboardHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -572,6 +573,15 @@ export default function FPLDashboard() {
                 </div>
               )}
             </>
+          )}
+
+          {activeTab === 'scout' && (
+            <ScoutTabContent
+              players={processedPlayers}
+              currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
+              onPlayerClick={handlePlayerClick}
+            />
           )}
 
           {activeTab === 'matching' && (
