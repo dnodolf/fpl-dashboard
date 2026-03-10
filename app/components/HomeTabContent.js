@@ -211,9 +211,9 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   const [fixtureCounts, setFixtureCounts] = useState(null);
   const [fixtureList, setFixtureList] = useState(null);
 
-  // Fetch live fixture data when GW is live
+  // Fetch fixture data for live and upcoming GWs
   useEffect(() => {
-    if (currentGameweek?.status !== 'live') {
+    if (currentGameweek?.status !== 'live' && currentGameweek?.status !== 'upcoming') {
       setFixtureCounts(null);
       setFixtureList(null);
       return;
@@ -231,9 +231,11 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
       } catch { /* silent */ }
     };
     fetchFixtures();
-    // Refresh every 60 seconds while live
-    const interval = setInterval(fetchFixtures, 60000);
-    return () => clearInterval(interval);
+    // Refresh every 60 seconds while live, once for upcoming
+    if (currentGameweek?.status === 'live') {
+      const interval = setInterval(fetchFixtures, 60000);
+      return () => clearInterval(interval);
+    }
   }, [currentGameweek?.status, currentGameweek?.number]);
   const [luckExpanded, setLuckExpanded] = useState(false);
 

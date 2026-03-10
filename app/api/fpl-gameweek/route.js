@@ -79,8 +79,8 @@ export async function GET() {
     const currentGameweek = await GameweekService.getCurrentGameweek();
     const upcomingGameweeks = await GameweekService.getUpcomingGameweeks();
 
-    // If GW is live, fetch actual fixture data from FPL
-    if (currentGameweek.status === 'live') {
+    // Fetch fixture data for live and upcoming GWs (kickoff times, scores, status)
+    if (currentGameweek.status === 'live' || currentGameweek.status === 'upcoming') {
       const fixtureData = await fetchFixtureData(currentGameweek.number);
       if (fixtureData) {
         currentGameweek.fixtureCounts = fixtureData.counts;
