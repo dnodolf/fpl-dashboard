@@ -35,7 +35,7 @@ export default function FPLDashboard() {
     search: ''
   });
   const [sortConfig, setSortConfig] = useState({ key: 'sleeper_points_ros', direction: 'desc' });
-  const [scoringMode, setScoringMode] = useState('v3');
+  const [scoringMode, setScoringMode] = useState('v4');
 
   // Shared gameweek range state for transfers tab
   const [transferGameweekRange, setTransferGameweekRange] = useState(null);
