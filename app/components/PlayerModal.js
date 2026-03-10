@@ -24,6 +24,7 @@ export function PlayerModal({
   onCompare = null
 }) {
   const [localScoringMode, setLocalScoringMode] = useState(parentScoringMode);
+  const [showAdvancedStats, setShowAdvancedStats] = useState(false);
 
   // Calculate key stats - all hooks must be called before any conditional returns
   const currentGW = currentGameweek?.number || 15;
@@ -491,6 +492,115 @@ export function PlayerModal({
             </div>
           );
         })()}
+
+        {/* Advanced Stats (Opta) - collapsible */}
+        {player.opta_stats && (
+          <div className="bg-gray-800 border-b border-gray-700">
+            <button
+              onClick={() => setShowAdvancedStats(!showAdvancedStats)}
+              className="w-full px-6 py-3 flex items-center justify-between text-sm font-semibold text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              <span>Advanced Stats (Opta)</span>
+              <span className="text-xs">{showAdvancedStats ? '▲' : '▼'}</span>
+            </button>
+            {showAdvancedStats && (() => {
+              const s = player.opta_stats;
+              const pos = player.position;
+              const n = (val) => Number(val) || 0;
+              const per90 = (val) => s.mins > 0 ? (n(val) / n(s.mins) * 90).toFixed(1) : '0.0';
+              const isGK = pos === 'GKP';
+              const isDEF = pos === 'DEF';
+              const isMID = pos === 'MID';
+              const isFWD = pos === 'FWD';
+              const isAttacker = isMID || isFWD;
+
+              const StatCard = ({ label, value, sub, color = 'text-white' }) => (
+                <div className="bg-gray-700 rounded p-2">
+                  <div className="text-xs text-gray-400">{label}</div>
+                  <div className={`text-lg font-bold ${color}`}>{value}</div>
+                  {sub && <div className="text-xs text-gray-500">{sub}</div>}
+                </div>
+              );
+
+              return (
+                <div className="px-6 pb-4 space-y-4">
+                  {/* xG & Shooting - relevant for outfield */}
+                  {!isGK && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">xG & Shooting</div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <StatCard label="xG" value={n(s.xg).toFixed(2)} sub={`${per90(s.xg)}/90`} color="text-green-400" />
+                        <StatCard label="xA" value={n(s.xa).toFixed(2)} sub={`${per90(s.xa)}/90`} color="text-blue-400" />
+                        <StatCard label="Shots" value={s.shots} sub={`${s.shots_on_target} on target`} />
+                        <StatCard label="Big Chances" value={s.big_chance} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Creativity - relevant for MID/FWD/DEF */}
+                  {!isGK && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Creativity</div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <StatCard label="Key Passes" value={s.key_pass} sub={`${per90(s.key_pass)}/90`} color="text-blue-400" />
+                        <StatCard label="Big Ch. Created" value={s.big_chance_created} />
+                        <StatCard label="Pass Accuracy" value={n(s.total_pass) > 0 ? `${Math.round(n(s.acc_pass) / n(s.total_pass) * 100)}%` : 'N/A'} sub={`${n(s.acc_pass)}/${n(s.total_pass)}`} />
+                        <StatCard label="Dribbles" value={s.succ_drib} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Defending - relevant for DEF/MID or GK */}
+                  {(isDEF || isMID || isGK) && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{isGK ? 'Goalkeeping' : 'Defending'}</div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {isGK ? (
+                          <>
+                            <StatCard label="Saves" value={s.saves} sub={`${per90(s.saves)}/90`} color="text-yellow-400" />
+                            <StatCard label="Goals Conceded" value={s.goals_conceded} />
+                            <StatCard label="Clean Sheets" value={s.clean_sheets} color="text-green-400" />
+                            <StatCard label="Pen Saves" value={`${n(s.pen_goal)}/${n(s.pen_taken)}`} />
+                          </>
+                        ) : (
+                          <>
+                            <StatCard label="Tackles Won" value={s.tackles_won} sub={`${per90(s.tackles_won)}/90`} />
+                            <StatCard label="Interceptions" value={s.intercepts} sub={`${per90(s.intercepts)}/90`} />
+                            <StatCard label="Clearances" value={s.clearances} />
+                            <StatCard label="Blocks" value={s.blocks} />
+                            {isDEF && <StatCard label="Recoveries" value={s.recoveries} sub={`${per90(s.recoveries)}/90`} />}
+                            {isDEF && <StatCard label="Clean Sheets" value={s.clean_sheets} color="text-green-400" />}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ICT Index - all positions */}
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">ICT Index</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <StatCard label="Influence" value={n(s.influence).toFixed(0)} color="text-orange-400" />
+                      <StatCard label="Creativity" value={n(s.creativity).toFixed(0)} color="text-purple-400" />
+                      <StatCard label="Threat" value={n(s.threat).toFixed(0)} color="text-red-400" />
+                    </div>
+                  </div>
+
+                  {/* Playing time summary */}
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Playing Time</div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <StatCard label="Minutes" value={n(s.mins).toLocaleString()} />
+                      <StatCard label="Appearances" value={s.appearance} sub={`${s.starts} starts`} />
+                      <StatCard label="BPS" value={s.bps} />
+                      <StatCard label="Bonus" value={s.bonus} color="text-purple-400" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Scoring mode toggle */}
         <div className="bg-gray-700 px-6 py-3 border-b border-gray-700">

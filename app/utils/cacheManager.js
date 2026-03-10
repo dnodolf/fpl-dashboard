@@ -90,20 +90,34 @@ const CacheManager = {
           sleeper_season_total: player.sleeper_season_total,
           sleeper_season_avg: player.sleeper_season_avg,
 
-          // V3 data (if exists)
+          // Scoring data
+          predicted_points: player.predicted_points,
           v3_season_total: player.v3_season_total,
           v3_season_avg: player.v3_season_avg,
           v3_current_gw: player.v3_current_gw,
+          v4_season_total: player.v4_season_total,
+          v4_season_avg: player.v4_season_avg,
+          v4_has_sleeper_data: player.v4_has_sleeper_data,
+
+          // Identity / matching
+          ffh_id: player.ffh_id,
+          ffh_code: player.ffh_code,
+          sleeper_id: player.sleeper_id,
+          ffh_matched: player.ffh_matched,
+
+          // FPL status / news
+          fpl_status: player.fpl_status,
+          fpl_news: player.fpl_news,
+          fpl_news_added: player.fpl_news_added,
+          chance_next_round: player.chance_next_round,
+
+          // Opta season stats
+          opta_stats: player.opta_stats,
 
           // Market data
           now_cost: player.now_cost,
           ownership_percentage: player.ownership_percentage,
-
-          // Remove large fields like:
-          // - sleeper_gw_predictions (JSON strings)
-          // - ffh_gw_predictions (JSON strings)
-          // - detailed match history
-          // - other verbose fields
+          is_starter: player.is_starter,
         };
       })
     };

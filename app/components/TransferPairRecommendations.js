@@ -527,6 +527,11 @@ export default function TransferPairRecommendations({
                           {pair.drop.name}
                         </button>
                         <div className="text-xs text-gray-400">{pair.drop.team} {pair.dropForm}</div>
+                        {pair.drop.opta_stats && (
+                          <div className="text-[10px] text-gray-500">
+                            xG {Number(pair.drop.opta_stats.xg || 0).toFixed(1)} · xA {Number(pair.drop.opta_stats.xa || 0).toFixed(1)} · KP {pair.drop.opta_stats.key_pass || 0}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -543,6 +548,11 @@ export default function TransferPairRecommendations({
                           {pair.add.name}
                         </button>
                         <div className="text-xs text-gray-400">{pair.add.team} {pair.addForm}</div>
+                        {pair.add.opta_stats && (
+                          <div className="text-[10px] text-gray-500">
+                            xG {Number(pair.add.opta_stats.xg || 0).toFixed(1)} · xA {Number(pair.add.opta_stats.xa || 0).toFixed(1)} · KP {pair.add.opta_stats.key_pass || 0}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>

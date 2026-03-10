@@ -318,10 +318,12 @@ async function integratePlayersWithOptaMatching(currentGameweek) {
   
   // Fetch data from all sources in parallel
   const { fetchFPLNewsData } = await import('../../services/fplNewsService.js');
-  const [sleeperData, ffhData, fplNewsMap] = await Promise.all([
+  const { fetchFFHCustomStats } = await import('../../services/ffhCustomStatsService.js');
+  const [sleeperData, ffhData, fplNewsMap, ffhCustomStats] = await Promise.all([
     fetchSleeperData(), // Will throw if fails
     fetchFFHData(),     // Will throw if fails
-    fetchFPLNewsData()  // Returns null on failure (graceful)
+    fetchFPLNewsData(),  // Returns null on failure (graceful)
+    fetchFFHCustomStats(currentGameweek?.number)  // Returns null on failure (graceful)
   ]);
 
   if (process.env.NODE_ENV === 'development') {
@@ -451,6 +453,21 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
     }
     if (process.env.NODE_ENV === 'development') {
       console.log(`📰 FPL News: Merged data for ${fplNewsMatched}/${matchedPlayers.length} players`);
+    }
+  }
+
+  // Merge FFH Custom Stats (Opta season stats: xG, xA, shots, tackles, etc.)
+  if (ffhCustomStats) {
+    let customStatsMatched = 0;
+    for (const player of matchedPlayers) {
+      const code = player.ffh_code;
+      if (code && ffhCustomStats[code]) {
+        player.opta_stats = ffhCustomStats[code];
+        customStatsMatched++;
+      }
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 FFH Custom Stats: Merged Opta stats for ${customStatsMatched}/${matchedPlayers.length} players`);
     }
   }
 

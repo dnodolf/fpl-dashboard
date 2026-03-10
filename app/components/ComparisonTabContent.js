@@ -87,6 +87,17 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
       { label: 'Rest of Season', drop: getScoringValue(dropPlayer, 'season_total', scoringMode), add: getScoringValue(addPlayer, 'season_total', scoringMode) },
       { label: 'Avg Mins (Next 5)', drop: getAvgMinutesNextN(dropPlayer, gw, 5), add: getAvgMinutesNextN(addPlayer, gw, 5) },
       { label: 'PPG', drop: getScoringValue(dropPlayer, 'season_avg', scoringMode), add: getScoringValue(addPlayer, 'season_avg', scoringMode) },
+      // Opta quality metrics (only if either player has stats)
+      ...(dropPlayer?.opta_stats || addPlayer?.opta_stats ? [
+        { label: 'xG', drop: dropPlayer?.opta_stats?.xg || 0, add: addPlayer?.opta_stats?.xg || 0, separator: true },
+        { label: 'xA', drop: dropPlayer?.opta_stats?.xa || 0, add: addPlayer?.opta_stats?.xa || 0 },
+        ...(dropPlayer?.position === 'GKP' || addPlayer?.position === 'GKP' ? [
+          { label: 'Saves', drop: dropPlayer?.opta_stats?.saves || 0, add: addPlayer?.opta_stats?.saves || 0 },
+        ] : [
+          { label: 'Key Passes', drop: dropPlayer?.opta_stats?.key_pass || 0, add: addPlayer?.opta_stats?.key_pass || 0 },
+          { label: 'Shots', drop: dropPlayer?.opta_stats?.shots || 0, add: addPlayer?.opta_stats?.shots || 0 },
+        ]),
+      ] : []),
     ];
   }, [dropPlayer, addPlayer, scoringMode, currentGameweek]);
 
@@ -298,20 +309,27 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
               const addBetter = diff > 0.05;
               const dropBetter = diff < -0.05;
               const isMinutes = m.label.includes('Mins');
+              const isInteger = ['Key Passes', 'Shots', 'Saves'].includes(m.label);
+              const fmt = (v) => isMinutes || isInteger ? Math.round(Number(v) || 0) : (Number(v) || 0).toFixed(1);
               return (
-                <div key={m.label} className="grid grid-cols-4 gap-0 text-sm">
+                <div key={m.label}>
+                {m.separator && (
+                  <div className="px-4 py-1.5 bg-gray-900/50 text-[10px] font-medium text-gray-500 uppercase tracking-widest">Opta Quality</div>
+                )}
+                <div className="grid grid-cols-4 gap-0 text-sm">
                   <div className="px-4 py-2.5 text-gray-400 font-medium">{m.label}</div>
                   <div className={`px-4 py-2.5 text-right font-mono ${dropBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
-                    {isMinutes ? m.drop.toFixed(0) : m.drop.toFixed(1)}
+                    {fmt(m.drop)}
                   </div>
                   <div className={`px-4 py-2.5 text-right font-mono ${addBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
-                    {isMinutes ? m.add.toFixed(0) : m.add.toFixed(1)}
+                    {fmt(m.add)}
                   </div>
                   <div className={`px-4 py-2.5 text-right font-mono font-bold ${
                     addBetter ? 'text-green-400' : dropBetter ? 'text-red-400' : 'text-gray-500'
                   }`}>
-                    {addBetter ? '+' : ''}{isMinutes ? diff.toFixed(0) : diff.toFixed(1)}
+                    {addBetter ? '+' : ''}{fmt(diff)}
                   </div>
+                </div>
                 </div>
               );
             })}

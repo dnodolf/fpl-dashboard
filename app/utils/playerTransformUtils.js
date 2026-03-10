@@ -51,7 +51,10 @@ export function transformPlayerForClient(player, optimizerService = null) {
     // Availability and injury status
     fpl_status: player.fpl_status || null,
     fpl_news: player.fpl_news || null,
-    chance_next_round: player.chance_next_round ?? player.chance_of_playing_next_round ?? null
+    chance_next_round: player.chance_next_round ?? player.chance_of_playing_next_round ?? null,
+
+    // Opta season stats (from FFH players-custom endpoint)
+    opta_stats: player.opta_stats || null
   };
 
   // Add calculated points if optimizer service provided

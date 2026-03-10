@@ -89,6 +89,11 @@ const PlayerPill = ({ player, scoringMode, currentGW, onPlayerClick }) => {
           {opp.code}{opp.isHome ? '(H)' : '(A)'}
         </span>
       )}
+      {player.opta_stats && Number(player.opta_stats.xg || 0) >= 1 && (
+        <span className="text-[8px] text-yellow-500" title={`xG: ${Number(player.opta_stats.xg).toFixed(1)}, xA: ${Number(player.opta_stats.xa || 0).toFixed(1)}`}>
+          xG {Number(player.opta_stats.xg).toFixed(1)}
+        </span>
+      )}
       <span className="font-bold text-green-400 ml-auto">{pts.toFixed(1)}</span>
     </button>
   );
@@ -301,6 +306,11 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
                 <span className="text-white font-medium truncate flex-1">{p.web_name || p.name}</span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getSleeperPositionBadgeClasses(p.position)}`}>{p.position}</span>
                 <span className="text-red-400 font-bold">{pts.toFixed(1)}</span>
+                {p.opta_stats && (
+                  <span className="text-[10px] text-gray-500" title={`xG: ${Number(p.opta_stats.xg || 0).toFixed(1)}, xA: ${Number(p.opta_stats.xa || 0).toFixed(1)}, Shots: ${p.opta_stats.shots || 0}`}>
+                    xG {Number(p.opta_stats.xg || 0).toFixed(1)}
+                  </span>
+                )}
               </div>
             );
           })}

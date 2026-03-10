@@ -17,7 +17,7 @@ npm run check:scoring # Scoring consistency lint (catches banned field usage)
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v3.9 - V4 Ensemble Model & Scoring Integrity
+**Current Version**: v4.0 - Opta Advanced Stats Integration
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -43,7 +43,8 @@ app/
 │   ├── formationOptimizerService.js  # Lineup optimization algorithms
 │   ├── v3ScoringService.js           # V3 Sleeper scoring with FPL conversion
 │   ├── scoringConversionService.js   # Pure FFH data extraction (no conversion)
-│   └── fplNewsService.js             # FPL bootstrap-static news/status fetcher
+│   ├── fplNewsService.js             # FPL bootstrap-static news/status fetcher
+│   └── ffhCustomStatsService.js      # FFH players-custom Opta season stats
 ├── components/                    # UI components
 │   ├── DashboardHeader.js            # Top nav bar, tabs, scoring toggle
 │   ├── GameweekDisplay.js            # Clickable gameweek status widget
@@ -77,9 +78,10 @@ app/
 
 **Primary Data Sources:**
 1. **Sleeper API**: Authoritative source for player positions, league data, rosters
-2. **Fantasy Football Hub (FFH)**: Predictions and analytics (with graceful fallback)
-3. **FPL Official API**: Player injury/status news via `bootstrap-static` endpoint (graceful fallback)
-4. **Hardcoded Schedule**: Complete 2025-26 Premier League gameweek dates
+2. **Fantasy Football Hub (FFH) Predictions**: Per-GW predictions via `player-predictions` endpoint (with graceful fallback)
+3. **Fantasy Football Hub (FFH) Opta Stats**: Season stats (xG, xA, shots, tackles, ICT) via `players-custom` endpoint (graceful fallback)
+4. **FPL Official API**: Player injury/status news via `bootstrap-static` endpoint (graceful fallback)
+5. **Hardcoded Schedule**: Complete 2025-26 Premier League gameweek dates
 
 **Position Authority**: Sleeper position data takes absolute precedence over FFH data to ensure 100% accuracy with Sleeper app.
 
@@ -127,6 +129,14 @@ app/
   - **FFH Mode**: Pure Fantasy Premier League predictions from FFH
   - **V3 Mode**: Sleeper-adjusted predictions with optimal position-based conversion ratios (validated as best-performing)
 - Interactive player comparison modals with detailed statistics
+
+### Opta Advanced Stats (NEW in v4.0)
+- **FFH `players-custom` endpoint**: 38 Opta season stats per player (xG, xA, shots, tackles, ICT, etc.)
+- **PlayerModal**: Collapsible "Advanced Stats (Opta)" section, position-aware (outfield vs GK)
+- **Decision support**: xG/xA surfaced in Comparison verdict, Transfer recommendations, Start/Sit cards, Scout pills
+- **Per-90 calculations**: Stats shown with per-90 context where useful
+- **Graceful fallback**: FFH custom endpoint failure silently skipped, no impact on other features
+- **Matching**: Uses `ffh_code` field (FPL element code) for exact match between endpoints
 
 ### Player News & Injury Status (NEW in v3.7)
 - **FPL Official API integration**: Real-time injury and availability data from `bootstrap-static`
@@ -292,6 +302,25 @@ async function importServices() {
 - ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v4.0 - Opta Advanced Stats Integration (March 2025)
+- **FFH `players-custom` Endpoint Integration**: New data source providing 38 Opta season stats per player
+  - `app/services/ffhCustomStatsService.js` — fetches FFH `players-custom` endpoint, 15-min cache, graceful fallback
+  - Stats include: xG, xA, shots, shots on target, key passes, big chances created, tackles, interceptions, clearances, blocks, recoveries, saves, ICT index, BPS, bonus, touches in opp box, dribbles, and more
+  - Matched to players via `ffh_code` (FPL element code) stored during FFH prediction merge
+  - 513 players enriched (all FFH-matched players)
+- **PlayerModal Advanced Stats**: Collapsible "Advanced Stats (Opta)" section with position-aware display
+  - Outfield: xG & Shooting, Creativity, Defending (DEF/MID), ICT Index, Playing Time
+  - GK: Goalkeeping (saves, conceded, clean sheets), ICT Index, Playing Time
+  - Per-90 stats shown as secondary text for context
+- **Opta Stats Surfaced Across Decision Tabs**:
+  - **Comparison tab**: Verdict table has "Opta Quality" section with xG, xA, Key Passes/Shots (or Saves for GK)
+  - **Transfer tab**: Each drop/add recommendation shows `xG · xA · KP` under player name
+  - **Start/Sit tab**: Formation diagram player cards show xG badge; Bench/Start recommendations show `xG · xA`
+  - **Scout tab**: Player pills show xG for players >= 1.0 xG; Key Threats show xG next to projected points
+- **Cache Manager Fix**: Updated `compressData()` whitelist to preserve `opta_stats`, `v4_*`, `fpl_status`, `fpl_news`, `ffh_id`, `ffh_code`, `predicted_points`, `is_starter` and other fields added since v3.3
+- **Data Flow**: `opta_stats` object attached per player in `integrated-players/route.js`, passed through `playerTransformUtils.js`, cached in localStorage via `cacheManager.js`
+- **No Scoring Impact**: Opta stats are purely informational display data — no changes to FFH/V3/V4 prediction calculations
 
 ### v3.9 - V4 Ensemble Model & Scoring Integrity (March 2025)
 - **V4 Ensemble Scoring**: New scoring mode blending V3 predictions with Sleeper projections

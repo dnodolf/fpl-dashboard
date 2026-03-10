@@ -262,6 +262,13 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           {getGWPoints(player, scoringMode, currentGameweek).toFixed(1)}
         </div>
 
+        {/* xG indicator for outfield players */}
+        {player.opta_stats && player.position !== 'GKP' && Number(player.opta_stats.xg || 0) >= 0.5 && (
+          <div className="text-[8px] text-yellow-500/80 mt-0.5" title={`xG: ${Number(player.opta_stats.xg).toFixed(1)}, xA: ${Number(player.opta_stats.xa || 0).toFixed(1)}, Shots: ${player.opta_stats.shots || 0}`}>
+            xG {Number(player.opta_stats.xg).toFixed(1)}
+          </div>
+        )}
+
         {/* Minutes + Opponent row */}
         <div className="flex items-center gap-1 text-[9px] mt-0.5">
           {predictedMinutes != null && (
@@ -442,7 +449,8 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
       points: getGWPoints(p, scoringMode, currentGameweek),
       minutes: extractMinutes(p),
       opponent: extractOpponent(p),
-      fplStatus: p.fpl_status
+      fplStatus: p.fpl_status,
+      opta_stats: p.opta_stats || null
     })).sort((a, b) => a.points - b.points);
 
     // Players to START: in optimal but NOT in current
@@ -456,7 +464,8 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
       points: getGWPoints(p, scoringMode, currentGameweek),
       minutes: extractMinutes(p),
       opponent: extractOpponent(p),
-      fplStatus: p.fpl_status
+      fplStatus: p.fpl_status,
+      opta_stats: p.opta_stats || null
     })).sort((a, b) => b.points - a.points);
 
     // Calculate net gain
@@ -531,6 +540,9 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                         )}
                         {player.minutes != null && <span className="ml-1 text-gray-500">{player.minutes}m</span>}
                       </div>
+                      {player.opta_stats && player.position !== 'GKP' && (
+                        <div className="text-[10px] text-gray-500">xG {Number(player.opta_stats.xg || 0).toFixed(1)} · xA {Number(player.opta_stats.xa || 0).toFixed(1)}</div>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold text-red-400">{player.points.toFixed(1)}</div>
@@ -572,6 +584,9 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                         )}
                         {player.minutes != null && <span className="ml-1 text-gray-500">{player.minutes}m</span>}
                       </div>
+                      {player.opta_stats && player.position !== 'GKP' && (
+                        <div className="text-[10px] text-gray-500">xG {Number(player.opta_stats.xg || 0).toFixed(1)} · xA {Number(player.opta_stats.xa || 0).toFixed(1)}</div>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold text-green-400">{player.points.toFixed(1)}</div>

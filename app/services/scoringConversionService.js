@@ -193,6 +193,7 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       // Enhanced status tracking
       ffh_matched: true,
       ffh_id: ffhData.fpl_id || ffhData.id,
+      ffh_code: ffhData.code || null,
       scoring_conversion_applied: false, // No conversion - pure FFH data
       enhancement_status: 'success',
       
