@@ -317,12 +317,11 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
     const currentPts = current.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
     const optimalPts = optimal.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
     const improvement = optimalPts - currentPts;
-    let efficiency = optimalPts > 0 ? Math.round((currentPts / optimalPts) * 100) : 100;
 
-    // Cap efficiency at 99% if there are changes needed (prevents showing 100% with pending swaps)
-    if (playersToSwap > 0 && efficiency >= 100) {
-      efficiency = 99;
-    }
+    // Efficiency = % of current starters that are also in the optimal XI
+    const totalStarters = current.players.length || 11;
+    const correctStarters = totalStarters - playersToSwap;
+    const efficiency = Math.round((correctStarters / totalStarters) * 100);
 
     return { playersToSwap, improvement, efficiency };
   };
