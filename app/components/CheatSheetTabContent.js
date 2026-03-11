@@ -7,7 +7,7 @@
 
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { USER_ID } from '../config/constants';
+import { USER_ID, TOTAL_GAMEWEEKS } from '../config/constants';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import { getPositionBadgeStyle } from '../constants/positionColors';
 import PlayerAvatar from './common/PlayerAvatar';
@@ -133,47 +133,18 @@ export default function CheatSheetTabContent({
   currentGameweek = { number: 15 },
   onPlayerClick
 }) {
-  const [timeframe, setTimeframe] = useState('ros'); // 'next1', 'next5', 'ros', 'custom'
-  const [customGames, setCustomGames] = useState(10);
+  const currentGW = currentGameweek?.number || 1;
+  const [startGW, setStartGW] = useState(currentGW);
+  const [endGW, setEndGW] = useState(TOTAL_GAMEWEEKS);
   const [hideOthers, setHideOthers] = useState(true);
+  const numGWs = endGW - startGW + 1;
 
   // Process and filter players
   const rankedPlayers = useMemo(() => {
     if (!players || players.length === 0) return {};
-
-    // Calculate display points and avg minutes based on timeframe
     const playersWithPoints = players.map(player => {
-      let displayPoints = 0;
-      let avgMinutes = 0;
-
-      if (timeframe === 'ros') {
-        // Rest of season
-        displayPoints = scoringMode === 'v4'
-          ? (player.v4_season_total || player.v3_season_total || 0)
-          : scoringMode === 'v3'
-          ? (player.v3_season_total || 0)
-          : (player.predicted_points || 0);
-
-        // Calculate avg minutes for rest of season
-        const predictions = player.predictions || [];
-        if (predictions.length > 0) {
-          const totalMinutes = predictions.reduce((sum, p) => sum + (p.xmins || 0), 0);
-          avgMinutes = Math.round(totalMinutes / predictions.length);
-        }
-      } else if (timeframe === 'next1' || (timeframe === 'custom' && customGames === 1)) {
-        // Next 1 gameweek - use predictions array for consistency across all components
-        const currentGW = currentGameweek?.number || 15;
-        displayPoints = getNextNGameweeksTotal(player, scoringMode, currentGW, 1);
-        avgMinutes = Math.round(getAvgMinutesNextN(player, currentGW, 1));
-      } else {
-        // Next N gameweeks (5 or custom with N > 1) - use centralized utility for consistency
-        const currentGW = currentGameweek?.number || 15;
-        const gamesToConsider = timeframe === 'custom' ? customGames : 5;
-
-        // Use centralized utility for consistent calculation across all components
-        displayPoints = getNextNGameweeksTotal(player, scoringMode, currentGW, gamesToConsider);
-        avgMinutes = Math.round(getAvgMinutesNextN(player, currentGW, gamesToConsider));
-      }
+      const displayPoints = getNextNGameweeksTotal(player, scoringMode, startGW, numGWs);
+      const avgMinutes = Math.round(getAvgMinutesNextN(player, startGW, numGWs));
 
       const ownershipStatus = getOwnershipStatus(player, USER_ID);
 
@@ -208,43 +179,63 @@ export default function CheatSheetTabContent({
     });
 
     return grouped;
-  }, [players, timeframe, customGames, hideOthers, scoringMode, currentGameweek]);
+  }, [players, startGW, endGW, hideOthers, scoringMode, currentGameweek]);
 
   return (
     <div className="space-y-4">
       {/* Controls */}
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
-          {/* Timeframe selector */}
+          {/* GW Range selector */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400">Timeframe:</label>
-            <select
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value)}
-              className="bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm focus:outline-none focus:border-blue-500"
+            <label className="text-sm text-gray-400">GW</label>
+            <button
+              onClick={() => setStartGW(gw => Math.max(currentGW, gw - 1))}
+              className="text-gray-400 hover:text-white px-1 text-lg"
+              disabled={startGW <= currentGW}
             >
-              <option value="next1">{currentGameweek?.status === 'live' ? 'This' : 'Next'} GW (GW {currentGameweek?.number || '?'})</option>
-              <option value="next5">Next 5 GWs</option>
-              <option value="ros">Rest of Season</option>
-              <option value="custom">Custom</option>
-            </select>
+              ◀
+            </button>
+            <input
+              type="number"
+              min={currentGW}
+              max={endGW}
+              value={startGW}
+              onChange={(e) => setStartGW(Math.max(currentGW, Math.min(endGW, parseInt(e.target.value) || currentGW)))}
+              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-14 text-center focus:outline-none focus:border-blue-500"
+            />
+            <button
+              onClick={() => setStartGW(gw => Math.min(endGW, gw + 1))}
+              className="text-gray-400 hover:text-white px-1 text-lg"
+              disabled={startGW >= endGW}
+            >
+              ▶
+            </button>
+            <span className="text-gray-400 text-sm">to</span>
+            <button
+              onClick={() => setEndGW(gw => Math.max(startGW, gw - 1))}
+              className="text-gray-400 hover:text-white px-1 text-lg"
+              disabled={endGW <= startGW}
+            >
+              ◀
+            </button>
+            <input
+              type="number"
+              min={startGW}
+              max={TOTAL_GAMEWEEKS}
+              value={endGW}
+              onChange={(e) => setEndGW(Math.max(startGW, Math.min(TOTAL_GAMEWEEKS, parseInt(e.target.value) || TOTAL_GAMEWEEKS)))}
+              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-14 text-center focus:outline-none focus:border-blue-500"
+            />
+            <button
+              onClick={() => setEndGW(gw => Math.min(TOTAL_GAMEWEEKS, gw + 1))}
+              className="text-gray-400 hover:text-white px-1 text-lg"
+              disabled={endGW >= TOTAL_GAMEWEEKS}
+            >
+              ▶
+            </button>
+            <span className="text-gray-500 text-xs ml-1">({numGWs} GW{numGWs !== 1 ? 's' : ''})</span>
           </div>
-
-          {/* Custom games input - only show when Custom is selected */}
-          {timeframe === 'custom' && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400">Next</label>
-              <input
-                type="number"
-                min="1"
-                max="38"
-                value={customGames}
-                onChange={(e) => setCustomGames(Math.max(1, Math.min(38, parseInt(e.target.value) || 1)))}
-                className="bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm w-16 focus:outline-none focus:border-blue-500"
-              />
-              <label className="text-sm text-gray-400">games</label>
-            </div>
-          )}
 
           {/* Hide Others toggle */}
           <div className="flex items-center gap-2 sm:ml-auto">
@@ -267,8 +258,8 @@ export default function CheatSheetTabContent({
         {/* Info text */}
         <div className="mt-3 text-xs text-gray-500">
           {hideOthers
-            ? 'Showing your players + top 10 free agents per position'
-            : 'Showing all players (top 50 per position)'}
+            ? `Showing your players + top 10 free agents per position (GW ${startGW}–${endGW})`
+            : `Showing all players, top 50 per position (GW ${startGW}–${endGW})`}
         </div>
       </div>
 
@@ -289,7 +280,7 @@ export default function CheatSheetTabContent({
 
 CheatSheetTabContent.propTypes = {
   players: PropTypes.array,
-  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   currentGameweek: PropTypes.shape({
     number: PropTypes.number
   }),
