@@ -63,6 +63,12 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
   }
   
   try {
+    // Normalise currentGameweek to a plain number — callers may pass the full
+    // gameweek object ({number, status, …}) or just the number.
+    const currentGwNum = typeof currentGameweek === 'object' && currentGameweek !== null
+      ? currentGameweek.number
+      : currentGameweek;
+
     // CRITICAL: Preserve Sleeper player data as base
     const sleeperPlayer = { ...player };
     
@@ -103,16 +109,16 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     });
 
     // Get current gameweek prediction and minutes - PURE FFH DATA
-    let currentGwPrediction = ffhGwPredictions[currentGameweek] || ffhSeasonAvg || 0;
+    let currentGwPrediction = ffhGwPredictions[currentGwNum] || ffhSeasonAvg || 0;
     let currentGwMins = 0;
 
     // Extract predicted minutes for current gameweek
-    const currentGwData = allGameweekPredictions.find(gw => gw.gw === currentGameweek);
+    const currentGwData = allGameweekPredictions.find(gw => gw.gw === currentGwNum);
     if (currentGwData) {
       currentGwMins = currentGwData.predicted_mins || 0;
       if (process.env.NODE_ENV === 'development') {
         if (currentGwMins > 0 && Math.random() < 0.01) {
-          console.log(`✅ Predicted minutes for ${sleeperPlayer.full_name || ffhName} GW${currentGameweek}: ${currentGwMins}`);
+          console.log(`✅ Predicted minutes for ${sleeperPlayer.full_name || ffhName} GW${currentGwNum}: ${currentGwMins}`);
         }
       }
     }
@@ -126,7 +132,7 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     // Zero out current gameweek prediction if player isn't playing
     if (chanceOfPlaying !== null && chanceOfPlaying !== undefined && chanceOfPlaying < 25) {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`⚠️ ${sleeperPlayer.full_name || ffhName}: Not playing (${chanceOfPlaying}% chance) - zeroing GW${currentGameweek} prediction`);
+        console.log(`⚠️ ${sleeperPlayer.full_name || ffhName}: Not playing (${chanceOfPlaying}% chance) - zeroing GW${currentGwNum} prediction`);
       }
       currentGwPrediction = 0;
       currentGwMins = 0;
@@ -155,18 +161,28 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       ffh_position_id: ffhData.position_id,
 
       // Predictions array: raw FFH predictions (have opp data for fixtures),
-      // but ensure the current GW is included even if FFH moved it to results
+      // but ensure the current GW is included even if FFH moved it to results.
+      // This is critical for Start/Sit and other tabs that read predictions for the live GW.
       predictions: (() => {
         const raw = ffhData.predictions || [];
-        const hasCurrentGW = raw.some(p => p.gw === currentGameweek);
-        if (hasCurrentGW || !currentGameweek) return raw;
-        // Current GW missing (FFH moved it to results) — inject it back
-        const currentGwEntry = allGameweekPredictions.find(p => p.gw === currentGameweek);
-        if (!currentGwEntry) return raw;
+        const hasCurrentGW = raw.some(p => p.gw === currentGwNum);
+        if (hasCurrentGW || !currentGwNum) return raw;
+        // Current GW missing (FFH moved it to results) — inject it back.
+        // Use allGameweekPredictions first, then fall back to the already-calculated
+        // currentGwPrediction (which itself falls back to season avg).
+        const currentGwEntry = allGameweekPredictions.find(p => p.gw === currentGwNum);
+        const pts = currentGwEntry?.predicted_pts || currentGwPrediction || 0;
+        // FFH results often drop predicted_mins — use the next future GW's xmins as proxy
+        let mins = currentGwEntry?.predicted_mins || currentGwMins || 0;
+        if (!mins && raw.length > 0) {
+          const nextFutureGW = raw.find(p => p.xmins > 0);
+          mins = nextFutureGW?.xmins || 0;
+        }
+        if (pts <= 0 && mins <= 0) return raw; // Nothing useful to inject
         // Also check raw results for opp data
-        const resultEntry = (ffhData.results || []).find(r => r.gw === currentGameweek);
+        const resultEntry = (ffhData.results || []).find(r => r.gw === currentGwNum);
         return [
-          { gw: currentGameweek, predicted_pts: currentGwEntry.predicted_pts, predicted_mins: currentGwEntry.predicted_mins, xmins: currentGwEntry.predicted_mins, opp: resultEntry?.opp || null, source: 'injected' },
+          { gw: currentGwNum, predicted_pts: pts, predicted_mins: mins, xmins: mins, opp: resultEntry?.opp || null, source: 'injected' },
           ...raw
         ];
       })(),

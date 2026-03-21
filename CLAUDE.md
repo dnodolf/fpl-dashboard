@@ -17,7 +17,7 @@ npm run check:scoring # Scoring consistency lint (catches banned field usage)
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v4.0 - Opta Advanced Stats Integration
+**Current Version**: v4.1 - Live GW Locked Players & Prediction Fix
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -119,6 +119,12 @@ app/
 - Real-time optimization status indicators with efficiency metrics
 - Interactive formation diagrams with player positioning
 - Current vs. optimal formation comparison analysis
+- **Live GW locked player support**: Players whose match has started/finished are locked in place
+  - Locked starters stay in the lineup — optimizer won't recommend benching them
+  - Locked bench players stay on bench — optimizer won't recommend starting them
+  - LOCKED badge shown on player cards with dimmed styling
+  - Swap recommendations skip locked players entirely
+  - Predictions still shown for the current live GW (injected from FFH results or season average fallback)
 
 ### Player Analytics
 - Comprehensive PPG comparison (current vs predicted performance)
@@ -302,6 +308,19 @@ async function importServices() {
 - ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v4.1 - Live GW Locked Players & Prediction Fix (March 2026)
+- **Live GW Prediction Fix**: Start/Sit tab now shows predicted points during a live gameweek
+  - Root cause: `scoringConversionService.js` used `currentGameweek` (full object) as if it were a number — comparisons like `p.gw === {object}` always failed, so injected predictions had `gw: {object}` and `getNextNGameweeksTotal()` couldn't find them
+  - Fix: Normalize `currentGameweek` to `currentGwNum` (plain number) at top of `enhancePlayerWithScoringConversion()`
+  - `ffhDataUtils.js`: Results extraction now checks alternative field names (`total_predicted_pts`, `ep`) so live GW entries aren't silently dropped
+  - Minutes fallback: When FFH results drop `xmins`, the injection uses the next future GW's `xmins` as proxy (stable week-to-week)
+- **Locked Player System**: Players whose match has started or finished in a live GW are locked in place
+  - `app/api/optimizer/route.js` — fetches FPL fixture data, determines `lockedTeams` (teams with started/finished matches), passes to optimizer, includes `fixtureList` in response
+  - `app/services/formationOptimizerService.js` — `analyzeCurrentRoster()` accepts `lockedTeams`, splits roster into locked starters (must stay in), locked bench (can't be promoted), and flexible players; `optimizeFormation()` fills locked starters first, then best flexible; swap recommendations skip locked players
+  - `app/utils/playerTransformUtils.js` — preserves `_locked`, `_lockedAsStarter`, `_lockedAsBench` through client transform
+  - `app/components/OptimizerTabContent.js` — LOCKED banner on formation cards + dimmed styling; LOCKED pill on bench/start recommendation cards; uses `fixtureList` from optimizer API response
+- **Data Flow**: Optimizer API fetches FPL fixtures in parallel with player data (zero latency overhead)
 
 ### v4.0 - Opta Advanced Stats Integration (March 2025)
 - **FFH `players-custom` Endpoint Integration**: New data source providing 38 Opta season stats per player

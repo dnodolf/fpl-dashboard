@@ -7,8 +7,74 @@ import { normalizePosition } from '../../../utils/positionUtils.js';
 import { transformPlayerForClient } from '../../utils/playerTransformUtils.js';
 import { cacheService } from '../../services/cacheService.js';
 import { USER_ID } from '../../config/constants';
+import GameweekService from '../../services/gameweekService.js';
 
 const optimizerService = new FormationOptimizerService();
+
+/**
+ * Fetch live fixture data for a gameweek from FPL API.
+ * Returns teams whose matches are finished or in-progress (locked).
+ */
+let teamMapCache = null;
+async function getLockedTeams(gwNumber) {
+  if (!gwNumber) return { lockedTeams: new Set(), fixtureList: [] };
+  try {
+    // Fetch team abbreviation map (cached)
+    if (!teamMapCache) {
+      const res = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/', {
+        cache: 'no-store',
+        headers: { 'User-Agent': 'FPL-Dashboard/1.0' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        teamMapCache = {};
+        for (const team of (data.teams || [])) {
+          teamMapCache[team.id] = team.short_name;
+        }
+        setTimeout(() => { teamMapCache = null; }, 60 * 60 * 1000);
+      }
+    }
+    const teamMap = teamMapCache || {};
+
+    const fixturesRes = await fetch(
+      `https://fantasy.premierleague.com/api/fixtures/?event=${gwNumber}`,
+      { cache: 'no-store' }
+    );
+    if (!fixturesRes.ok) return { lockedTeams: new Set(), fixtureList: [] };
+    const fixtures = await fixturesRes.json();
+
+    const lockedTeams = new Set();
+    const fixtureList = fixtures
+      .sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time))
+      .map(f => {
+        const isFinished = f.finished_provisional || f.finished;
+        const isLive = f.started && !isFinished;
+        const homeAbbr = teamMap[f.team_h] || `T${f.team_h}`;
+        const awayAbbr = teamMap[f.team_a] || `T${f.team_a}`;
+        // Players are locked once their match has started (can't sub them)
+        if (isFinished || isLive) {
+          lockedTeams.add(homeAbbr.toUpperCase());
+          lockedTeams.add(awayAbbr.toUpperCase());
+        }
+        return {
+          homeTeam: homeAbbr,
+          awayTeam: awayAbbr,
+          homeScore: f.team_h_score,
+          awayScore: f.team_a_score,
+          kickoffTime: f.kickoff_time,
+          minutes: f.minutes,
+          status: isFinished ? 'finished' : isLive ? 'live' : 'upcoming'
+        };
+      });
+
+    return { lockedTeams, fixtureList };
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Failed to fetch fixture data for locked teams:', e.message);
+    }
+    return { lockedTeams: new Set(), fixtureList: [] };
+  }
+}
 
 /**
  * Fetch integrated player data
@@ -79,9 +145,13 @@ export async function POST(request) {
     const { protocol, host } = new URL(request.url);
     const baseUrl = `${protocol}//${host}`;
 
-    // Fetch integrated player data (pass forceRefresh to clear player data cache too)
-    let players = await fetchPlayerData(baseUrl, forceRefresh);
-    
+    // Fetch player data and live fixture status in parallel
+    const currentGW = requestData.currentGameweek;
+    const [players, { lockedTeams, fixtureList }] = await Promise.all([
+      fetchPlayerData(baseUrl, forceRefresh),
+      getLockedTeams(currentGW)
+    ]);
+
     if (!players || players.length === 0) {
       throw new Error('No player data available');
     }
@@ -114,8 +184,7 @@ export async function POST(request) {
       console.log('📊 Position distribution:', positionCounts);
       console.log('🎯 Analyzing current roster...');
     }
-    const currentGW = requestData.currentGameweek;
-    const analysis = await optimizerService.analyzeCurrentRoster(players, userId, scoringMode, currentGW);
+    const analysis = await optimizerService.analyzeCurrentRoster(players, userId, scoringMode, currentGW, lockedTeams);
 
     if (analysis.error) {
       throw new Error(analysis.error);
@@ -175,7 +244,8 @@ export async function POST(request) {
         formationsChecked: formationsData.length,
         positionDistribution: positionCounts
       },
-      scoringMode
+      scoringMode,
+      fixtureList
     };
 
     // Cache successful results

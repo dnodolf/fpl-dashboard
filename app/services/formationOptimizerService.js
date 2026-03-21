@@ -98,9 +98,9 @@ export class FormationOptimizerService {
   /**
    * Enhanced formation optimization that provides better error messages
    */
-  optimizeFormation(formationType, availablePlayers) {
+  optimizeFormation(formationType, availablePlayers, lockedStarterIds = new Set(), lockedBenchIds = new Set()) {
     const formationConfig = FormationOptimizerService.VALID_FORMATIONS[formationType];
-    
+
     if (!formationConfig) {
       return {
         formation: formationType,
@@ -115,44 +115,61 @@ export class FormationOptimizerService {
       console.log(`🔍 ${formationType} - Available players:`, availablePlayers.length);
     }
 
-    // Group players by position using unified position logic
-    const playersByPosition = {
-      GKP: [],
-      DEF: [],
-      MID: [],
-      FWD: []
-    };
+    // Separate locked starters (must be included) from flexible players
+    const lockedStarters = [];
+    const flexiblePlayers = [];
 
     availablePlayers.forEach(player => {
-      // Use unified position normalization
+      const pid = player.sleeper_id || player.player_id || player.id;
       const position = normalizePosition(player);
-      
-      if (playersByPosition.hasOwnProperty(position)) {
-        playersByPosition[position].push({
-          ...player,
-          position: position, // Ensure position is normalized
-          points: this.getPlayerPoints(player)
-        });
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(`🚨 Invalid position: "${position}" for player ${player.name || player.web_name}`);
-        }
+      const enriched = {
+        ...player,
+        position: position,
+        points: this.getPlayerPoints(player)
+      };
+
+      if (lockedStarterIds.has(pid)) {
+        lockedStarters.push(enriched);
+      } else if (!lockedBenchIds.has(pid)) {
+        // Only include players that aren't locked on the bench
+        flexiblePlayers.push(enriched);
       }
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📊 ${formationType} position distribution:`, {
-        GKP: playersByPosition.GKP.length,
-        DEF: playersByPosition.DEF.length,
-        MID: playersByPosition.MID.length,
-        FWD: playersByPosition.FWD.length
-      });
-    }
+    // Count locked starters by position
+    const lockedByPosition = { GKP: [], DEF: [], MID: [], FWD: [] };
+    lockedStarters.forEach(p => {
+      if (lockedByPosition.hasOwnProperty(p.position)) {
+        lockedByPosition[p.position].push(p);
+      }
+    });
 
-    // Check if we have enough players for this formation
+    // Check if locked starters exceed formation requirements (formation impossible)
     const requirements = formationConfig;
     for (const [pos, needed] of Object.entries(requirements)) {
-      const available = playersByPosition[pos].length;
+      if (lockedByPosition[pos].length > needed) {
+        return {
+          formation: formationType,
+          valid: false,
+          reason: `Too many locked ${pos} players (${lockedByPosition[pos].length}) for this formation (needs ${needed})`,
+          totalPoints: 0,
+          players: [],
+          requirements
+        };
+      }
+    }
+
+    // Group flexible players by position
+    const flexByPosition = { GKP: [], DEF: [], MID: [], FWD: [] };
+    flexiblePlayers.forEach(player => {
+      if (flexByPosition.hasOwnProperty(player.position)) {
+        flexByPosition[player.position].push(player);
+      }
+    });
+
+    // Check if we have enough total players (locked + flexible) for this formation
+    for (const [pos, needed] of Object.entries(requirements)) {
+      const available = lockedByPosition[pos].length + flexByPosition[pos].length;
       if (available < needed) {
         return {
           formation: formationType,
@@ -160,25 +177,31 @@ export class FormationOptimizerService {
           reason: `Not enough ${pos} players (need ${needed}, have ${available})`,
           totalPoints: 0,
           players: [],
-          requirements,
-          available: playersByPosition
+          requirements
         };
       }
     }
 
-    // Sort players by points descending within each position
-    Object.keys(playersByPosition).forEach(pos => {
-      playersByPosition[pos].sort((a, b) => (b.points || 0) - (a.points || 0));
+    // Sort flexible players by points descending within each position
+    Object.keys(flexByPosition).forEach(pos => {
+      flexByPosition[pos].sort((a, b) => (b.points || 0) - (a.points || 0));
     });
 
-    // Select optimal players for this formation
+    // Select optimal players: locked starters first, fill remaining slots with best flexible
     const selectedPlayers = [];
     let totalPoints = 0;
 
     Object.entries(requirements).forEach(([pos, count]) => {
-      const topPlayers = playersByPosition[pos].slice(0, count);
-      selectedPlayers.push(...topPlayers);
-      totalPoints += topPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
+      const locked = lockedByPosition[pos];
+      selectedPlayers.push(...locked);
+      totalPoints += locked.reduce((sum, p) => sum + (p.points || 0), 0);
+
+      const remaining = count - locked.length;
+      if (remaining > 0) {
+        const topFlex = flexByPosition[pos].slice(0, remaining);
+        selectedPlayers.push(...topFlex);
+        totalPoints += topFlex.reduce((sum, p) => sum + (p.points || 0), 0);
+      }
     });
 
     return {
@@ -186,20 +209,19 @@ export class FormationOptimizerService {
       valid: true,
       totalPoints: Math.round(totalPoints * 100) / 100,
       players: selectedPlayers,
-      requirements,
-      available: playersByPosition
+      requirements
     };
   }
 
   /**
    * Optimize all valid formations for given players
    */
-  optimizeAllFormations(availablePlayers) {
+  optimizeAllFormations(availablePlayers, lockedStarterIds = new Set(), lockedBenchIds = new Set()) {
     const formations = Object.keys(FormationOptimizerService.VALID_FORMATIONS);
     const results = [];
 
     formations.forEach(formation => {
-      const result = this.optimizeFormation(formation, availablePlayers);
+      const result = this.optimizeFormation(formation, availablePlayers, lockedStarterIds, lockedBenchIds);
       results.push(result);
     });
 
@@ -335,9 +357,10 @@ export class FormationOptimizerService {
   /**
    * Analyze current roster and provide optimization recommendations
    */
-  async analyzeCurrentRoster(allPlayers, userId, scoringMode = 'ffh', currentGW = null) {
+  async analyzeCurrentRoster(allPlayers, userId, scoringMode = 'ffh', currentGW = null, lockedTeams = null) {
     this.scoringMode = scoringMode;
     this.currentGW = currentGW;
+    this.lockedTeams = lockedTeams || new Set();
     try {
       if (process.env.NODE_ENV === 'development') {
         console.log(`🔍 Analyzing roster for ${userId}...`);
@@ -383,12 +406,41 @@ export class FormationOptimizerService {
       const currentFormation = this.calculateFormationFromPlayers(currentStarters);
       const currentPoints = currentStarters.reduce((sum, p) => sum + this.getPlayerPoints(p), 0);
 
+      // Determine locked players: players whose team match has started/finished
+      const starterIds = new Set(rosterInfo.starters);
+      const lockedStarterIds = new Set();
+      const lockedBenchIds = new Set();
+      if (this.lockedTeams.size > 0) {
+        myPlayers.forEach(p => {
+          const teamAbbr = (p.team_abbr || p.team || '').toUpperCase();
+          if (this.lockedTeams.has(teamAbbr)) {
+            const pid = p.sleeper_id || p.player_id || p.id;
+            if (starterIds.has(pid)) {
+              lockedStarterIds.add(pid);
+            } else {
+              lockedBenchIds.add(pid);
+            }
+          }
+        });
+        if (process.env.NODE_ENV === 'development' && (lockedStarterIds.size > 0 || lockedBenchIds.size > 0)) {
+          console.log(`🔒 Locked: ${lockedStarterIds.size} starters, ${lockedBenchIds.size} bench players`);
+        }
+      }
+
+      // Mark players as locked for client-side display
+      myPlayers.forEach(p => {
+        const pid = p.sleeper_id || p.player_id || p.id;
+        p._locked = lockedStarterIds.has(pid) || lockedBenchIds.has(pid);
+        p._lockedAsStarter = lockedStarterIds.has(pid);
+        p._lockedAsBench = lockedBenchIds.has(pid);
+      });
+
       if (process.env.NODE_ENV === 'development') {
         console.log(`📈 Current: ${currentFormation} with ${currentPoints.toFixed(1)} points`);
       }
 
-      // Optimize all possible formations
-      const allFormationResults = this.optimizeAllFormations(myPlayers);
+      // Optimize all possible formations (respecting locked constraints)
+      const allFormationResults = this.optimizeAllFormations(myPlayers, lockedStarterIds, lockedBenchIds);
       const validFormations = allFormationResults.filter(f => f.valid);
       
       if (validFormations.length === 0) {
@@ -424,13 +476,21 @@ export class FormationOptimizerService {
       const benchPlayers = myPlayers.filter(p => !currentPlayerIds.has(p.sleeper_id || p.player_id || p.id));
       
       benchPlayers.forEach(benchPlayer => {
+        const benchPlayerId = benchPlayer.sleeper_id || benchPlayer.player_id || benchPlayer.id;
+        // Skip locked bench players — they can't be moved to starters
+        if (lockedBenchIds.has(benchPlayerId)) return;
+
         const benchPosition = normalizePosition(benchPlayer);
         const benchPoints = this.getPlayerPoints(benchPlayer);
-        
+
         currentStarters.forEach(starter => {
+          const starterId = starter.sleeper_id || starter.player_id || starter.id;
+          // Skip locked starters — they can't be benched
+          if (lockedStarterIds.has(starterId)) return;
+
           const starterPosition = normalizePosition(starter);
           const starterPoints = this.getPlayerPoints(starter);
-          
+
           if (benchPosition === starterPosition && benchPoints > starterPoints + 0.5) {
             recommendations.push({
               type: 'player_swap',

@@ -54,7 +54,12 @@ export function transformPlayerForClient(player, optimizerService = null) {
     chance_next_round: player.chance_next_round ?? player.chance_of_playing_next_round ?? null,
 
     // Opta season stats (from FFH players-custom endpoint)
-    opta_stats: player.opta_stats || null
+    opta_stats: player.opta_stats || null,
+
+    // Lock status (live GW — match started/finished, player can't be moved)
+    _locked: player._locked || false,
+    _lockedAsStarter: player._lockedAsStarter || false,
+    _lockedAsBench: player._lockedAsBench || false
   };
 
   // Add calculated points if optimizer service provided

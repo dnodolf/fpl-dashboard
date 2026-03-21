@@ -42,10 +42,11 @@ export function extractAllGameweekPredictions(ffhPlayer) {
     ffhPlayer.results
       .filter(result => !result.season || result.season === 2025 || result.season === 2026)
       .forEach(result => {
-        // Use != null (not falsy) so 0-pt results are included
-        if (result.gw && result.predicted_pts != null) {
-          const pts = typeof result.predicted_pts === 'object' ?
-                      (result.predicted_pts?.predicted_pts ?? 0) : result.predicted_pts;
+        if (!result.gw) return;
+        // Check multiple field names — FFH may use different names once a GW goes live
+        const rawPts = result.predicted_pts ?? result.total_predicted_pts ?? result.ep ?? null;
+        if (rawPts != null) {
+          const pts = typeof rawPts === 'object' ? (rawPts?.predicted_pts ?? 0) : rawPts;
           const mins = result.predicted_mins || result.xmins || 0;
 
           if (typeof pts === 'number' && pts >= 0) {

@@ -193,6 +193,9 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
     const opponent = getNextOpponent(player);
     const fplBadge = player.fpl_status && player.fpl_status !== 'a' ? getFPLStatusBadge(player.fpl_status) : null;
 
+    // Player is locked if their match has started/finished in the live GW
+    const isLocked = player._locked || false;
+
     // Get position colors for subtle background
     const posColors = getPositionColors(player.position);
 
@@ -208,9 +211,16 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
     return (
       <button
         onClick={() => onPlayerClick?.(player)}
-        className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg} hover:brightness-125 transition-all cursor-pointer`}
+        className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg} hover:brightness-125 transition-all cursor-pointer ${isLocked ? 'opacity-60' : ''}`}
         style={{ width: 'clamp(68px, 100%, 80px)' }}
       >
+
+        {/* Locked badge — match started/finished, player can't be moved */}
+        {isLocked && (
+          <div className="absolute top-0 left-0 right-0 bg-gray-900/80 text-[7px] text-gray-300 text-center font-bold rounded-t-lg py-[1px] tracking-wider z-10">
+            LOCKED
+          </div>
+        )}
 
         {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
         {isOptimal && (
@@ -406,7 +416,15 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 };
 
 // ----------------- ACTIONABLE RECOMMENDATIONS COMPONENT -----------------
-const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'ffh', currentGameweek = null }) => {
+const ActionableRecommendations = ({ recommendations, current, optimal, recalculatedStats, scoringMode = 'ffh', currentGameweek = null, fixtureList = [] }) => {
+  // Check if a team's match has started or finished (player is locked)
+  const isTeamLocked = (teamAbbr) => {
+    if (!teamAbbr || !fixtureList.length) return false;
+    const t = teamAbbr.toUpperCase();
+    const fixture = fixtureList.find(f => f.homeTeam?.toUpperCase() === t || f.awayTeam?.toUpperCase() === t);
+    return fixture && (fixture.status === 'finished' || fixture.status === 'live');
+  };
+
   // Extract opponent info from player predictions
   const extractOpponent = (p) => {
     if (!p.predictions?.length) return null;
@@ -519,11 +537,12 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
             </div>
             <div className="space-y-2">
               {toBench.map((player, idx) => (
-                <div key={idx} className="p-2 rounded-lg bg-red-900/20 border border-red-600/30">
+                <div key={idx} className={`p-2 rounded-lg bg-red-900/20 border border-red-600/30 ${isTeamLocked(player.team) ? 'opacity-60' : ''}`}>
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-sm font-medium text-white flex items-center gap-1.5">
                         {player.name}
+                        {isTeamLocked(player.team) && <span className="text-[9px] px-1 py-0.5 rounded bg-gray-600 text-gray-300">LOCKED</span>}
                         {player.fplStatus && player.fplStatus !== 'a' && (() => {
                           const badge = getFPLStatusBadge(player.fplStatus);
                           return badge ? <span className={`text-[9px] px-1 py-0.5 rounded ${badge.color}`}>{badge.badge}</span> : null;
@@ -563,11 +582,12 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
             </div>
             <div className="space-y-2">
               {toStart.map((player, idx) => (
-                <div key={idx} className="p-2 rounded-lg bg-green-900/20 border border-green-600/30">
+                <div key={idx} className={`p-2 rounded-lg bg-green-900/20 border border-green-600/30 ${isTeamLocked(player.team) ? 'opacity-60' : ''}`}>
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-sm font-medium text-white flex items-center gap-1.5">
                         {player.name}
+                        {isTeamLocked(player.team) && <span className="text-[9px] px-1 py-0.5 rounded bg-gray-600 text-gray-300">LOCKED</span>}
                         {player.fplStatus && player.fplStatus !== 'a' && (() => {
                           const badge = getFPLStatusBadge(player.fplStatus);
                           return badge ? <span className={`text-[9px] px-1 py-0.5 rounded ${badge.color}`}>{badge.badge}</span> : null;
@@ -758,14 +778,15 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
     );
   }
 
-  const { 
-    loading, 
-    error, 
-    stats, 
-    current, 
-    optimal, 
-    recommendations, 
+  const {
+    loading,
+    error,
+    stats,
+    current,
+    optimal,
+    recommendations,
     formations,
+    fixtureList: optimizerFixtureList,
     roster,
     refetch 
   } = useOptimizerData(USER_ID, scoringMode, currentGameweek);
@@ -945,6 +966,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
           recalculatedStats={recalculatedStats}
           scoringMode={scoringMode}
           currentGameweek={currentGameweek?.number}
+          fixtureList={optimizerFixtureList || []}
         />
         <FormationComparison
           allFormations={formations}
