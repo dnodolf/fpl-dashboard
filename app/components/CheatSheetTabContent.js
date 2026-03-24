@@ -187,7 +187,7 @@ export default function CheatSheetTabContent({
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
           {/* GW Range selector */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <label className="text-sm text-gray-400">GW</label>
             <button
               onClick={() => setStartGW(gw => Math.max(currentGW, gw - 1))}
@@ -202,7 +202,7 @@ export default function CheatSheetTabContent({
               max={endGW}
               value={startGW}
               onChange={(e) => setStartGW(Math.max(currentGW, Math.min(endGW, parseInt(e.target.value) || currentGW)))}
-              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-14 text-center focus:outline-none focus:border-blue-500"
+              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-16 sm:w-20 text-center focus:outline-none focus:border-blue-500"
             />
             <button
               onClick={() => setStartGW(gw => Math.min(endGW, gw + 1))}
@@ -225,7 +225,7 @@ export default function CheatSheetTabContent({
               max={TOTAL_GAMEWEEKS}
               value={endGW}
               onChange={(e) => setEndGW(Math.max(startGW, Math.min(TOTAL_GAMEWEEKS, parseInt(e.target.value) || TOTAL_GAMEWEEKS)))}
-              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-14 text-center focus:outline-none focus:border-blue-500"
+              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-16 sm:w-20 text-center focus:outline-none focus:border-blue-500"
             />
             <button
               onClick={() => setEndGW(gw => Math.min(TOTAL_GAMEWEEKS, gw + 1))}

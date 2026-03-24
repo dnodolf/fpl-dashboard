@@ -53,7 +53,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                   }`}
                   title="Fantasy Football Hub (FPL scoring)"
                 >
-                  📊 FFH
+                  📊 <span className="hidden sm:inline">FFH</span>
                 </button>
                 <button
                   onClick={() => setScoringMode('v3')}
@@ -64,7 +64,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                   }`}
                   title="V3 Sleeper conversion (optimal position-based ratios)"
                 >
-                  🚀 V3
+                  🚀 <span className="hidden sm:inline">V3</span>
                 </button>
                 <button
                   onClick={() => setScoringMode('v4')}
@@ -75,7 +75,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                   }`}
                   title="V4 Ensemble (75% V3 + 25% Sleeper projections)"
                 >
-                  ⚡ V4
+                  ⚡ <span className="hidden sm:inline">V4</span>
                 </button>
               </div>
             </div>
@@ -126,7 +126,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         {/* Navigation Tabs */}
         <div className="relative">
           {canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-gray-800 to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-2 w-8 sm:w-12 bg-gradient-to-l from-gray-800 to-transparent pointer-events-none z-10" />
           )}
         <div ref={tabScrollRef} className="flex space-x-1 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           {[

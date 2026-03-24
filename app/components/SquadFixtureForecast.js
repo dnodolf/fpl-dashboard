@@ -136,14 +136,14 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 mt-3 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2 mt-3">
         <span className="text-[10px] text-gray-500">Difficulty:</span>
         {[1, 2, 3, 4, 5].map(d => (
-          <span key={d} className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${DIFF_STYLES[d].badge}`}>
+          <span key={d} className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${DIFF_STYLES[d].badge}`}>
             {d} — {DIFF_STYLES[d].label}
           </span>
         ))}
-        <span className="ml-auto text-[10px] text-gray-500 flex items-center gap-1">
+        <span className="w-full sm:w-auto mt-1 sm:mt-0 ml-0 sm:ml-auto text-[10px] text-gray-500 flex items-center gap-1">
           <span className="inline-block w-2 h-2 rounded-full bg-green-400"></span> best 2-GW window
           <span className="inline-block w-2 h-2 rounded-full bg-red-500/60 ml-1"></span> hardest window
         </span>

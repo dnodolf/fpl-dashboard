@@ -686,14 +686,14 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
             <h3 className="text-sm font-medium text-gray-400 mb-3">Top 3 This GW</h3>
             <div className="space-y-2">
               {top3ThisGW.map((player, idx) => (
-                <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-600 w-4 font-bold">{idx + 1}</span>
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
+                <div key={player.sleeper_id} className="flex items-center gap-2 text-sm min-w-0">
+                  <span className="text-gray-600 w-4 font-bold shrink-0">{idx + 1}</span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${getSleeperPositionStyle(player.position)}`}>
                     {player.position}
                   </span>
                   <button
                     onClick={() => onPlayerClick?.(player)}
-                    className={`truncate flex-1 text-left font-medium hover:underline transition-colors ${getPositionTextColor(player.position)}`}
+                    className={`truncate max-w-[120px] sm:max-w-none flex-1 text-left font-medium hover:underline transition-colors ${getPositionTextColor(player.position)}`}
                   >
                     {player.web_name || player.name}
                   </button>
@@ -822,11 +822,11 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
                       {player.position}
                     </span>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => onPlayerClick?.(player)}
-                          className={`font-medium hover:underline transition-colors text-left ${getPositionTextColor(player.position)}`}
+                          className={`truncate max-w-[120px] sm:max-w-none font-medium hover:underline transition-colors text-left ${getPositionTextColor(player.position)}`}
                         >
                           {player.name}
                         </button>

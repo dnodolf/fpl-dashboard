@@ -296,7 +296,7 @@ export function PlayerModal({
     >
       <div
         ref={modalRef}
-        className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4"
+        className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] overflow-y-auto mx-4"
         onClick={(e) => e.stopPropagation()}
         style={{ animation: 'slideUp 0.3s ease-out' }}
         tabIndex={-1}
@@ -304,7 +304,7 @@ export function PlayerModal({
         aria-modal="true"
       >
         {/* Header */}
-        <div className={`bg-gradient-to-r ${getPositionGradient(player.position)} p-6 rounded-t-lg relative`}>
+        <div className={`bg-gradient-to-r ${getPositionGradient(player.position)} p-4 sm:p-6 rounded-t-lg relative`}>
           {/* Action buttons */}
           <div className="absolute top-4 right-4 flex items-center gap-2">
             {/* Compare button */}
@@ -334,10 +334,10 @@ export function PlayerModal({
               <PlayerAvatar player={player} size="xl" />
             </div>
             <div className="flex-1">
-              <h2 className="text-3xl font-bold text-white mb-1">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">
                 {player.web_name || player.name || player.full_name}
               </h2>
-              <div className="flex items-center gap-3 text-lg">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-lg">
                 {/* Team logo and name */}
                 <div className="flex items-center gap-2">
                   {getTeamLogoFromPlayer(player) && (
@@ -361,7 +361,7 @@ export function PlayerModal({
           </div>
 
           {/* Key stats grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-700 bg-opacity-50 rounded p-3">
               <div className="text-xs text-gray-400 mb-1">Current PPG</div>
               <div className="text-2xl font-bold text-white">

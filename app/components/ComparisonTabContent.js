@@ -265,7 +265,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
                   className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none text-sm"
                 />
                 {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-xl max-h-72 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-xl max-h-48 sm:max-h-72 overflow-y-auto">
                     {suggestions.map(player => {
                       const isFree = !player.owned_by || player.owned_by === 'Free Agent';
                       return (
@@ -304,11 +304,11 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
       {metrics && verdictSummary && (
         <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
           {/* Table Header */}
-          <div className="grid grid-cols-4 gap-0 bg-gray-900 text-xs font-medium text-gray-400 uppercase tracking-wide">
-            <div className="px-4 py-3">Metric</div>
-            <div className="px-4 py-3 text-right">{pName(dropPlayer)}</div>
-            <div className="px-4 py-3 text-right">{pName(addPlayer)}</div>
-            <div className="px-4 py-3 text-right">Diff</div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-0 bg-gray-900 text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <div className="px-3 sm:px-4 py-3">Metric</div>
+            <div className="px-3 sm:px-4 py-3 text-right truncate">{pName(dropPlayer)}</div>
+            <div className="px-3 sm:px-4 py-3 text-right truncate">{pName(addPlayer)}</div>
+            <div className="hidden sm:block px-4 py-3 text-right">Diff</div>
           </div>
 
           {/* Metric Rows */}
@@ -325,15 +325,18 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
                 {m.separator && (
                   <div className="px-4 py-1.5 bg-gray-900/50 text-[10px] font-medium text-gray-500 uppercase tracking-widest">Opta Quality</div>
                 )}
-                <div className="grid grid-cols-4 gap-0 text-sm">
-                  <div className="px-4 py-2.5 text-gray-400 font-medium">{m.label}</div>
-                  <div className={`px-4 py-2.5 text-right font-mono ${dropBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-0 text-sm">
+                  <div className="px-3 sm:px-4 py-2.5 text-gray-400 font-medium">
+                    <span className="hidden sm:inline">{m.label}</span>
+                    <span className="sm:hidden">{m.label.replace('Next ', 'N').replace('Rest of Season', 'ROS').replace('Avg Mins (Next 5)', 'Mins').replace('Key Passes', 'KP')}</span>
+                  </div>
+                  <div className={`px-3 sm:px-4 py-2.5 text-right font-mono ${dropBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
                     {fmt(m.drop)}
                   </div>
-                  <div className={`px-4 py-2.5 text-right font-mono ${addBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
+                  <div className={`px-3 sm:px-4 py-2.5 text-right font-mono ${addBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
                     {fmt(m.add)}
                   </div>
-                  <div className={`px-4 py-2.5 text-right font-mono font-bold ${
+                  <div className={`hidden sm:block px-4 py-2.5 text-right font-mono font-bold ${
                     addBetter ? 'text-green-400' : dropBetter ? 'text-red-400' : 'text-gray-500'
                   }`}>
                     {addBetter ? '+' : ''}{fmt(diff)}

@@ -220,7 +220,7 @@ const getSleeperPositionBadgeColor = (position) => {
         </div>
         
         {/* Search */}
-        <div className="w-64">
+        <div className="w-full sm:w-64">
           <input
             type="text"
             placeholder="Search players..."
@@ -266,21 +266,21 @@ const getSleeperPositionBadgeColor = (position) => {
                 </th>
                 <th
                   onClick={() => handleSort('predicted_minutes')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Predicted Minutes {renderSortIcon('predicted_minutes')}
                 </th>
                 {!hideColumns.includes('ppg') && (
                   <th
                     onClick={() => handleSort('ppg_value')}
-                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                    className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                   >
                     PPG {scoringMode === 'v4' ? '⚡' : scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
                   </th>
                 )}
                 <th
                   onClick={() => handleSort('fixture_difficulty_value')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   Fixture Difficulty {renderSortIcon('fixture_difficulty_value')}
                 </th>
@@ -292,7 +292,7 @@ const getSleeperPositionBadgeColor = (position) => {
                 </th>
                 <th
                   onClick={() => handleSort('start_percentage')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
                 >
                   START % {renderSortIcon('start_percentage')}
                 </th>
@@ -358,7 +358,7 @@ const getSleeperPositionBadgeColor = (position) => {
                     </td>
 
                     {/* Predicted Minutes */}
-                    <td className="px-4 py-3">
+                    <td className="hidden md:table-cell px-4 py-3">
                       <span className="text-sm text-gray-300">
                         {formatMinutes(player.predicted_minutes)}
                       </span>
@@ -366,7 +366,7 @@ const getSleeperPositionBadgeColor = (position) => {
 
                     {/* PPG */}
                     {!hideColumns.includes('ppg') && (
-                      <td className="px-4 py-3">
+                      <td className="hidden md:table-cell px-4 py-3">
                         <span className="text-sm font-medium text-blue-400">
                           {formatPoints(player.ppg_value)}
                         </span>
@@ -374,7 +374,7 @@ const getSleeperPositionBadgeColor = (position) => {
                     )}
 
                     {/* Fixture Difficulty - ENHANCED WITH PROPER COLOR CODING */}
-                    <td className="px-4 py-3">
+                    <td className="hidden md:table-cell px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(player.fixture_difficulty_value)}`}>
                         {player.fixture_difficulty_value !== 'N/A' && !isNaN(parseFloat(player.fixture_difficulty_value))
                           ? parseFloat(player.fixture_difficulty_value).toFixed(1)
@@ -395,7 +395,7 @@ const getSleeperPositionBadgeColor = (position) => {
                     </td>
 
                     {/* START % - Chance of playing */}
-                    <td className="px-4 py-3">
+                    <td className="hidden md:table-cell px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold ${
                         player.start_percentage === null || player.start_percentage === undefined ? 'text-gray-400' :
                         player.start_percentage >= 75 ? 'text-green-400' :
