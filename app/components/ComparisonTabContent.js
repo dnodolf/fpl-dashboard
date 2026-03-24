@@ -469,7 +469,7 @@ ComparisonTabContent.propTypes = {
   currentGameweek: PropTypes.shape({
     number: PropTypes.number.isRequired
   }),
-  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   onPlayerClick: PropTypes.func,
   preSelectedPlayer1: PropTypes.object,
   onClearPreSelection: PropTypes.func

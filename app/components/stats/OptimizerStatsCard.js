@@ -164,7 +164,7 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
 }
 
 OptimizerStatsCard.propTypes = {
-  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   currentGameweek: PropTypes.shape({
     number: PropTypes.number.isRequired
   })

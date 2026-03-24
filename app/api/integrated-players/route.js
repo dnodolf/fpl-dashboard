@@ -5,7 +5,6 @@ import GameweekService from '../../services/gameweekService.js';
 import { normalizePosition } from '../../../utils/positionUtils.js';
 import v3ScoringService from '../../services/v3ScoringService.js';
 import { extractAllGameweekPredictions, extractAllGameweekMinutes } from '../../utils/ffhDataUtils.js';
-import { fetchSleeperScoringSettings } from '../../services/scoringConversionService.js';
 import { cacheService } from '../../services/cacheService.js';
 
 async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek, calibrationData = null) {
@@ -53,21 +52,6 @@ async function enhancePlayersWithV3Predictions(matchedPlayers, currentGameweek, 
       }
     };
   }
-}
-
-// Helper function for matching
-function findFFHStatsMatch(sleeperPlayer, ffhStatsPlayers) {
-  return ffhStatsPlayers.find(ffh => {
-    const sleeperName = (sleeperPlayer.full_name || sleeperPlayer.name || '').toLowerCase();
-    const ffhName = (ffh.web_name || '').toLowerCase();
-    const sleeperTeam = (sleeperPlayer.team_abbr || sleeperPlayer.team || '').toUpperCase();
-    const ffhTeam = (ffh.teamContext?.code_name || '').toUpperCase();
-    
-    const namesSimilar = sleeperName.includes(ffhName) || ffhName.includes(sleeperName);
-    const teamsMatch = sleeperTeam === ffhTeam;
-    
-    return namesSimilar && teamsMatch;
-  });
 }
 
 /**
@@ -121,23 +105,6 @@ function extractTeamCode(ffhPlayer) {
   if (ffhPlayer.club) return ffhPlayer.club;
   if (ffhPlayer.team) return ffhPlayer.team;
   return null;
-}
-
-/**
- * Fallback scoring conversion
- */
-function fallbackConvertFFHToSleeper(ffhPrediction, position) {
-  if (!ffhPrediction || ffhPrediction <= 0) return 0;
-  
-  const multipliers = {
-    'GKP': 0.8,
-    'DEF': 0.9,
-    'MID': 1.0,
-    'FWD': 1.1
-  };
-  
-  const multiplier = multipliers[position] || 1.0;
-  return Math.round(ffhPrediction * multiplier * 100) / 100;
 }
 
 /**

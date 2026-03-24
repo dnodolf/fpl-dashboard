@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
@@ -25,6 +25,40 @@ export function PlayerModal({
 }) {
   const [localScoringMode, setLocalScoringMode] = useState(parentScoringMode);
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
+  const modalRef = useRef(null);
+
+  // Keep local scoring mode in sync when parent toggles while modal is open
+  useEffect(() => {
+    setLocalScoringMode(parentScoringMode);
+  }, [parentScoringMode]);
+
+  // ESC key closes modal; Tab key stays trapped inside
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+          e.preventDefault();
+          (e.shiftKey ? last : first)?.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    // Move focus into modal on open
+    modalRef.current?.focus();
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Calculate key stats - all hooks must be called before any conditional returns
   const currentGW = currentGameweek?.number || 15;
@@ -261,9 +295,13 @@ export function PlayerModal({
       style={{ animation: 'fadeIn 0.2s ease-out' }}
     >
       <div
+        ref={modalRef}
         className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4"
         onClick={(e) => e.stopPropagation()}
         style={{ animation: 'slideUp 0.3s ease-out' }}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
       >
         {/* Header */}
         <div className={`bg-gradient-to-r ${getPositionGradient(player.position)} p-6 rounded-t-lg relative`}>
@@ -768,6 +806,6 @@ PlayerModal.propTypes = {
   currentGameweek: PropTypes.shape({
     number: PropTypes.number.isRequired
   }),
-  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   onCompare: PropTypes.func
 };

@@ -1006,7 +1006,7 @@ OptimizerTabContent.propTypes = {
   currentGameweek: PropTypes.shape({
     number: PropTypes.number.isRequired
   }).isRequired,
-  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   onPlayerClick: PropTypes.func
 };
 

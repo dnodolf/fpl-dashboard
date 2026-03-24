@@ -34,7 +34,7 @@ TransferTabContent.propTypes = {
   currentGameweek: PropTypes.shape({
     number: PropTypes.number.isRequired
   }),
-  scoringMode: PropTypes.oneOf(['ffh', 'v3']),
+  scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   gameweekRange: PropTypes.shape({
     start: PropTypes.number,
     end: PropTypes.number
