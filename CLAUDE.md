@@ -19,7 +19,7 @@ npm run test:coverage # Run tests with coverage report
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v4.3 - Code Cleanup, Tab UX & Expanded Tests
+**Current Version**: v4.4 - Mobile Responsiveness Pass
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -310,6 +310,16 @@ async function importServices() {
 - ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v4.4 - Mobile Responsiveness Pass (March 2026)
+- **MyPlayersTable**: search input `w-full sm:w-64`; Pred Mins, PPG, Fixture Diff, Start % columns hidden below `md` breakpoint
+- **PlayerModal**: `max-w-full sm:max-w-4xl`, `max-h-[95vh]`, responsive header padding/text, always 2-col stats grid
+- **ComparisonTabContent**: 3-col on mobile (Diff column `hidden sm:block`), shortened metric labels via `sm:hidden` spans, dropdown `max-h-48 sm:max-h-72`
+- **DashboardHeader**: scoring button labels `hidden sm:inline` (emoji-only on mobile), fade gradient `w-8 sm:w-12`
+- **SquadFixtureForecast**: `flex-wrap` legend, badge `text-[11px]`, window indicators drop to own line on mobile
+- **OptimizerTabContent**: player cards `clamp(56px, 14vw, 80px)` (was 68px floor), name/badge text sizes bumped 1px
+- **CheatSheetTabContent**: `flex-wrap` GW controls, inputs `w-16 sm:w-20`
+- **HomeTabContent**: player name `truncate max-w-[120px] sm:max-w-none`, `min-w-0`/`shrink-0` on flex children
 
 ### v4.3 - Code Cleanup, Tab UX & Expanded Tests (March 2026)
 - **V3 re-exports removed**: Stripped 3 unused re-export blocks from `v3ScoringService.js` (adjustment functions, matchup functions, `FALLBACK_CONVERSION_RATIOS`) — none were imported outside the `v3/` directory

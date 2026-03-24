@@ -2,7 +2,7 @@
 
 > Sleeper Fantasy Football analytics powered by FFH predictions, Opta stats, and calibrated scoring models.
 
-**v4.3** · Next.js 14 · Production Ready · March 2026
+**v4.4** · Next.js 14 · Production Ready · March 2026
 
 ---
 
