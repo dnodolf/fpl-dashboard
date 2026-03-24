@@ -18,20 +18,3 @@ export {
   default
 } from './v3/core.js';
 
-// Re-export constants for external use
-export { FALLBACK_CONVERSION_RATIOS } from './v3/conversionRatios.js';
-
-// Re-export adjustment functions if needed externally
-export {
-  applyPlayingTimeAdjustment,
-  calculateFormMomentum,
-  calculateFixtureRunQuality,
-  calculateInjuryReturnAdjustment
-} from './v3/adjustments.js';
-
-// Re-export matchup functions if needed externally
-export {
-  extractCurrentGameweekMatchup,
-  calculateStartRecommendation,
-  calculateSingleGameweekMatchup
-} from './v3/matchup.js';

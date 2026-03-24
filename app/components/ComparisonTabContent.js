@@ -165,6 +165,15 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
     return { addWins, dropWins: metrics.length - addWins, total: metrics.length };
   }, [metrics]);
 
+  if (!players.length) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3" />
+        <span className="text-white">Loading player data...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Selection Bar */}

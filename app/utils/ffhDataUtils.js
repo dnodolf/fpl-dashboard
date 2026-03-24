@@ -62,18 +62,11 @@ export function extractAllGameweekPredictions(ffhPlayer) {
       });
   }
 
-  // Convert to arrays
+  // Convert to sorted array
   const allPredictionsArray = Array.from(allPredictions.values())
     .sort((a, b) => a.gw - b.gw);
 
-  const upcomingPredictions = allPredictionsArray.filter(p => p.gw >= 2); // Adjust as needed
-  const currentPredictions = allPredictionsArray.filter(p => p.gw < 10); // Current season predictions
-
-  return {
-    all: allPredictionsArray,
-    upcoming: upcomingPredictions,
-    current: currentPredictions
-  };
+  return { all: allPredictionsArray };
 }
 
 /**

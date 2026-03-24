@@ -1,11 +1,28 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { getDataFreshnessStatus } from '../utils/cacheManager';
 import CacheManager from '../utils/cacheManager';
 import { AppLogo } from './common/AppLogo';
 
 const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration, modelAccuracy }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
+  const tabScrollRef = useRef(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  useEffect(() => {
+    const el = tabScrollRef.current;
+    if (!el) return;
+
+    const check = () => setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    check();
+    el.addEventListener('scroll', check);
+    window.addEventListener('resize', check);
+    return () => {
+      el.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, []);
 
   return (
     <header className="bg-gray-800 border-gray-700 border-b sticky top-0 z-50">
@@ -107,7 +124,11 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+        <div className="relative">
+          {canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-gray-800 to-transparent pointer-events-none z-10" />
+          )}
+        <div ref={tabScrollRef} className="flex space-x-1 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           {[
             { id: 'home', label: 'Home' },
             { id: 'optimizer', label: 'Start/Sit' },
@@ -130,6 +151,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
               {tab.label}
             </button>
           ))}
+        </div>
         </div>
       </div>
     </header>
