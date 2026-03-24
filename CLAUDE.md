@@ -19,7 +19,7 @@ npm run test:coverage # Run tests with coverage report
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v4.2 - Dead Code Cleanup, Accessibility & Test Foundation
+**Current Version**: v4.3 - Code Cleanup, Tab UX & Expanded Tests
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -310,6 +310,13 @@ async function importServices() {
 - ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v4.3 - Code Cleanup, Tab UX & Expanded Tests (March 2026)
+- **V3 re-exports removed**: Stripped 3 unused re-export blocks from `v3ScoringService.js` (adjustment functions, matchup functions, `FALLBACK_CONVERSION_RATIOS`) — none were imported outside the `v3/` directory
+- **ffhDataUtils simplified**: Removed `upcomingPredictions`/`currentPredictions` return values with hardcoded magic GW thresholds (`>= 2`, `< 10`); `extractAllGameweekPredictions()` now returns `{ all }` only
+- **Tab scroll indicator**: `DashboardHeader` shows a right-to-left fade gradient when the tab bar has hidden tabs off-screen; disappears once fully scrolled. Uses `useRef` + scroll/resize listener
+- **ComparisonTabContent loading state**: Shows spinner when `players` prop is empty (initial data load), replacing silent empty dropdowns
+- **gameweekStyles.test.js**: 10 tests added; total suite now 92 tests across 4 files
 
 ### v4.2 - Dead Code Cleanup, Accessibility & Test Foundation (March 2026)
 - **Dead code removed**: Deleted 6 unused functions from `scoringConversionService.js` (`convertFFHToSleeperPrediction`, `calculateConversionRatios`, `fetchSleeperScoringSettings`, `clearConversionCache`) and `integrated-players/route.js` (`fallbackConvertFFHToSleeper`, `findFFHStatsMatch`), along with orphaned constants and cache variables
