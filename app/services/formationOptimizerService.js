@@ -51,48 +51,25 @@ export class FormationOptimizerService {
   }
 
   /**
-   * Get player's predicted minutes - enhanced with multiple fallback strategies
+   * Get player's predicted minutes for the upcoming GW.
+   * Three levels: (1) current-GW predicted_mins from FFH enhancement,
+   * (2) first xmins value from the predictions array, (3) default 90.
    */
   getPlayerMinutes(player) {
-    // Priority 1: Use avg_predicted_minutes if available
-    if (player.avg_predicted_minutes && player.avg_predicted_minutes > 0) {
-      return player.avg_predicted_minutes;
+    // 1: predicted_mins set by enhancePlayerWithScoringConversion (current GW)
+    if (player.predicted_mins > 0) return player.predicted_mins;
+
+    // 2: xmins from predictions array — first entry at or after currentGW
+    if (player.predictions?.length) {
+      const gwNum = this.currentGW;
+      const pred = gwNum
+        ? player.predictions.find(p => p.gw >= gwNum && p.xmins > 0)
+        : player.predictions.find(p => p.xmins > 0);
+      if (pred?.xmins > 0) return pred.xmins;
     }
-    
-    // Priority 2: Use predicted_minutes (current gameweek)
-    if (player.predicted_minutes && player.predicted_minutes > 0) {
-      return player.predicted_minutes;
-    }
-    
-    // Priority 3: Use minutes from player data
-    if (player.minutes && player.minutes > 0) {
-      return player.minutes;
-    }
-    
-    // Priority 4: Use avg_minutes if available
-    if (player.avg_minutes && player.avg_minutes > 0) {
-      return player.avg_minutes;
-    }
-    
-    // Priority 5: Use avg_minutes_next5 if available
-    if (player.avg_minutes_next5 && player.avg_minutes_next5 > 0) {
-      return player.avg_minutes_next5;
-    }
-    
-    // Priority 6: Try to extract from gameweek minutes JSON
-    if (player.ffh_gw_minutes) {
-      try {
-        const gwMins = JSON.parse(player.ffh_gw_minutes);
-        const values = Object.values(gwMins);
-        if (values.length > 0) {
-          return values[0]; // Return next gameweek minutes
-        }
-      } catch (e) {
-        // Continue to fallback
-      }
-    }
-    
-    return 90; // Default full minutes
+
+    // 3: Default — assume full game
+    return 90;
   }
 
   /**
