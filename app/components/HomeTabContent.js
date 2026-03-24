@@ -9,6 +9,7 @@ import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import { getTeamLogoUrl } from '../utils/teamImage';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import PlayerAvatar from './common/PlayerAvatar';
+import SquadFixtureForecast from './SquadFixtureForecast';
 
 // Progress Ring component for visual stats
 const ProgressRing = ({ progress, size = 60, strokeWidth = 6, color = 'green', label, sublabel }) => {
@@ -735,6 +736,15 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
           </div>
         </div>
       </div>
+
+      {/* Squad Fixture Forecast */}
+      {myPlayers.length > 0 && (
+        <SquadFixtureForecast
+          myPlayers={myPlayers}
+          currentGW={currentGW}
+          scoringMode={scoringMode}
+        />
+      )}
 
       {/* Expanded Standings Table */}
       {standingsExpanded && standings.length > 0 && (

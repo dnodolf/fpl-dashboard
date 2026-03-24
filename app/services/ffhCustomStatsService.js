@@ -67,59 +67,59 @@ export async function fetchFFHCustomStats(currentGW) {
 
       statsMap[p.code] = {
         // xG / xA
-        xg: p.xg1 || 0,
-        xa: p.xa || 0,
-        xgi: p.xgi || 0,
-        xpts: p.xpts || 0,
+        xg: p.xg1 ?? 0,
+        xa: p.xa ?? 0,
+        xgi: p.xgi ?? 0,
+        xpts: p.xpts ?? 0,
 
         // Shooting
-        shots: p.shots || 0,
-        shots_on_target: p.shots_on_target || 0,
-        shots_in_box: p.shots_in_box || 0,
-        big_chance: p.big_chance || 0,
-        goals: p.goals || 0,
+        shots: p.shots ?? 0,
+        shots_on_target: p.shots_on_target ?? 0,
+        shots_in_box: p.shots_in_box ?? 0,
+        big_chance: p.big_chance ?? 0,
+        goals: p.goals ?? 0,
 
         // Passing / Creativity
-        key_pass: p.key_pass || 0,
-        big_chance_created: p.big_chance_created || 0,
-        assists: p.assists || 0,
-        acc_pass: p.acc_pass || 0,
-        total_pass: p.total_pass || 0,
+        key_pass: p.key_pass ?? 0,
+        big_chance_created: p.big_chance_created ?? 0,
+        assists: p.assists ?? 0,
+        acc_pass: p.acc_pass ?? 0,
+        total_pass: p.total_pass ?? 0,
 
         // Defending
-        tackles: p.tackles || 0,
-        tackles_won: p.tackles_won || 0,
-        intercepts: p.intercepts || 0,
-        clearances: p.clearances || 0,
-        blocks: p.blocks || 0,
-        recoveries: p.recoveries || 0,
+        tackles: p.tackles ?? 0,
+        tackles_won: p.tackles_won ?? 0,
+        intercepts: p.intercepts ?? 0,
+        clearances: p.clearances ?? 0,
+        blocks: p.blocks ?? 0,
+        recoveries: p.recoveries ?? 0,
 
         // GK
-        saves: p.saves || 0,
-        goals_conceded: p.goals_conceded || 0,
+        saves: p.saves ?? 0,
+        goals_conceded: p.goals_conceded ?? 0,
 
         // ICT Index
-        influence: p.influence || 0,
-        creativity: p.creativity || 0,
-        threat: p.threat || 0,
+        influence: p.influence ?? 0,
+        creativity: p.creativity ?? 0,
+        threat: p.threat ?? 0,
 
         // Playing time
-        mins: p.mins || 0,
-        appearance: p.appearance || 0,
-        starts: p.starts || 0,
+        mins: p.mins ?? 0,
+        appearance: p.appearance ?? 0,
+        starts: p.starts ?? 0,
 
         // Misc
-        clean_sheets: p.clean_sheets || 0,
-        bps: p.bps || 0,
-        bonus: p.bonus || 0,
-        yellow_card: p.yellow_card || 0,
-        red_card: p.red_card || 0,
-        touches_in_opp_box: p.touches_in_opp_box || 0,
-        succ_drib: p.succ_drib || 0,
-        fouls: p.fouls || 0,
-        offside: p.offside || 0,
-        pen_taken: p.pen_taken || 0,
-        pen_goal: p.pen_goal || 0
+        clean_sheets: p.clean_sheets ?? 0,
+        bps: p.bps ?? 0,
+        bonus: p.bonus ?? 0,
+        yellow_card: p.yellow_card ?? 0,
+        red_card: p.red_card ?? 0,
+        touches_in_opp_box: p.touches_in_opp_box ?? 0,
+        succ_drib: p.succ_drib ?? 0,
+        fouls: p.fouls ?? 0,
+        offside: p.offside ?? 0,
+        pen_taken: p.pen_taken ?? 0,
+        pen_goal: p.pen_goal ?? 0
       };
     }
 
