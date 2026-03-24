@@ -11,13 +11,15 @@ npm run build        # Build for production
 npm start           # Start production server
 npm run lint        # Run ESLint checks
 npm run check:scoring # Scoring consistency lint (catches banned field usage)
+npm test             # Run Jest unit tests (82 tests across 3 suites)
+npm run test:coverage # Run tests with coverage report
 ```
 
 ## Project Overview
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v4.1 - Live GW Locked Players & Prediction Fix
+**Current Version**: v4.2 - Dead Code Cleanup, Accessibility & Test Foundation
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -308,6 +310,17 @@ async function importServices() {
 - ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v4.2 - Dead Code Cleanup, Accessibility & Test Foundation (March 2026)
+- **Dead code removed**: Deleted 6 unused functions from `scoringConversionService.js` (`convertFFHToSleeperPrediction`, `calculateConversionRatios`, `fetchSleeperScoringSettings`, `clearConversionCache`) and `integrated-players/route.js` (`fallbackConvertFFHToSleeper`, `findFFHStatsMatch`), along with orphaned constants and cache variables
+- **PlayerModal accessibility**: ESC key closes modal, Tab focus trapped inside modal, `role="dialog" aria-modal="true"` on container, focus moves into modal on open
+- **V4 PropTypes**: Added `'v4'` to `scoringMode` PropTypes across `ComparisonTabContent`, `TransferTabContent`, `OptimizerTabContent`, `OptimizerStatsCard`, and `PlayerModal`
+- **PlayerModal scoring sync**: `localScoringMode` now syncs with `parentScoringMode` via `useEffect` — toggling V3/V4/FFH in the header updates an already-open modal
+- **Minutes fallback simplified**: `formationOptimizerService.getPlayerMinutes()` collapsed from 6 fallback levels to 3: `predicted_mins` → `xmins` from predictions array → default 90. Removed 4 fields that were never populated
+- **Jest test foundation**: 82 unit tests across 3 suites (`predictionUtils`, `newsUtils`, `v3ScoringService`). Run with `npm test` or `npm run test:coverage`
+  - `app/utils/__tests__/predictionUtils.test.js` — 30 tests for all 3 prediction utilities
+  - `app/utils/__tests__/newsUtils.test.js` — 19 tests with fake timers for `timeAgo` and `getFPLStatusBadge`
+  - `app/services/__tests__/v3ScoringService.test.js` — 33 tests for `getScoringValue`, `calculateV3Prediction`, `applyV3Scoring`
 
 ### v4.1 - Live GW Locked Players & Prediction Fix (March 2026)
 - **Live GW Prediction Fix**: Start/Sit tab now shows predicted points during a live gameweek
