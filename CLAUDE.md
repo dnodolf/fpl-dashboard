@@ -11,7 +11,7 @@ npm run build        # Build for production
 npm start           # Start production server
 npm run lint        # Run ESLint checks
 npm run check:scoring # Scoring consistency lint (catches banned field usage)
-npm test             # Run Jest unit tests (82 tests across 3 suites)
+npm test             # Run Jest unit tests (135 tests across 9 suites)
 npm run test:coverage # Run tests with coverage report
 ```
 
@@ -19,7 +19,7 @@ npm run test:coverage # Run tests with coverage report
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v4.4 - Mobile Responsiveness Pass
+**Current Version**: v4.5 - Multi-User Support
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -38,6 +38,7 @@ app/
 │   ├── integrated-players/route.js   # Main data integration (Sleeper + FFH)
 │   ├── optimizer/route.js            # Formation optimization
 │   ├── fpl-gameweek/route.js        # Hardcoded gameweek service
+│   ├── validate-league/route.js     # Sleeper league ID validation + roster owners
 │   └── ffh/players/route.js         # FFH data with fallback handling
 ├── services/                      # Business logic services
 │   ├── gameweekService.js            # Hardcoded 2025-26 schedule
@@ -50,7 +51,7 @@ app/
 ├── components/                    # UI components
 │   ├── DashboardHeader.js            # Top nav bar, tabs, scoring toggle
 │   ├── GameweekDisplay.js            # Clickable gameweek status widget
-│   ├── MatchingTabContent.js         # Opta matching stats tab
+│   ├── SetupModal.js                 # First-run onboarding (league ID + roster picker)
 │   ├── ComparisonChart.js            # Reusable bar chart for fixture comparisons
 │   ├── OptimizerTabContent.js        # Formation optimization interface
 │   ├── TransferTabContent.js         # Transfer recommendations with smart pairing
@@ -61,13 +62,13 @@ app/
 │   ├── ErrorBoundary.js             # React error boundary (class component)
 │   ├── common/AppLogo.js            # SVG logo component
 │   └── stats/                       # Statistics card components
-│       ├── MatchingStatsCard.js     # Player matching statistics
 │       └── OptimizerStatsCard.js    # Optimizer performance statistics
 ├── config/                        # Configuration constants
 │   └── constants.js                 # Centralized app constants
 ├── hooks/                         # Custom React hooks
 │   ├── usePlayerData.js             # Player data fetching hook
-│   └── useGameweek.js               # Gameweek state management hook
+│   ├── useGameweek.js               # Gameweek state management hook
+│   └── useUserConfig.js             # Per-user league config (localStorage)
 ├── utils/                         # Utility functions
 │   ├── predictionUtils.js            # Centralized scoring utilities
 │   ├── gameweekStyles.js             # Gameweek status color utilities
@@ -310,6 +311,17 @@ async function importServices() {
 - ✅ Real-time FPL injury/status news with badges and timestamps
 
 ## Recent Technical Updates
+
+### v4.5 - Multi-User Support (March 2026)
+- **Per-user league config**: `useUserConfig` hook stores `leagueId` + `userId` in localStorage — no auth server needed
+- **SetupModal**: First-run onboarding — paste Sleeper league ID → validate → pick roster from dropdown
+- **`/api/validate-league`**: Validates Sleeper league ID, returns league info and all roster owners
+- **Dynamic `USER_ID`**: Removed hardcoded `'ThatDerekGuy'`; all components receive `userId` as prop from `useUserConfig`
+- **Dynamic `leagueId`**: `integrated-players` and `optimizer` routes accept `leagueId` in request body; fall back to `DEFAULT_LEAGUE_ID` env var
+- **Scoped caching**: Server-side cache keys use `integrated-players-{leagueId}`; client-side localStorage cache keyed by `fpl_dashboard_cache_{leagueId}`
+- **Removed Matching tab**: Internal dev/debug tool removed — not relevant for multi-user audience; 98% match rate is stable
+- **`constants.js`**: `USER_ID` legacy alias preserved; `DEFAULT_USER_ID` + `DEFAULT_LEAGUE_ID` exported as fallbacks
+- **No auth server required**: Friends paste their Sleeper league ID on first visit; config persists across sessions via localStorage
 
 ### v4.4 - Mobile Responsiveness Pass (March 2026)
 - **MyPlayersTable**: search input `w-full sm:w-64`; Pred Mins, PPG, Fixture Diff, Start % columns hidden below `md` breakpoint

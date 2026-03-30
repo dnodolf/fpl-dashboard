@@ -29,7 +29,6 @@ Fantasy FC Playbook bridges your **Sleeper Fantasy Football** league with **Fant
 | ⚖️ **Comparison** | Drop/Add verdict table — 7 metrics, Opta quality, fixture charts |
 | 🔭 **Scout** | Waiver wire targets, key threats, xG badges |
 | 👥 **Players** | Full player table with filtering, search, pagination |
-| 🔗 **Matching** | Opta matching stats and data integration health |
 
 ---
 
