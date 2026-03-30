@@ -2,19 +2,18 @@
 import { useState, useMemo, useCallback } from 'react';
 import v3ScoringService from '../services/v3ScoringService.js';
 import { getPositionBadgeWithBorder } from '../constants/positionColors';
-import { USER_ID } from '../config/constants';
 import { getDifficultyColor } from '../constants/designTokens';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 
-const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [], onPlayerClick }) => {
+const MyPlayersTable = ({ players, currentGameweek, optimalPlayerIds = [], scoringMode = 'ffh', hideColumns = [], onPlayerClick, userId }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'predicted_points', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Filter to get only user's players (owned by USER_ID) - memoized
+  // Filter to get only user's players (owned by userId) - memoized
   const myPlayers = useMemo(() => players.filter(player =>
-    player.owned_by === USER_ID ||
-    player.owner_name === USER_ID
+    player.owned_by === userId ||
+    player.owner_name === userId
   ), [players]);
 
   // Apply search filter - memoized
@@ -200,7 +199,7 @@ const getSleeperPositionBadgeColor = (position) => {
           No Players Found
         </h3>
         <p className="text-gray-400">
-          No players found for user "{USER_ID}". Check ownership data.
+          No players found for user "{userId}". Check ownership data.
         </p>
       </div>
     );

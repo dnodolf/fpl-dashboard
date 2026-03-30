@@ -7,10 +7,9 @@
 
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { USER_ID } from '../../config/constants';
 import { getNextNGameweeksTotal } from '../../utils/predictionUtils';
 
-export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { number: 15 } }) {
+export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { number: 15 }, userId }) {
   const [rawData, setRawData] = useState(null); // Store raw API data
   const [stats, setStats] = useState({
     currentPoints: 0,
@@ -29,7 +28,7 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: USER_ID,
+            userId: userId,
             forceRefresh: false,
             scoringMode: scoringMode,
             currentGameweek: currentGameweek.number || 4
@@ -167,7 +166,8 @@ OptimizerStatsCard.propTypes = {
   scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   currentGameweek: PropTypes.shape({
     number: PropTypes.number.isRequired
-  })
+  }),
+  userId: PropTypes.string
 };
 
 OptimizerStatsCard.defaultProps = {

@@ -3,14 +3,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { getScoringValue } from '../services/v3ScoringService.js';
-import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
+import { TOTAL_GAMEWEEKS } from '../config/constants';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
 import { getSleeperPositionStyle } from '../constants/positionColors';
 import { getFPLStatusBadge } from '../utils/newsUtils';
 import ComparisonChart from './ComparisonChart';
 
-const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ffh', onPlayerClick, preSelectedPlayer1, onClearPreSelection }) => {
+const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ffh', onPlayerClick, preSelectedPlayer1, onClearPreSelection, userId }) => {
   const [dropPlayer, setDropPlayer] = useState(null);
   const [addPlayer, setAddPlayer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,7 +22,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
   // My players grouped by position
   const myPlayers = useMemo(() => {
     return players.filter(p =>
-      p.owned_by === USER_ID || p.owned_by === 'You'
+      p.owned_by === userId || p.owned_by === 'You'
     ).sort((a, b) => {
       const posOrder = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
       if (posOrder[a.position] !== posOrder[b.position]) {
@@ -35,7 +35,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
   // Handle pre-selected player from PlayerModal Compare button
   useEffect(() => {
     if (preSelectedPlayer1) {
-      const isMyPlayer = preSelectedPlayer1.owned_by === USER_ID || preSelectedPlayer1.owned_by === 'You';
+      const isMyPlayer = preSelectedPlayer1.owned_by === userId || preSelectedPlayer1.owned_by === 'You';
       if (isMyPlayer) {
         setDropPlayer(preSelectedPlayer1);
       } else {
@@ -484,7 +484,8 @@ ComparisonTabContent.propTypes = {
   scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
   onPlayerClick: PropTypes.func,
   preSelectedPlayer1: PropTypes.object,
-  onClearPreSelection: PropTypes.func
+  onClearPreSelection: PropTypes.func,
+  userId: PropTypes.string
 };
 
 ComparisonTabContent.defaultProps = {

@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { USER_ID } from '../config/constants';
 import { getSleeperPositionStyle } from '../constants/positionColors';
 import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import { getTeamLogoUrl } from '../utils/teamImage';
@@ -203,7 +202,7 @@ const getPositionTextColor = (position) => {
   }
 };
 
-const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }) => {
+const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, userId }) => {
   const [optimizerData, setOptimizerData] = useState(null);
   const [loadingOptimizer, setLoadingOptimizer] = useState(true);
   const [standings, setStandings] = useState([]);
@@ -249,7 +248,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: USER_ID,
+            userId: userId,
             scoringMode,
             currentGameweek: currentGameweek?.number
           })
@@ -291,7 +290,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
   }, []);
 
   // Get my players
-  const myPlayers = players.filter(p => p.owned_by === USER_ID);
+  const myPlayers = players.filter(p => p.owned_by === userId);
 
   // Helper to get current GW points - use predictions array for consistency
   const currentGW = currentGameweek?.number || 1;
@@ -337,7 +336,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
     .slice(0, 3);
 
   // Find user's league standing
-  const userStanding = standings.find(s => s.displayName === USER_ID);
+  const userStanding = standings.find(s => s.displayName === userId);
   const userRank = userStanding ? standings.indexOf(userStanding) + 1 : null;
 
   // Luck analysis computation
@@ -381,7 +380,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
     const sortedByLuck = [...teams].sort((a, b) => a.luckScore - b.luckScore);
     const minLuck = Math.min(...teams.map(t => t.luckScore));
     const maxLuck = Math.max(...teams.map(t => t.luckScore));
-    const userLuck = teams.find(t => t.displayName === USER_ID);
+    const userLuck = teams.find(t => t.displayName === userId);
 
     return { teams: sortedByLuck, userLuck, minLuck, maxLuck };
   }, [standings]);
@@ -761,7 +760,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
             </thead>
             <tbody className="divide-y divide-gray-700">
               {standings.map((team, index) => {
-                const isCurrentUser = team.displayName === USER_ID;
+                const isCurrentUser = team.displayName === userId;
                 return (
                   <tr
                     key={team.roster_id}
@@ -987,7 +986,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick }
                   </thead>
                   <tbody className="divide-y divide-gray-700">
                     {luckData.teams.map((team, index) => {
-                      const isUser = team.displayName === USER_ID;
+                      const isUser = team.displayName === userId;
                       const luckRange = (luckData.maxLuck - luckData.minLuck) || 1;
                       const barPosition = ((team.luckScore - luckData.minLuck) / luckRange) * 100;
                       const luckColor = team.luckScore <= -2 ? 'bg-red-500'
@@ -1063,7 +1062,8 @@ HomeTabContent.propTypes = {
   players: PropTypes.array.isRequired,
   currentGameweek: PropTypes.object,
   scoringMode: PropTypes.string.isRequired,
-  onPlayerClick: PropTypes.func
+  onPlayerClick: PropTypes.func,
+  userId: PropTypes.string
 };
 
 export default HomeTabContent;

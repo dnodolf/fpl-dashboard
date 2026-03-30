@@ -7,7 +7,7 @@
 
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { USER_ID, TOTAL_GAMEWEEKS } from '../config/constants';
+import { TOTAL_GAMEWEEKS } from '../config/constants';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import { getPositionBadgeStyle } from '../constants/positionColors';
 import PlayerAvatar from './common/PlayerAvatar';
@@ -19,7 +19,7 @@ const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
 // Get ownership status for a player
 const getOwnershipStatus = (player, userId) => {
   const ownerName = player.owned_by || player.owner_name;
-  if (ownerName === userId || ownerName === USER_ID) return 'mine';
+  if (ownerName === userId) return 'mine';
   if (!ownerName || ownerName === 'FA' || ownerName === 'Free Agent') return 'fa';
   return 'other';
 };
@@ -131,7 +131,8 @@ export default function CheatSheetTabContent({
   players = [],
   scoringMode = 'ffh',
   currentGameweek = { number: 15 },
-  onPlayerClick
+  onPlayerClick,
+  userId
 }) {
   const currentGW = currentGameweek?.number || 1;
   const [startGW, setStartGW] = useState(currentGW);
@@ -146,7 +147,7 @@ export default function CheatSheetTabContent({
       const displayPoints = getNextNGameweeksTotal(player, scoringMode, startGW, numGWs);
       const avgMinutes = Math.round(getAvgMinutesNextN(player, startGW, numGWs));
 
-      const ownershipStatus = getOwnershipStatus(player, USER_ID);
+      const ownershipStatus = getOwnershipStatus(player, userId);
 
       return {
         ...player,
@@ -284,5 +285,6 @@ CheatSheetTabContent.propTypes = {
   currentGameweek: PropTypes.shape({
     number: PropTypes.number
   }),
-  onPlayerClick: PropTypes.func
+  onPlayerClick: PropTypes.func,
+  userId: PropTypes.string
 };

@@ -7,7 +7,7 @@ import TransferTabContent from './components/TransferTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
 import CheatSheetTabContent from './components/CheatSheetTabContent';
 import HomeTabContent from './components/HomeTabContent';
-import MatchingTabContent from './components/MatchingTabContent';
+
 import ScoutTabContent from './components/ScoutTabContent';
 import DashboardHeader from './components/DashboardHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -16,8 +16,10 @@ import { EPL_TEAMS, TEAM_DISPLAY_NAMES, isEPLPlayer } from './constants/teams';
 import CacheManager from './utils/cacheManager';
 import { usePlayerData } from './hooks/usePlayerData';
 import { useGameweek } from './hooks/useGameweek';
-import { USER_ID, TOTAL_GAMEWEEKS, OWNERSHIP_STATUS, FILTER_OPTIONS } from './config/constants';
-import { MatchingStatsCard } from './components/stats/MatchingStatsCard';
+import { useUserConfig } from './hooks/useUserConfig';
+import { DEFAULT_USER_ID, TOTAL_GAMEWEEKS, OWNERSHIP_STATUS, FILTER_OPTIONS } from './config/constants';
+import SetupModal from './components/SetupModal';
+
 import { OptimizerStatsCard } from './components/stats/OptimizerStatsCard';
 import { PlayerModal } from './components/PlayerModal';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from './utils/predictionUtils';
@@ -47,10 +49,14 @@ export default function FPLDashboard() {
   // Comparison tab pre-selection state
   const [comparisonPlayer1, setComparisonPlayer1] = useState(null);
 
+  // User config — dynamic league ID + user ID
+  const { isConfigured, isLoading: configLoading, saveConfig, clearConfig, userId: configUserId, leagueId: configLeagueId, leagueName } = useUserConfig();
+  const userId = configUserId || DEFAULT_USER_ID;
+
   // Use gameweek hook for current gameweek data
   const currentGameweek = useGameweek();
 
-  const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration, calibration, modelAccuracy } = usePlayerData();
+  const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration, calibration, modelAccuracy } = usePlayerData(configLeagueId);
 
   // Processed players with scoring mode applied
   const [processedPlayers, setProcessedPlayers] = useState([]);
@@ -180,14 +186,14 @@ export default function FPLDashboard() {
       // Owner filter
       if (filters.owner !== FILTER_OPTIONS.ALL) {
         if (filters.owner === FILTER_OPTIONS.MY_PLAYERS_AND_FAS) {
-          const isMyPlayer = player.owned_by === USER_ID;
+          const isMyPlayer = player.owned_by === userId;
           const isFreeAgent = !player.owned_by || player.owned_by === OWNERSHIP_STATUS.FREE_AGENT;
           if (!isMyPlayer && !isFreeAgent) return false;
         } else if (filters.owner === OWNERSHIP_STATUS.FREE_AGENT && player.owned_by && player.owned_by !== OWNERSHIP_STATUS.FREE_AGENT) {
           return false;
-        } else if (filters.owner === USER_ID && player.owned_by !== USER_ID) {
+        } else if (filters.owner === userId && player.owned_by !== userId) {
           return false;
-        } else if (filters.owner !== OWNERSHIP_STATUS.FREE_AGENT && filters.owner !== USER_ID && player.owned_by !== filters.owner) {
+        } else if (filters.owner !== OWNERSHIP_STATUS.FREE_AGENT && filters.owner !== userId && player.owned_by !== filters.owner) {
           return false;
         }
       }
@@ -219,7 +225,7 @@ export default function FPLDashboard() {
 
       return true;
     });
-  }, [processedPlayers, filters.position, filters.team, filters.owner, filters.minPoints, filters.search]);
+  }, [processedPlayers, filters.position, filters.team, filters.owner, filters.minPoints, filters.search, userId]);
 
   // Sort players based on sort config
   const sortedPlayers = useMemo(() => {
@@ -250,8 +256,17 @@ export default function FPLDashboard() {
       <span className="text-blue-500 ml-1">↓</span>;
   };
 
+  // Setup modal — show when user hasn't configured their league
+  if (!configLoading && !isConfigured) {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <SetupModal onComplete={saveConfig} />
+      </div>
+    );
+  }
+
   // Loading state
-  if (loading) {
+  if (configLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
         <div className="flex items-center justify-center min-h-screen">
@@ -284,10 +299,8 @@ export default function FPLDashboard() {
   // Render tab-specific stats
   const renderStatsCards = () => {
     switch(activeTab) {
-      case 'matching':
-        return <MatchingStatsCard players={processedPlayers} integration={integration} />;
       case 'optimizer':
-        return <OptimizerStatsCard scoringMode={scoringMode} currentGameweek={currentGameweek} />;
+        return <OptimizerStatsCard scoringMode={scoringMode} currentGameweek={currentGameweek} userId={userId} />;
       default:
         return null;
     }
@@ -309,6 +322,8 @@ export default function FPLDashboard() {
           setScoringMode={setScoringMode}
           calibration={calibration}
           modelAccuracy={modelAccuracy}
+          leagueName={leagueName}
+          onChangeLeague={clearConfig}
         />
 
         {/* Main Content */}
@@ -324,6 +339,7 @@ export default function FPLDashboard() {
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
+              userId={userId}
             />
           )}
 
@@ -380,7 +396,7 @@ export default function FPLDashboard() {
                     >
                       <option value={FILTER_OPTIONS.ALL}>All Owners</option>
                       <option value={FILTER_OPTIONS.MY_PLAYERS_AND_FAS}>My Players + FAs</option>
-                      <option value={USER_ID}>My Players Only</option>
+                      <option value={userId}>My Players Only</option>
                       <option value={OWNERSHIP_STATUS.FREE_AGENT}>Free Agents Only</option>
                       {owners.map(owner => (
                         <option key={owner} value={owner}>{owner}</option>
@@ -503,11 +519,11 @@ export default function FPLDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {player.owned_by && player.owned_by !== OWNERSHIP_STATUS.FREE_AGENT && player.owned_by !== '' ? (
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                player.owned_by === USER_ID
+                                player.owned_by === userId
                                   ? 'bg-indigo-100 text-indigo-900 border border-indigo-400'
                                   : 'bg-orange-100 text-orange-900 border border-orange-400'
                               }`}>
-                                {player.owned_by === USER_ID ? '👤 My Player' : player.owned_by}
+                                {player.owned_by === userId ? '👤 My Player' : player.owned_by}
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
@@ -581,11 +597,8 @@ export default function FPLDashboard() {
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
+              userId={userId}
             />
-          )}
-
-          {activeTab === 'matching' && (
-            <MatchingTabContent players={processedPlayers} integration={integration} />
           )}
 
           {activeTab === 'optimizer' && (
@@ -594,6 +607,7 @@ export default function FPLDashboard() {
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
+              userId={userId}
             />
           )}
 
@@ -605,6 +619,7 @@ export default function FPLDashboard() {
               gameweekRange={transferGameweekRange}
               onGameweekRangeChange={setTransferGameweekRange}
               onPlayerClick={handlePlayerClick}
+              userId={userId}
             />
           )}
 
@@ -616,6 +631,7 @@ export default function FPLDashboard() {
               onPlayerClick={handlePlayerClick}
               preSelectedPlayer1={comparisonPlayer1}
               onClearPreSelection={() => setComparisonPlayer1(null)}
+              userId={userId}
             />
           )}
 
@@ -625,6 +641,7 @@ export default function FPLDashboard() {
               scoringMode={scoringMode}
               currentGameweek={currentGameweek}
               onPlayerClick={handlePlayerClick}
+              userId={userId}
             />
           )}
 
@@ -638,6 +655,7 @@ export default function FPLDashboard() {
           currentGameweek={currentGameweek}
           scoringMode={scoringMode}
           onCompare={handleCompare}
+          userId={userId}
         />
       </div>
     </ErrorBoundary>

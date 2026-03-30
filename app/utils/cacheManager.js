@@ -3,8 +3,27 @@
  * Client-side localStorage cache management with compression and cleanup
  */
 
-const CACHE_KEY = 'fpl_dashboard_cache';
+const CACHE_KEY_BASE = 'fpl_dashboard_cache';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+// Dynamic cache key scoped to current user config
+function getCacheKey() {
+  try {
+    const config = localStorage.getItem('fpl_dashboard_user_config');
+    if (config) {
+      const { userId, leagueId } = JSON.parse(config);
+      if (userId && leagueId) {
+        return `${CACHE_KEY_BASE}_${leagueId}`;
+      }
+    }
+  } catch {
+    // Fall through to default
+  }
+  return CACHE_KEY_BASE;
+}
+
+// Legacy alias for backwards compatibility
+const CACHE_KEY = CACHE_KEY_BASE;
 
 const CacheManager = {
   // Get size of data in bytes
@@ -156,7 +175,7 @@ const CacheManager = {
       }
 
       // Try to save
-      localStorage.setItem(CACHE_KEY, dataString);
+      localStorage.setItem(getCacheKey(), dataString);
 
     } catch (error) {
       if (error.name === 'QuotaExceededError') {
@@ -175,7 +194,7 @@ const CacheManager = {
             timestamp: Date.now(),
             compressed: true
           };
-          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+          localStorage.setItem(getCacheKey(), JSON.stringify(cacheData));
           if (process.env.NODE_ENV === 'development') {
             console.log('✅ Compressed cache saved after cleanup');
           }
@@ -195,14 +214,15 @@ const CacheManager = {
 
   get: () => {
     try {
-      const cached = localStorage.getItem(CACHE_KEY);
+      const cacheKey = getCacheKey();
+      const cached = localStorage.getItem(cacheKey);
       if (!cached) return null;
 
       const cacheData = JSON.parse(cached);
       const age = Date.now() - cacheData.timestamp;
 
       if (age > CACHE_DURATION) {
-        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(cacheKey);
         return null;
       }
 
@@ -221,7 +241,7 @@ const CacheManager = {
 
   clear: () => {
     try {
-      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(getCacheKey());
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.warn('Could not clear cache:', error);
@@ -231,7 +251,7 @@ const CacheManager = {
 
   getAge: () => {
     try {
-      const cached = localStorage.getItem(CACHE_KEY);
+      const cached = localStorage.getItem(getCacheKey());
       if (!cached) return null;
 
       const cacheData = JSON.parse(cached);

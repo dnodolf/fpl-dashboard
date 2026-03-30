@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import CacheManager from '../utils/cacheManager';
 
-export function usePlayerData() {
+export function usePlayerData(leagueId = '') {
   const [data, setData] = useState({
     players: [],
     loading: true,
@@ -52,7 +52,8 @@ export function usePlayerData() {
         body: JSON.stringify({
           includeMatching: true,
           includeScoring: true,
-          forceRefresh
+          forceRefresh,
+          ...(leagueId ? { leagueId } : {})
         })
       });
 
@@ -102,7 +103,8 @@ export function usePlayerData() {
 
   useEffect(() => {
     fetchData('auto', false, true);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId]);
 
   return { ...data, refetch: fetchData };
 }

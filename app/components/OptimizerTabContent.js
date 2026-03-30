@@ -9,11 +9,11 @@ import { getSleeperPositionCardStyle, getPositionColors } from '../constants/pos
 import { getDifficultyColor } from '../constants/designTokens';
 import { getFPLStatusBadge } from '../utils/newsUtils';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
-import { USER_ID } from '../config/constants';
+import { DEFAULT_USER_ID } from '../config/constants';
 import PlayerAvatar from './common/PlayerAvatar';
 
 // ----------------- OPTIMIZER HOOK -----------------
-function useOptimizerData(userId = USER_ID, scoringMode = 'ffh', currentGameweek) {
+function useOptimizerData(userId = DEFAULT_USER_ID, scoringMode = 'ffh', currentGameweek) {
   const [data, setData] = useState({
     loading: true,
     error: null,
@@ -767,7 +767,7 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
 };
 
 // ----------------- MAIN OPTIMIZER TAB CONTENT - ENHANCED -----------------
-export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlayerClick }) => {
+export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlayerClick, userId }) => {
   // Don't render if gameweek data isn't loaded for v3/v4 scoring
   if ((scoringMode === 'v3' || scoringMode === 'v4') && !currentGameweek?.number) {
     return (
@@ -789,7 +789,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
     fixtureList: optimizerFixtureList,
     roster,
     refetch 
-  } = useOptimizerData(USER_ID, scoringMode, currentGameweek);
+  } = useOptimizerData(userId, scoringMode, currentGameweek);
 
   // Calculate optimal player IDs for comparison - for FormationVisualization checkmarks
   const optimalPlayerIdsForDisplay = optimal?.players?.map(p => {
@@ -885,7 +885,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
       {/* Lineup Comparison - Main Focus */}
       {(() => {
         // Filter to only my roster players, then compute bench as roster minus starters
-        const myRoster = players?.filter(p => p.owned_by === USER_ID) || [];
+        const myRoster = players?.filter(p => p.owned_by === userId) || [];
         const currentStarterIds = new Set(current?.players?.map(p => p.id || p.player_id || p.sleeper_id) || []);
         const optimalStarterIds = new Set(optimal?.players?.map(p => p.id || p.player_id || p.sleeper_id) || []);
         const currentBench = myRoster.filter(p => {
@@ -985,6 +985,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
           scoringMode={scoringMode}
           hideColumns={['ppg']}
           onPlayerClick={onPlayerClick}
+          userId={userId}
         />
       </div>
 
@@ -1007,7 +1008,8 @@ OptimizerTabContent.propTypes = {
     number: PropTypes.number.isRequired
   }).isRequired,
   scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
-  onPlayerClick: PropTypes.func
+  onPlayerClick: PropTypes.func,
+  userId: PropTypes.string
 };
 
 OptimizerTabContent.defaultProps = {

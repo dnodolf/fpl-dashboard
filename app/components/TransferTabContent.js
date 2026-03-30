@@ -4,9 +4,8 @@
 
 import PropTypes from 'prop-types';
 import TransferPairRecommendations from './TransferPairRecommendations';
-import { USER_ID } from '../config/constants';
 
-const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gameweekRange, onGameweekRangeChange, onPlayerClick }) => {
+const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gameweekRange, onGameweekRangeChange, onPlayerClick, userId }) => {
   // Calculate default gameweek range: current GW + next 4 (total of 5)
   const currentGW = currentGameweek?.number;
   const defaultEndGW = currentGW + 4;
@@ -18,7 +17,7 @@ const TransferTabContent = ({ players, currentGameweek, scoringMode = 'ffh', gam
     <div className="space-y-6">
       {/* Transfer Pair Recommendations - Smart Transfer System */}
       <TransferPairRecommendations
-        myPlayers={players?.filter(p => p.owned_by === USER_ID) || []}
+        myPlayers={players?.filter(p => p.owned_by === userId) || []}
         availablePlayers={players?.filter(p => !p.owned_by || p.owned_by === 'Free Agent') || []}
         scoringMode={scoringMode}
         currentGameweek={currentGW}
@@ -40,7 +39,8 @@ TransferTabContent.propTypes = {
     end: PropTypes.number
   }),
   onGameweekRangeChange: PropTypes.func,
-  onPlayerClick: PropTypes.func
+  onPlayerClick: PropTypes.func,
+  userId: PropTypes.string
 };
 
 TransferTabContent.defaultProps = {

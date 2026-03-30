@@ -5,7 +5,7 @@ import { getDataFreshnessStatus } from '../utils/cacheManager';
 import CacheManager from '../utils/cacheManager';
 import { AppLogo } from './common/AppLogo';
 
-const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration, modelAccuracy }) => {
+const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration, modelAccuracy, leagueName, onChangeLeague }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
   const tabScrollRef = useRef(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -30,11 +30,29 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         {/* Top Row: Title, Gameweek, Update Button */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-            <h1 className="flex items-center gap-3 text-xl sm:text-3xl font-bold text-white whitespace-nowrap">
-              <AppLogo size={48} className="hidden sm:block" />
-              <AppLogo size={40} className="block sm:hidden" />
-              Fantasy FC Playbook
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="flex items-center gap-3 text-xl sm:text-3xl font-bold text-white whitespace-nowrap">
+                <AppLogo size={48} className="hidden sm:block" />
+                <AppLogo size={40} className="block sm:hidden" />
+                Fantasy FC Playbook
+              </h1>
+              {leagueName && (
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full truncate max-w-[160px]" title={leagueName}>
+                    {leagueName}
+                  </span>
+                  {onChangeLeague && (
+                    <button
+                      onClick={onChangeLeague}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      title="Change league"
+                    >
+                      ✏️
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
@@ -136,8 +154,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
             { id: 'cheatsheet', label: 'Cheat Sheet' },
             { id: 'comparison', label: 'Comparison' },
             { id: 'scout', label: 'Scout' },
-            { id: 'players', label: 'Players' },
-            { id: 'matching', label: 'Matching' }
+            { id: 'players', label: 'Players' }
           ].map((tab) => (
             <button
               key={tab.id}

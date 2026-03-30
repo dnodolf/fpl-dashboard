@@ -6,7 +6,7 @@ import { FormationOptimizerService } from '../../services/formationOptimizerServ
 import { normalizePosition } from '../../../utils/positionUtils.js';
 import { transformPlayerForClient } from '../../utils/playerTransformUtils.js';
 import { cacheService } from '../../services/cacheService.js';
-import { USER_ID } from '../../config/constants';
+import { DEFAULT_USER_ID } from '../../config/constants';
 import GameweekService from '../../services/gameweekService.js';
 
 const optimizerService = new FormationOptimizerService();
@@ -106,7 +106,7 @@ async function fetchPlayerData(baseUrl, forceRefresh = false) {
 export async function POST(request) {
   try {
     const requestData = await request.json();
-    const userId = requestData.userId || USER_ID;
+    const userId = requestData.userId || DEFAULT_USER_ID;
     const analysisType = requestData.analysisType || 'current_roster';
     const forceRefresh = requestData.forceRefresh || false;
     const scoringMode = requestData.scoringMode || 'ffh';

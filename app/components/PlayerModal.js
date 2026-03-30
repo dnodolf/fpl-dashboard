@@ -8,7 +8,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { TOTAL_GAMEWEEKS, USER_ID } from '../config/constants';
+import { TOTAL_GAMEWEEKS } from '../config/constants';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
 import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
@@ -21,7 +21,8 @@ export function PlayerModal({
   onClose,
   currentGameweek = { number: 15 },
   scoringMode: parentScoringMode = 'ffh',
-  onCompare = null
+  onCompare = null,
+  userId
 }) {
   const [localScoringMode, setLocalScoringMode] = useState(parentScoringMode);
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
@@ -240,7 +241,7 @@ export function PlayerModal({
 
   // Get ownership display
   const getOwnershipDisplay = () => {
-    if (player.owned_by === USER_ID || player.owned_by === 'You') {
+    if (player.owned_by === userId || player.owned_by === 'You') {
       return { text: 'Your Team', color: 'text-green-400' };
     } else if (!player.owned_by || player.owned_by === 'Free Agent') {
       return { text: 'Free Agent', color: 'text-blue-400' };
@@ -807,5 +808,6 @@ PlayerModal.propTypes = {
     number: PropTypes.number.isRequired
   }),
   scoringMode: PropTypes.oneOf(['ffh', 'v3', 'v4']),
-  onCompare: PropTypes.func
+  onCompare: PropTypes.func,
+  userId: PropTypes.string
 };

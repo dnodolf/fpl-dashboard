@@ -110,12 +110,12 @@ function extractTeamCode(ffhPlayer) {
 /**
  * Fetch Sleeper data directly from Sleeper API (no internal routes)
  */
-async function fetchSleeperData() {
+async function fetchSleeperData(requestLeagueId = null) {
   try {
     if (process.env.NODE_ENV === 'development') {
       console.log('📡 Pipeline: Fetching Sleeper players & rosters');
     }
-    const leagueId = process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
+    const leagueId = requestLeagueId || process.env.SLEEPER_LEAGUE_ID || '1240184286171107328';
     
     const [playersResponse, rostersResponse, usersResponse] = await Promise.all([
       fetch('https://api.sleeper.app/v1/players/clubsoccer:epl'),
@@ -277,7 +277,7 @@ async function fetchFFHData() {
 /**
  * FAIL-FAST INTEGRATION - No fallbacks, system errors if any component fails
  */
-async function integratePlayersWithOptaMatching(currentGameweek) {
+async function integratePlayersWithOptaMatching(currentGameweek, requestLeagueId = null) {
   if (process.env.NODE_ENV === 'development') {
     console.log('🔗 Pipeline: Starting player integration');
   }
@@ -287,7 +287,7 @@ async function integratePlayersWithOptaMatching(currentGameweek) {
   const { fetchFPLNewsData } = await import('../../services/fplNewsService.js');
   const { fetchFFHCustomStats } = await import('../../services/ffhCustomStatsService.js');
   const [sleeperData, ffhData, fplNewsMap, ffhCustomStats] = await Promise.all([
-    fetchSleeperData(), // Will throw if fails
+    fetchSleeperData(requestLeagueId), // Will throw if fails
     fetchFFHData(),     // Will throw if fails
     fetchFPLNewsData(),  // Returns null on failure (graceful)
     fetchFFHCustomStats(currentGameweek?.number)  // Returns null on failure (graceful)
@@ -458,10 +458,12 @@ export async function POST(request) {
   try {
     const requestData = await request.json();
     const forceRefresh = requestData.forceRefresh || false;
+    const requestLeagueId = requestData.leagueId || null;
+    const cacheKey = requestLeagueId ? `integrated-players-${requestLeagueId}` : 'integrated-players';
 
     // Check cache unless force refresh
     if (!forceRefresh) {
-      const cached = cacheService.get('integrated-players');
+      const cached = cacheService.get(cacheKey);
       if (cached) {
         if (process.env.NODE_ENV === 'development') {
           console.log('📋 Returning cached data');
@@ -495,7 +497,7 @@ export async function POST(request) {
     const { fetchSleeperMatchupHistory } = await import('../../services/sleeperMatchupService.js');
     const { fetchSleeperProjections } = await import('../../services/sleeperProjectionsService.js');
     const [players, matchupData, sleeperProjectionsData] = await Promise.all([
-      integratePlayersWithOptaMatching(currentGameweek),
+      integratePlayersWithOptaMatching(currentGameweek, requestLeagueId),
       fetchSleeperMatchupHistory(currentGameweek.number), // Returns null on failure (graceful)
       fetchSleeperProjections(currentGameweek.number)       // Returns null on failure (graceful)
     ]);
@@ -602,7 +604,7 @@ const responseData = {
 };
 
 // Cache successful results
-cacheService.set('integrated-players', responseData, 15 * 60 * 1000); // 15 minutes
+cacheService.set(cacheKey, responseData, 15 * 60 * 1000); // 15 minutes
 if (process.env.NODE_ENV === 'development') {
   console.log('💾 Data cached successfully');
 }

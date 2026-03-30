@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { USER_ID } from '../config/constants';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getSleeperPositionBadgeClasses } from '../../utils/positionUtils';
 import { getDifficultyColor } from '../constants/designTokens';
@@ -338,13 +337,13 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
 };
 
 // ─── Main export ──────────────────────────────────────────────────
-const ScoutTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlayerClick }) => {
+const ScoutTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlayerClick, userId }) => {
   const { loading, error, teams, refetch } = useScoutData(scoringMode, currentGameweek);
   const [selectedRival, setSelectedRival] = useState(null);
 
   // Find my team
   const myTeam = useMemo(() => {
-    return teams.find(t => t.displayName.toLowerCase() === USER_ID.toLowerCase());
+    return teams.find(t => t.displayName.toLowerCase() === userId.toLowerCase());
   }, [teams]);
 
   const currentGW = currentGameweek?.number || 1;
@@ -425,7 +424,7 @@ const ScoutTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlay
             </div>
           )}
 
-          <LeagueTable teams={teams} myDisplayName={USER_ID} onSelectRival={setSelectedRival} />
+          <LeagueTable teams={teams} myDisplayName={userId} onSelectRival={setSelectedRival} />
 
           <div className="text-center">
             <button
