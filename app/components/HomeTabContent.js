@@ -208,6 +208,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
   const [standings, setStandings] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(true);
   const [standingsExpanded, setStandingsExpanded] = useState(false);
+  const [fixtureExpanded, setFixtureExpanded] = useState(false);
   const [fixtureCounts, setFixtureCounts] = useState(null);
   const [fixtureList, setFixtureList] = useState(null);
 
@@ -493,122 +494,6 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
         </div>
       </div>
 
-      {/* GW Fixture Schedule — shown when live */}
-      {fixtureList && fixtureList.length > 0 && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white">GW {currentGameweek?.number} Fixtures</h2>
-            {fixtureCounts && (
-              <span className="text-xs text-gray-400">
-                {fixtureCounts.finished}/{fixtureCounts.total} complete
-              </span>
-            )}
-          </div>
-          <div className="divide-y divide-gray-700/50">
-            {fixtureList.map((fixture, idx) => {
-              const myStarters = myPlayers.filter(p => p.is_starter);
-              const homeMyPlayers = myStarters.filter(p => p.team_abbr === fixture.homeTeam);
-              const awayMyPlayers = myStarters.filter(p => p.team_abbr === fixture.awayTeam);
-              const hasMyPlayers = homeMyPlayers.length > 0 || awayMyPlayers.length > 0;
-              const kickoff = new Date(fixture.kickoffTime);
-              const timeStr = kickoff.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-              const dateStr = kickoff.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-              return (
-                <div
-                  key={idx}
-                  className={`px-4 py-2.5 flex items-center gap-3 ${
-                    fixture.status === 'live' ? 'bg-red-500/10' :
-                    fixture.status === 'finished' ? '' : ''
-                  } ${hasMyPlayers ? 'border-l-2 border-l-blue-500' : ''}`}
-                >
-                  {/* Status / Time */}
-                  <div className="w-16 shrink-0 text-center">
-                    {fixture.status === 'live' ? (
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                        </span>
-                        <span className="text-xs font-bold text-red-400">{fixture.minutes}&apos;</span>
-                      </div>
-                    ) : fixture.status === 'finished' ? (
-                      <span className="text-xs font-medium text-green-500">FT</span>
-                    ) : (
-                      <div>
-                        <p className="text-xs font-medium text-gray-300">{timeStr}</p>
-                        <p className="text-[10px] text-gray-500">{dateStr}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Home Team */}
-                  <div className="flex-1 flex items-center justify-end gap-2">
-                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-gray-400' : 'text-white'}`}>
-                      {fixture.homeTeam}
-                    </span>
-                    <img
-                      src={getTeamLogoUrl(fixture.homeTeam)}
-                      alt={fixture.homeTeam}
-                      className="w-6 h-6"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  </div>
-
-                  {/* Score */}
-                  <div className="w-14 text-center shrink-0">
-                    {fixture.status === 'upcoming' ? (
-                      <span className="text-xs text-gray-500">vs</span>
-                    ) : (
-                      <span className={`text-sm font-bold ${fixture.status === 'live' ? 'text-white' : 'text-gray-300'}`}>
-                        {fixture.homeScore} - {fixture.awayScore}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Away Team */}
-                  <div className="flex-1 flex items-center gap-2">
-                    <img
-                      src={getTeamLogoUrl(fixture.awayTeam)}
-                      alt={fixture.awayTeam}
-                      className="w-6 h-6"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-gray-400' : 'text-white'}`}>
-                      {fixture.awayTeam}
-                    </span>
-                  </div>
-
-                  {/* My Starters */}
-                  <div className="w-44 shrink-0 flex flex-wrap gap-1 justify-end">
-                    {[...homeMyPlayers, ...awayMyPlayers].map(p => (
-                      <span
-                        key={p.sleeper_id}
-                        className={`text-[10px] px-1.5 py-0.5 rounded ${
-                          fixture.status === 'finished'
-                            ? 'bg-green-900/40 text-green-400'
-                            : fixture.status === 'live'
-                              ? 'bg-red-900/40 text-red-300 ring-1 ring-red-500/30'
-                              : getSleeperPositionStyle(p.position)
-                        }`}
-                        title={`${p.web_name || p.name} (${p.position}) — ${
-                          fixture.status === 'finished' ? 'Done' :
-                          fixture.status === 'live' ? 'Playing now' : 'Not started'
-                        }`}
-                      >
-                        {fixture.status === 'finished' && '✓ '}
-                        {fixture.status === 'live' && '● '}
-                        {p.web_name || p.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Stats Grid with Progress Rings */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Lineup Optimization with Progress Ring */}
@@ -735,6 +620,128 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
           </div>
         </div>
       </div>
+
+      {/* GW Fixture Schedule — shown when live */}
+      {fixtureList && fixtureList.length > 0 && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setFixtureExpanded(!fixtureExpanded)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+          >
+            <h2 className="text-sm font-bold text-white">GW {currentGameweek?.number} Fixtures</h2>
+            <div className="flex items-center gap-2">
+              {fixtureCounts && (
+                <span className="text-xs text-gray-400">
+                  {fixtureCounts.finished}/{fixtureCounts.total} complete
+                </span>
+              )}
+              <span className="text-gray-400 text-xs">{fixtureExpanded ? '▲' : '▼'}</span>
+            </div>
+          </button>
+          {fixtureExpanded && <div className="divide-y divide-gray-700/50 border-t border-gray-700">
+            {fixtureList.map((fixture, idx) => {
+              const myStarters = myPlayers.filter(p => p.is_starter);
+              const homeMyPlayers = myStarters.filter(p => p.team_abbr === fixture.homeTeam);
+              const awayMyPlayers = myStarters.filter(p => p.team_abbr === fixture.awayTeam);
+              const hasMyPlayers = homeMyPlayers.length > 0 || awayMyPlayers.length > 0;
+              const kickoff = new Date(fixture.kickoffTime);
+              const timeStr = kickoff.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              const dateStr = kickoff.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+              return (
+                <div
+                  key={idx}
+                  className={`px-4 py-2.5 flex items-center gap-3 ${
+                    fixture.status === 'live' ? 'bg-red-500/10' :
+                    fixture.status === 'finished' ? '' : ''
+                  } ${hasMyPlayers ? 'border-l-2 border-l-blue-500' : ''}`}
+                >
+                  {/* Status / Time */}
+                  <div className="w-16 shrink-0 text-center">
+                    {fixture.status === 'live' ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                        <span className="text-xs font-bold text-red-400">{fixture.minutes}&apos;</span>
+                      </div>
+                    ) : fixture.status === 'finished' ? (
+                      <span className="text-xs font-medium text-green-500">FT</span>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-medium text-gray-300">{timeStr}</p>
+                        <p className="text-[10px] text-gray-500">{dateStr}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Home Team */}
+                  <div className="flex-1 flex items-center justify-end gap-2">
+                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-gray-400' : 'text-white'}`}>
+                      {fixture.homeTeam}
+                    </span>
+                    <img
+                      src={getTeamLogoUrl(fixture.homeTeam)}
+                      alt={fixture.homeTeam}
+                      className="w-6 h-6"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  </div>
+
+                  {/* Score */}
+                  <div className="w-14 text-center shrink-0">
+                    {fixture.status === 'upcoming' ? (
+                      <span className="text-xs text-gray-500">vs</span>
+                    ) : (
+                      <span className={`text-sm font-bold ${fixture.status === 'live' ? 'text-white' : 'text-gray-300'}`}>
+                        {fixture.homeScore} - {fixture.awayScore}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Away Team */}
+                  <div className="flex-1 flex items-center gap-2">
+                    <img
+                      src={getTeamLogoUrl(fixture.awayTeam)}
+                      alt={fixture.awayTeam}
+                      className="w-6 h-6"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-gray-400' : 'text-white'}`}>
+                      {fixture.awayTeam}
+                    </span>
+                  </div>
+
+                  {/* My Starters */}
+                  <div className="w-44 shrink-0 flex flex-wrap gap-1 justify-end">
+                    {[...homeMyPlayers, ...awayMyPlayers].map(p => (
+                      <span
+                        key={p.sleeper_id}
+                        className={`text-[10px] px-1.5 py-0.5 rounded ${
+                          fixture.status === 'finished'
+                            ? 'bg-green-900/40 text-green-400'
+                            : fixture.status === 'live'
+                              ? 'bg-red-900/40 text-red-300 ring-1 ring-red-500/30'
+                              : getSleeperPositionStyle(p.position)
+                        }`}
+                        title={`${p.web_name || p.name} (${p.position}) — ${
+                          fixture.status === 'finished' ? 'Done' :
+                          fixture.status === 'live' ? 'Playing now' : 'Not started'
+                        }`}
+                      >
+                        {fixture.status === 'finished' && '✓ '}
+                        {fixture.status === 'live' && '● '}
+                        {p.web_name || p.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>}
+        </div>
+      )}
 
       {/* Squad Fixture Forecast */}
       {myPlayers.length > 0 && (

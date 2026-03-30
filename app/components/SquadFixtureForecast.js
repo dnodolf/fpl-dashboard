@@ -22,6 +22,7 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
     const results = [];
     for (let i = 0; i < 8; i++) {
       const gw = currentGW + i;
+      if (gw > 38) break;
       let totalDiff = 0;
       let diffCount = 0;
       let totalPts = 0;

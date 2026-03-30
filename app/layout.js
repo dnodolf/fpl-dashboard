@@ -25,6 +25,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
+        {/* Inter font */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         {/* Multiple favicon formats for maximum compatibility */}
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png" />
@@ -46,7 +50,7 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Fantasy FC Playbook" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased font-sans">
         {children}
       </body>
     </html>

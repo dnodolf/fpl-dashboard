@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { getDataFreshnessStatus } from '../utils/cacheManager';
 import CacheManager from '../utils/cacheManager';
 import { AppLogo } from './common/AppLogo';
+import { Home, Users, ArrowLeftRight, BookOpen, GitCompare, Search, Table2, RefreshCw, Info } from 'lucide-react';
 
 const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration, modelAccuracy, leagueName, onChangeLeague }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
@@ -25,20 +26,20 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
   }, []);
 
   return (
-    <header className="bg-gray-800 border-gray-700 border-b sticky top-0 z-50">
+    <header className="bg-slate-900 border-slate-800 border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
         {/* Top Row: Title, Gameweek, Update Button */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-3">
-              <h1 className="flex items-center gap-3 text-xl sm:text-3xl font-bold text-white whitespace-nowrap">
+              <h1 className="flex items-center gap-3 text-xl sm:text-3xl font-semibold text-slate-50 whitespace-nowrap">
                 <AppLogo size={48} className="hidden sm:block" />
                 <AppLogo size={40} className="block sm:hidden" />
                 Fantasy FC Playbook
               </h1>
               {leagueName && (
                 <div className="flex items-center gap-2">
-                  <span className="hidden sm:inline text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full truncate max-w-[160px]" title={leagueName}>
+                  <span className="hidden sm:inline text-xs text-slate-400 bg-slate-800 border border-slate-700 px-2 py-1 rounded-full truncate max-w-[160px]" title={leagueName}>
                     {leagueName}
                   </span>
                   {onChangeLeague && (
@@ -58,7 +59,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
           <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
             {/* Scoring Mode Toggle */}
             <div className="flex items-center gap-1 sm:gap-2">
-              <span className="text-xs sm:text-sm text-gray-300 hidden sm:inline">
+              <span className="text-xs sm:text-sm text-slate-400 hidden sm:inline">
                 Scoring:
               </span>
               <div className="flex gap-1">
@@ -66,8 +67,8 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                   onClick={() => setScoringMode('ffh')}
                   className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                     scoringMode === 'ffh'
-                      ? 'bg-blue-500 text-white hover:bg-blue-600'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-violet-500 hover:bg-violet-600 text-white'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                   }`}
                   title="Fantasy Football Hub (FPL scoring)"
                 >
@@ -77,8 +78,8 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                   onClick={() => setScoringMode('v3')}
                   className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                     scoringMode === 'v3'
-                      ? 'bg-green-500 text-white hover:bg-green-600'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-violet-500 hover:bg-violet-600 text-white'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                   }`}
                   title="V3 Sleeper conversion (optimal position-based ratios)"
                 >
@@ -88,8 +89,8 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                   onClick={() => setScoringMode('v4')}
                   className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                     scoringMode === 'v4'
-                      ? 'bg-amber-500 text-white hover:bg-amber-600'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-violet-500 hover:bg-violet-600 text-white'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                   }`}
                   title="V4 Ensemble (75% V3 + 25% Sleeper projections)"
                 >
@@ -98,44 +99,47 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
               </div>
             </div>
 
-            {/* Model accuracy badge */}
-            {modelAccuracy && (
-              <span
-                className="hidden sm:inline text-xs px-2 py-1 rounded-full font-medium bg-gray-700 text-gray-300 border border-gray-600"
-                title={`Sleeper Projections MAE: ${modelAccuracy.sleeper_proj?.mae ?? '?'} (${modelAccuracy.sleeper_proj?.samples ?? 0} samples). Lower MAE = more accurate prediction of actual Sleeper scores.`}
-              >
-                Sleeper MAE: {modelAccuracy.sleeper_proj?.mae?.toFixed(1) ?? '?'}
-              </span>
-            )}
-
-            {/* Calibration status chip */}
-            {calibration && (
-              <span
-                className={`hidden sm:inline text-xs px-2 py-1 rounded-full font-medium ${
-                  calibration.active
-                    ? 'bg-green-900/60 text-green-400 border border-green-700'
-                    : 'bg-gray-700 text-gray-500 border border-gray-600'
-                }`}
-                title={
-                  calibration.active
-                    ? `V3 ratios calibrated from ${calibration.sampleCount} real GW samples across ${calibration.gwsAnalyzed} gameweeks. Confidence: ${calibration.confidence}. GKP:${calibration.positionRatios?.GKP} DEF:${calibration.positionRatios?.DEF} MID:${calibration.positionRatios?.MID} FWD:${calibration.positionRatios?.FWD}`
-                    : `Using hardcoded V3 ratios — ${calibration.fallbackReason || 'calibration data unavailable'}`
-                }
-              >
-                {calibration.active ? `🎯 Cal: ${calibration.gwsAnalyzed}GW` : '⚠️ Uncal'}
-              </span>
+            {/* Model accuracy + calibration — info icon with hover tooltip */}
+            {(modelAccuracy || calibration) && (
+              <div className="relative group">
+                <button className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors">
+                  <Info size={14} />
+                </button>
+                <div className="absolute right-0 top-full mt-2 w-64 bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 shadow-xl shadow-black/40 hidden group-hover:block z-50 space-y-2">
+                  {modelAccuracy && (
+                    <div>
+                      <span className="text-slate-500 uppercase tracking-wider text-[10px] font-medium">Model Accuracy</span>
+                      <p className="mt-0.5 text-slate-300">Sleeper MAE: <span className="text-white font-medium">{modelAccuracy.sleeper_proj?.mae?.toFixed(2) ?? '?'}</span> <span className="text-slate-500">({modelAccuracy.sleeper_proj?.samples ?? 0} samples)</span></p>
+                      <p className="text-slate-500 mt-0.5">Lower = more accurate vs actual Sleeper scores</p>
+                    </div>
+                  )}
+                  {calibration && (
+                    <div className={modelAccuracy ? 'border-t border-slate-700 pt-2' : ''}>
+                      <span className="text-slate-500 uppercase tracking-wider text-[10px] font-medium">V3 Calibration</span>
+                      {calibration.active ? (
+                        <>
+                          <p className="mt-0.5 text-emerald-400 font-medium">Active — {calibration.gwsAnalyzed} GWs · {calibration.sampleCount} samples</p>
+                          <p className="text-slate-400 mt-0.5">GKP {calibration.positionRatios?.GKP} · DEF {calibration.positionRatios?.DEF} · MID {calibration.positionRatios?.MID} · FWD {calibration.positionRatios?.FWD}</p>
+                        </>
+                      ) : (
+                        <p className="mt-0.5 text-amber-400">Uncalibrated — {calibration.fallbackReason || 'using hardcoded ratios'}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Data Freshness + Update Button */}
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline text-xs text-gray-400">
+              <span className="hidden sm:inline text-xs text-slate-400">
                 {freshnessStatus.message}
               </span>
               <button
                 onClick={() => updateData('manual', true, false)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 sm:gap-2 whitespace-nowrap"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center whitespace-nowrap"
               >
-                🔄 <span className="hidden sm:inline">Update Data</span>
+                <RefreshCw size={13} className="mr-1" /><span className="hidden sm:inline">Update Data</span>
               </button>
             </div>
           </div>
@@ -144,28 +148,28 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
         {/* Navigation Tabs */}
         <div className="relative">
           {canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-2 w-8 sm:w-12 bg-gradient-to-l from-gray-800 to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-2 w-8 sm:w-12 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none z-10" />
           )}
-        <div ref={tabScrollRef} className="flex space-x-1 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+        <div ref={tabScrollRef} className="flex overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
           {[
-            { id: 'home', label: 'Home' },
-            { id: 'optimizer', label: 'Start/Sit' },
-            { id: 'transfers', label: 'Transfers' },
-            { id: 'cheatsheet', label: 'Cheat Sheet' },
-            { id: 'comparison', label: 'Comparison' },
-            { id: 'scout', label: 'Scout' },
-            { id: 'players', label: 'Players' }
+            { id: 'home', label: 'Home', icon: <Home size={14} /> },
+            { id: 'optimizer', label: 'Start/Sit', icon: <Users size={14} /> },
+            { id: 'transfers', label: 'Transfers', icon: <ArrowLeftRight size={14} /> },
+            { id: 'cheatsheet', label: 'Cheat Sheet', icon: <BookOpen size={14} /> },
+            { id: 'comparison', label: 'Comparison', icon: <GitCompare size={14} /> },
+            { id: 'scout', label: 'Scout', icon: <Search size={14} /> },
+            { id: 'players', label: 'Players', icon: <Table2 size={14} /> }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 font-medium rounded-lg transition-colors whitespace-nowrap flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 border-b-2 ${
                 activeTab === tab.id
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                  ? 'border-violet-500 text-white'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600'
               }`}
             >
-              {tab.label}
+              {tab.icon}<span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>

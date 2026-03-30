@@ -259,7 +259,7 @@ export default function FPLDashboard() {
   // Setup modal — show when user hasn't configured their league
   if (!configLoading && !isConfigured) {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-slate-950">
         <SetupModal onComplete={saveConfig} />
       </div>
     );
@@ -268,7 +268,7 @@ export default function FPLDashboard() {
   // Loading state
   if (configLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white">
+      <div className="min-h-screen bg-slate-950 text-white">
         <div className="flex items-center justify-center min-h-screen">
           <LoadingSpinner message="Loading player data..." />
         </div>
@@ -279,7 +279,7 @@ export default function FPLDashboard() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white">
+      <div className="min-h-screen bg-slate-950 text-white">
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center p-8">
             <h2 className="text-2xl font-bold text-red-600 mb-4">❌ Error Loading Data</h2>
@@ -309,7 +309,7 @@ export default function FPLDashboard() {
   // Main render
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-900 text-white">
+      <div className="min-h-screen bg-slate-950 text-white">
 
         <DashboardHeader
           lastUpdated={lastUpdated}
