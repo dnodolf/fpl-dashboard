@@ -81,10 +81,10 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
   if (!gwData.length) return null;
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-400">Squad Fixture Forecast</h3>
-        <span className="text-xs text-gray-500">Next {gwData.length} GWs · avg difficulty &amp; predicted pts</span>
+        <h3 className="text-sm font-medium text-slate-400">Squad Fixture Forecast</h3>
+        <span className="text-xs text-slate-500">Next {gwData.length} GWs · avg difficulty &amp; predicted pts</span>
       </div>
 
       <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
@@ -115,10 +115,10 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
                 </span>
               )}
 
-              <span className="text-[10px] font-bold text-gray-300">GW{d.gw}</span>
+              <span className="text-[10px] font-bold text-slate-300">GW{d.gw}</span>
 
               {/* Difficulty mini-bar */}
-              <div className="w-full bg-gray-700 rounded-full h-1">
+              <div className="w-full bg-slate-700 rounded-full h-1">
                 <div
                   className={`${style.bar} h-1 rounded-full`}
                   style={{ width: `${(d.avgDiff / 5) * 100}%` }}
@@ -126,7 +126,7 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
               </div>
 
               <span className="text-xs font-bold text-white">{d.avgDiff.toFixed(1)}</span>
-              <span className="text-[10px] text-gray-400">{d.avgPts.toFixed(1)}pt</span>
+              <span className="text-[10px] text-slate-400">{d.avgPts.toFixed(1)}pt</span>
 
               <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${style.badge}`}>
                 {style.label}
@@ -138,13 +138,13 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-2 mt-3">
-        <span className="text-[10px] text-gray-500">Difficulty:</span>
+        <span className="text-[10px] text-slate-500">Difficulty:</span>
         {[1, 2, 3, 4, 5].map(d => (
           <span key={d} className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${DIFF_STYLES[d].badge}`}>
             {d} — {DIFF_STYLES[d].label}
           </span>
         ))}
-        <span className="w-full sm:w-auto mt-1 sm:mt-0 ml-0 sm:ml-auto text-[10px] text-gray-500 flex items-center gap-1">
+        <span className="w-full sm:w-auto mt-1 sm:mt-0 ml-0 sm:ml-auto text-[10px] text-slate-500 flex items-center gap-1">
           <span className="inline-block w-2 h-2 rounded-full bg-green-400"></span> best 2-GW window
           <span className="inline-block w-2 h-2 rounded-full bg-red-500/60 ml-1"></span> hardest window
         </span>

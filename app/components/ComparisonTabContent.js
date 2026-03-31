@@ -168,7 +168,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
   if (!players.length) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mr-3" />
         <span className="text-white">Loading player data...</span>
       </div>
     );
@@ -177,22 +177,22 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
   return (
     <div className="space-y-4">
       {/* Selection Bar */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 shadow-md">
         <div className="flex flex-col md:flex-row items-stretch gap-3">
           {/* Left: Your Player (dropdown) */}
           <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide">Your Player (Drop)</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Your Player (Drop)</label>
             {dropPlayer ? (
-              <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2 border border-blue-500/50">
+              <div className="flex items-center gap-2 bg-slate-700 rounded-lg px-3 py-2 border border-blue-500/50">
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(dropPlayer.position)}`}>
                   {dropPlayer.position}
                 </span>
                 <span className="text-white font-medium text-sm flex-1 truncate">{pName(dropPlayer)}</span>
-                <span className="text-gray-500 text-xs">{dropPlayer.team_abbr}</span>
+                <span className="text-slate-500 text-xs">{dropPlayer.team_abbr}</span>
                 <StatusBadge player={dropPlayer} />
                 <button
                   onClick={() => setDropPlayer(null)}
-                  className="text-gray-500 hover:text-red-400 ml-1 text-sm"
+                  className="text-slate-500 hover:text-red-400 ml-1 text-sm"
                 >
                   ✕
                 </button>
@@ -204,7 +204,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
                   if (player) setDropPlayer(player);
                 }}
                 value=""
-                className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
+                className="w-full px-3 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none text-sm"
               >
                 <option value="">Select from your team...</option>
                 {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
@@ -229,7 +229,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
             <button
               onClick={handleSwap}
               disabled={!dropPlayer && !addPlayer}
-              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white rounded-lg border border-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm"
+              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white rounded-lg border border-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm"
               title="Swap players"
             >
               ⇄
@@ -238,18 +238,18 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
 
           {/* Right: Replacement (search) */}
           <div className="flex-1" ref={searchRef}>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide">Replacement (Add)</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Replacement (Add)</label>
             {addPlayer ? (
-              <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2 border border-green-500/50">
+              <div className="flex items-center gap-2 bg-slate-700 rounded-lg px-3 py-2 border border-green-500/50">
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(addPlayer.position)}`}>
                   {addPlayer.position}
                 </span>
                 <span className="text-white font-medium text-sm flex-1 truncate">{pName(addPlayer)}</span>
-                <span className="text-gray-500 text-xs">{addPlayer.team_abbr}</span>
+                <span className="text-slate-500 text-xs">{addPlayer.team_abbr}</span>
                 <StatusBadge player={addPlayer} />
                 <button
                   onClick={() => { setAddPlayer(null); setSearchTerm(''); }}
-                  className="text-gray-500 hover:text-red-400 ml-1 text-sm"
+                  className="text-slate-500 hover:text-red-400 ml-1 text-sm"
                 >
                   ✕
                 </button>
@@ -262,17 +262,17 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setShowSuggestions(e.target.value.length >= 2); }}
                   onFocus={() => { if (searchTerm.length >= 2) setShowSuggestions(true); }}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none text-sm"
+                  className="w-full px-3 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-green-500 focus:outline-none text-sm"
                 />
                 {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-xl max-h-48 sm:max-h-72 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl max-h-48 sm:max-h-72 overflow-y-auto">
                     {suggestions.map(player => {
                       const isFree = !player.owned_by || player.owned_by === 'Free Agent';
                       return (
                         <button
                           key={player.player_id}
                           onClick={() => { setAddPlayer(player); setSearchTerm(''); setShowSuggestions(false); }}
-                          className="w-full px-3 py-2 hover:bg-gray-600 text-left border-b border-gray-600/50 last:border-b-0 flex items-center gap-2"
+                          className="w-full px-3 py-2 hover:bg-slate-600 text-left border-b border-slate-600/50 last:border-b-0 flex items-center gap-2"
                         >
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getSleeperPositionStyle(player.position)}`}>
                             {player.position}
@@ -280,13 +280,13 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
                           <span className="text-white text-sm font-medium flex-1 truncate">
                             {pName(player)}
                           </span>
-                          <span className="text-gray-500 text-xs">{player.team_abbr}</span>
+                          <span className="text-slate-500 text-xs">{player.team_abbr}</span>
                           {isFree ? (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/50 text-green-400">FA</span>
                           ) : (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-600 text-gray-400">{player.owned_by}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-600 text-slate-400">{player.owned_by}</span>
                           )}
-                          <span className="text-gray-400 text-xs w-12 text-right">
+                          <span className="text-slate-400 text-xs w-12 text-right">
                             {getScoringValue(player, 'season_total', scoringMode).toFixed(0)}
                           </span>
                         </button>
@@ -302,9 +302,9 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
 
       {/* Verdict Table */}
       {metrics && verdictSummary && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
           {/* Table Header */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-0 bg-gray-900 text-xs font-medium text-gray-400 uppercase tracking-wide">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-0 bg-slate-900 text-xs font-medium text-slate-400 uppercase tracking-wide">
             <div className="px-3 sm:px-4 py-3">Metric</div>
             <div className="px-3 sm:px-4 py-3 text-right truncate">{pName(dropPlayer)}</div>
             <div className="px-3 sm:px-4 py-3 text-right truncate">{pName(addPlayer)}</div>
@@ -323,21 +323,21 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
               return (
                 <div key={m.label}>
                 {m.separator && (
-                  <div className="px-4 py-1.5 bg-gray-900/50 text-[10px] font-medium text-gray-500 uppercase tracking-widest">Opta Quality</div>
+                  <div className="px-4 py-1.5 bg-slate-900/50 text-[10px] font-medium text-slate-500 uppercase tracking-widest">Opta Quality</div>
                 )}
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-0 text-sm">
-                  <div className="px-3 sm:px-4 py-2.5 text-gray-400 font-medium">
+                  <div className="px-3 sm:px-4 py-2.5 text-slate-400 font-medium">
                     <span className="hidden sm:inline">{m.label}</span>
                     <span className="sm:hidden">{m.label.replace('Next ', 'N').replace('Rest of Season', 'ROS').replace('Avg Mins (Next 5)', 'Mins').replace('Key Passes', 'KP')}</span>
                   </div>
-                  <div className={`px-3 sm:px-4 py-2.5 text-right font-mono ${dropBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
+                  <div className={`px-3 sm:px-4 py-2.5 text-right font-mono ${dropBetter ? 'text-green-400 font-bold' : 'text-slate-300'}`}>
                     {fmt(m.drop)}
                   </div>
-                  <div className={`px-3 sm:px-4 py-2.5 text-right font-mono ${addBetter ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
+                  <div className={`px-3 sm:px-4 py-2.5 text-right font-mono ${addBetter ? 'text-green-400 font-bold' : 'text-slate-300'}`}>
                     {fmt(m.add)}
                   </div>
                   <div className={`hidden sm:block px-4 py-2.5 text-right font-mono font-bold ${
-                    addBetter ? 'text-green-400' : dropBetter ? 'text-red-400' : 'text-gray-500'
+                    addBetter ? 'text-green-400' : dropBetter ? 'text-red-400' : 'text-slate-500'
                   }`}>
                     {addBetter ? '+' : ''}{fmt(diff)}
                   </div>
@@ -348,12 +348,12 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
           </div>
 
           {/* Verdict Summary */}
-          <div className={`px-4 py-3 border-t border-gray-700 flex items-center justify-between ${
+          <div className={`px-4 py-3 border-t border-slate-700 flex items-center justify-between ${
             verdictSummary.addWins > verdictSummary.dropWins
               ? 'bg-green-900/20'
               : verdictSummary.dropWins > verdictSummary.addWins
                 ? 'bg-red-900/20'
-                : 'bg-gray-700/30'
+                : 'bg-slate-700/30'
           }`}>
             <span className="text-sm font-bold text-white">
               {verdictSummary.addWins > verdictSummary.dropWins
@@ -367,7 +367,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
                 ? 'bg-green-600 text-white'
                 : verdictSummary.dropWins > verdictSummary.addWins
                   ? 'bg-red-600 text-white'
-                  : 'bg-gray-600 text-gray-300'
+                  : 'bg-slate-600 text-slate-300'
             }`}>
               {verdictSummary.addWins > verdictSummary.dropWins
                 ? 'ADD'
@@ -384,7 +384,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
         <div className="text-center py-10">
           <div className="text-5xl mb-3">⚖️</div>
           <h3 className="text-lg font-semibold text-white mb-1">Compare Two Players</h3>
-          <p className="text-gray-500 text-sm">
+          <p className="text-slate-500 text-sm">
             {!dropPlayer && !addPlayer
               ? 'Select a player from your team and search for a replacement'
               : !dropPlayer
@@ -396,23 +396,23 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
 
       {/* Collapsible: Next 5 GW Charts */}
       {dropPlayer && addPlayer && dropFixtures.next5.length > 0 && addFixtures.next5.length > 0 && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
           <button
             onClick={() => setShowCharts(!showCharts)}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/50 transition-colors"
           >
             <span className="text-sm font-bold text-white">Next 5 GW Charts</span>
-            <span className="text-gray-500 text-xs">{showCharts ? '▼' : '▶'}</span>
+            <span className="text-slate-500 text-xs">{showCharts ? '▼' : '▶'}</span>
           </button>
           {showCharts && (
             <div className="px-4 pb-4">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 text-center">{pName(dropPlayer)}</p>
+                  <p className="text-xs text-slate-400 mb-2 text-center">{pName(dropPlayer)}</p>
                   <ComparisonChart fixtures={dropFixtures.next5} barColor="bg-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 text-center">{pName(addPlayer)}</p>
+                  <p className="text-xs text-slate-400 mb-2 text-center">{pName(addPlayer)}</p>
                   <ComparisonChart fixtures={addFixtures.next5} barColor="bg-green-500" />
                 </div>
               </div>
@@ -423,35 +423,35 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
 
       {/* Collapsible: Rest of Season Fixtures */}
       {dropPlayer && addPlayer && dropFixtures.remaining.length > 0 && addFixtures.remaining.length > 0 && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
           <button
             onClick={() => setShowFixtures(!showFixtures)}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/50 transition-colors"
           >
             <span className="text-sm font-bold text-white">Rest of Season Fixtures</span>
-            <span className="text-gray-500 text-xs">{showFixtures ? '▼' : '▶'}</span>
+            <span className="text-slate-500 text-xs">{showFixtures ? '▼' : '▶'}</span>
           </button>
           {showFixtures && (
             <div className="px-4 pb-4">
               <div className="grid grid-cols-2 gap-6">
                 {[{ player: dropPlayer, fixtures: dropFixtures.remaining }, { player: addPlayer, fixtures: addFixtures.remaining }].map(({ player, fixtures }, idx) => (
-                  <div key={idx} className="bg-gray-700/50 rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-700 text-xs font-medium text-gray-400">
+                  <div key={idx} className="bg-slate-700/50 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-slate-700 text-xs font-medium text-slate-400">
                       {pName(player)} — {fixtures.length} fixtures
                     </div>
                     <div className="overflow-y-auto max-h-80">
                       <table className="w-full text-xs">
-                        <thead className="sticky top-0 bg-gray-700">
-                          <tr className="border-b border-gray-600">
-                            <th className="text-left py-1.5 px-2 text-gray-400">GW</th>
-                            <th className="text-left py-1.5 px-2 text-gray-400">Opp</th>
-                            <th className="text-center py-1.5 px-2 text-gray-400">FDR</th>
-                            <th className="text-right py-1.5 px-2 text-gray-400">Pts</th>
+                        <thead className="sticky top-0 bg-slate-700">
+                          <tr className="border-b border-slate-600">
+                            <th className="text-left py-1.5 px-2 text-slate-400">GW</th>
+                            <th className="text-left py-1.5 px-2 text-slate-400">Opp</th>
+                            <th className="text-center py-1.5 px-2 text-slate-400">FDR</th>
+                            <th className="text-right py-1.5 px-2 text-slate-400">Pts</th>
                           </tr>
                         </thead>
                         <tbody>
                           {fixtures.map(f => (
-                            <tr key={f.gw} className="border-b border-gray-600/50 hover:bg-gray-600/30">
+                            <tr key={f.gw} className="border-b border-slate-600/50 hover:bg-slate-600/30">
                               <td className="py-1.5 px-2 text-white">{f.gw}</td>
                               <td className="py-1.5 px-2 text-white">{f.isHome ? 'vs ' : '@ '}{f.opponent}</td>
                               <td className="py-1.5 px-2 text-center">

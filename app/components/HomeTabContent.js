@@ -35,7 +35,7 @@ const ProgressRing = ({ progress, size = 60, strokeWidth = 6, color = 'green', l
           strokeWidth={strokeWidth}
           stroke="currentColor"
           fill="none"
-          className="text-gray-700"
+          className="text-slate-700"
         />
         {/* Progress circle */}
         <circle
@@ -56,7 +56,7 @@ const ProgressRing = ({ progress, size = 60, strokeWidth = 6, color = 'green', l
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-lg font-bold text-white">{label}</span>
-        {sublabel && <span className="text-[10px] text-gray-400">{sublabel}</span>}
+        {sublabel && <span className="text-[10px] text-slate-400">{sublabel}</span>}
       </div>
     </div>
   );
@@ -109,7 +109,7 @@ const CountdownTimer = ({ deadline }) => {
       <span className={`text-2xl font-bold ${isUrgent ? 'text-orange-400' : 'text-white'}`}>
         {String(value).padStart(2, '0')}
       </span>
-      <span className="text-[10px] text-gray-500 uppercase">{label}</span>
+      <span className="text-[10px] text-slate-500 uppercase">{label}</span>
     </div>
   );
 
@@ -118,22 +118,22 @@ const CountdownTimer = ({ deadline }) => {
       {timeLeft.days > 0 && (
         <>
           <TimeUnit value={timeLeft.days} label="days" />
-          <span className="text-gray-600 text-xl">:</span>
+          <span className="text-slate-600 text-xl">:</span>
         </>
       )}
       <TimeUnit value={timeLeft.hours} label="hrs" />
-      <span className="text-gray-600 text-xl">:</span>
+      <span className="text-slate-600 text-xl">:</span>
       <TimeUnit value={timeLeft.mins} label="min" />
-      <span className="text-gray-600 text-xl">:</span>
+      <span className="text-slate-600 text-xl">:</span>
       <TimeUnit value={timeLeft.secs} label="sec" />
     </div>
   );
 };
 
 // Gradient border card wrapper
-const GradientCard = ({ children, gradient = 'from-blue-500 to-purple-500', className = '' }) => (
+const GradientCard = ({ children, gradient = 'from-violet-500 to-purple-500', className = '' }) => (
   <div className={`relative p-[1px] rounded-lg bg-gradient-to-r ${gradient} ${className}`}>
-    <div className="bg-gray-800 rounded-lg h-full">
+    <div className="bg-slate-800 rounded-lg h-full">
       {children}
     </div>
   </div>
@@ -161,21 +161,21 @@ const LuckMeter = ({ luckScore, minLuck, maxLuck }) => {
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-between text-xs text-gray-500">
+      <div className="flex justify-between text-xs text-slate-500">
         <span>Unlucky</span>
         <span>Lucky</span>
       </div>
 
       {/* Gauge bar */}
-      <div className="relative h-4 rounded-full bg-gradient-to-r from-red-900/60 via-gray-700 to-green-900/60 border border-gray-600">
+      <div className="relative h-4 rounded-full bg-gradient-to-r from-red-900/60 via-gray-700 to-green-900/60 border border-slate-600">
         {/* Zero/fair center line */}
         <div
-          className="absolute top-0 bottom-0 w-px bg-gray-500"
+          className="absolute top-0 bottom-0 w-px bg-slate-500"
           style={{ left: `${zeroPosition}%` }}
         />
         {/* Marker */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-blue-400 shadow-lg shadow-blue-500/30 z-10"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-violet-400 shadow-lg shadow-violet-500/30 z-10"
           style={{ left: `${clampedPosition}%` }}
         />
       </div>
@@ -185,7 +185,7 @@ const LuckMeter = ({ luckScore, minLuck, maxLuck }) => {
         <span className={`text-2xl font-bold ${getColor(luckScore)}`}>
           {luckScore > 0 ? '+' : ''}{luckScore.toFixed(1)}
         </span>
-        <span className="text-sm text-gray-400 ml-2">expected wins differential</span>
+        <span className="text-sm text-slate-400 ml-2">expected wins differential</span>
       </div>
     </div>
   );
@@ -198,7 +198,7 @@ const getPositionTextColor = (position) => {
     case 'DEF': return 'text-green-400';
     case 'MID': return 'text-blue-400';
     case 'FWD': return 'text-purple-400';
-    default: return 'text-gray-400';
+    default: return 'text-slate-400';
   }
 };
 
@@ -422,7 +422,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
   return (
     <div className="space-y-6">
       {/* Hero Header with Countdown or Live Indicator */}
-      <div className={`bg-gradient-to-r ${currentGameweek?.status === 'live' ? 'from-red-700 via-red-600 to-orange-600' : 'from-blue-600 via-purple-600 to-indigo-600'} rounded-xl shadow-lg px-6 py-4 relative overflow-hidden`}>
+      <div className={`bg-gradient-to-r ${currentGameweek?.status === 'live' ? 'from-red-700 via-red-600 to-orange-600' : 'from-violet-600 via-purple-600 to-indigo-600'} rounded-xl shadow-lg px-6 py-4 relative overflow-hidden`}>
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16" />
@@ -442,10 +442,10 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                 GW {currentGameweek?.number || '?'}
               </div>
               <div className="text-sm">
-                <p className="text-blue-100">
+                <p className="text-violet-100">
                   {currentGameweek?.status === 'live' ? '🔴 Live' : currentGameweek?.status === 'upcoming' ? '🏁 Upcoming' : '✓ Complete'}
                 </p>
-                <p className="text-blue-200/70 text-xs">
+                <p className="text-violet-200/70 text-xs">
                   {currentGameweek?.date || 'Loading...'}
                   <span className="ml-1 opacity-60">🔗</span>
                 </p>
@@ -487,7 +487,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
             </div>
           ) : (
             <div className="bg-black/20 backdrop-blur-sm rounded-lg px-4 py-2">
-              <p className="text-xs text-blue-200 mb-1 text-center">Deadline</p>
+              <p className="text-xs text-violet-200 mb-1 text-center">Deadline</p>
               <CountdownTimer deadline={currentGameweek?.deadline} />
             </div>
           )}
@@ -497,12 +497,12 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
       {/* Stats Grid with Progress Rings */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Lineup Optimization with Progress Ring */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
           <div className="p-4">
-            <h3 className="text-sm font-medium text-gray-400 mb-3">Lineup Status</h3>
+            <h3 className="text-sm font-medium text-slate-400 mb-3">Lineup Status</h3>
             {loadingOptimizer ? (
               <div className="flex items-center justify-center py-4">
-                <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"></div>
               </div>
             ) : (
               <div className="flex items-center gap-4">
@@ -517,12 +517,12 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                   {optimizationStats.playersToSwap === 0 ? (
                     <>
                       <p className="text-lg font-bold text-green-400">Optimized</p>
-                      <p className="text-xs text-gray-400">No changes needed</p>
+                      <p className="text-xs text-slate-400">No changes needed</p>
                     </>
                   ) : (
                     <>
                       <p className="text-lg font-bold text-yellow-400">{optimizationStats.playersToSwap} Changes</p>
-                      <p className="text-xs text-gray-400">+{optimizationStats.improvement.toFixed(1)} pts</p>
+                      <p className="text-xs text-slate-400">+{optimizationStats.improvement.toFixed(1)} pts</p>
                     </>
                   )}
                 </div>
@@ -532,9 +532,9 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
         </div>
 
         {/* Team Health with Progress Ring */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
           <div className="p-4">
-            <h3 className="text-sm font-medium text-gray-400 mb-3">Team Health</h3>
+            <h3 className="text-sm font-medium text-slate-400 mb-3">Team Health</h3>
             <div className="flex items-center gap-4">
               <ProgressRing
                 progress={teamHealth}
@@ -546,17 +546,17 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
               <div className="space-y-1 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  <span className="text-gray-400">Fit:</span>
+                  <span className="text-slate-400">Fit:</span>
                   <span className="text-white font-bold">{availabilityStats.healthy}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                  <span className="text-gray-400">Doubt:</span>
+                  <span className="text-slate-400">Doubt:</span>
                   <span className="text-white font-bold">{availabilityStats.doubtful}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                  <span className="text-gray-400">Out:</span>
+                  <span className="text-slate-400">Out:</span>
                   <span className="text-white font-bold">{availabilityStats.out}</span>
                 </div>
               </div>
@@ -565,13 +565,13 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
         </div>
 
         {/* Top 3 This Gameweek */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
           <div className="p-4">
-            <h3 className="text-sm font-medium text-gray-400 mb-3">Top 3 This GW</h3>
+            <h3 className="text-sm font-medium text-slate-400 mb-3">Top 3 This GW</h3>
             <div className="space-y-2">
               {top3ThisGW.map((player, idx) => (
                 <div key={player.sleeper_id} className="flex items-center gap-2 text-sm min-w-0">
-                  <span className="text-gray-600 w-4 font-bold shrink-0">{idx + 1}</span>
+                  <span className="text-slate-600 w-4 font-bold shrink-0">{idx + 1}</span>
                   <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${getSleeperPositionStyle(player.position)}`}>
                     {player.position}
                   </span>
@@ -589,13 +589,13 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
         </div>
 
         {/* League Standing */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
           <div className="p-4">
-            <h3 className="text-sm font-medium text-gray-400 mb-3">League Standing</h3>
+            <h3 className="text-sm font-medium text-slate-400 mb-3">League Standing</h3>
             {loadingStandings ? (
               <div className="animate-pulse space-y-2">
-                <div className="h-8 bg-gray-700 rounded w-16"></div>
-                <div className="h-4 bg-gray-700 rounded w-24"></div>
+                <div className="h-8 bg-slate-700 rounded w-16"></div>
+                <div className="h-4 bg-slate-700 rounded w-24"></div>
               </div>
             ) : userRank ? (
               <div className="flex items-center gap-4">
@@ -605,17 +605,17 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                     {userStanding.wins}-{userStanding.losses}
                     {userStanding.ties > 0 && `-${userStanding.ties}`}
                   </p>
-                  <p className="text-xs text-gray-400">of {standings.length} teams</p>
+                  <p className="text-xs text-slate-400">of {standings.length} teams</p>
                   <button
                     onClick={() => setStandingsExpanded(!standingsExpanded)}
-                    className="text-xs text-blue-400 hover:text-blue-300 mt-1 flex items-center gap-1"
+                    className="text-xs text-violet-400 hover:text-violet-300 mt-1 flex items-center gap-1"
                   >
                     {standingsExpanded ? '▼' : '▶'} Full standings
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">Unable to load</p>
+              <p className="text-slate-500 text-sm">Unable to load</p>
             )}
           </div>
         </div>
@@ -623,22 +623,22 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
 
       {/* GW Fixture Schedule — shown when live */}
       {fixtureList && fixtureList.length > 0 && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
           <button
             onClick={() => setFixtureExpanded(!fixtureExpanded)}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/50 transition-colors"
           >
             <h2 className="text-sm font-bold text-white">GW {currentGameweek?.number} Fixtures</h2>
             <div className="flex items-center gap-2">
               {fixtureCounts && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-slate-400">
                   {fixtureCounts.finished}/{fixtureCounts.total} complete
                 </span>
               )}
-              <span className="text-gray-400 text-xs">{fixtureExpanded ? '▲' : '▼'}</span>
+              <span className="text-slate-400 text-xs">{fixtureExpanded ? '▲' : '▼'}</span>
             </div>
           </button>
-          {fixtureExpanded && <div className="divide-y divide-gray-700/50 border-t border-gray-700">
+          {fixtureExpanded && <div className="divide-y divide-slate-700/50 border-t border-slate-700">
             {fixtureList.map((fixture, idx) => {
               const myStarters = myPlayers.filter(p => p.is_starter);
               const homeMyPlayers = myStarters.filter(p => p.team_abbr === fixture.homeTeam);
@@ -654,7 +654,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                   className={`px-4 py-2.5 flex items-center gap-3 ${
                     fixture.status === 'live' ? 'bg-red-500/10' :
                     fixture.status === 'finished' ? '' : ''
-                  } ${hasMyPlayers ? 'border-l-2 border-l-blue-500' : ''}`}
+                  } ${hasMyPlayers ? 'border-l-2 border-l-violet-500' : ''}`}
                 >
                   {/* Status / Time */}
                   <div className="w-16 shrink-0 text-center">
@@ -670,15 +670,15 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                       <span className="text-xs font-medium text-green-500">FT</span>
                     ) : (
                       <div>
-                        <p className="text-xs font-medium text-gray-300">{timeStr}</p>
-                        <p className="text-[10px] text-gray-500">{dateStr}</p>
+                        <p className="text-xs font-medium text-slate-300">{timeStr}</p>
+                        <p className="text-[10px] text-slate-500">{dateStr}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Home Team */}
                   <div className="flex-1 flex items-center justify-end gap-2">
-                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-gray-400' : 'text-white'}`}>
+                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-slate-400' : 'text-white'}`}>
                       {fixture.homeTeam}
                     </span>
                     <img
@@ -692,9 +692,9 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                   {/* Score */}
                   <div className="w-14 text-center shrink-0">
                     {fixture.status === 'upcoming' ? (
-                      <span className="text-xs text-gray-500">vs</span>
+                      <span className="text-xs text-slate-500">vs</span>
                     ) : (
-                      <span className={`text-sm font-bold ${fixture.status === 'live' ? 'text-white' : 'text-gray-300'}`}>
+                      <span className={`text-sm font-bold ${fixture.status === 'live' ? 'text-white' : 'text-slate-300'}`}>
                         {fixture.homeScore} - {fixture.awayScore}
                       </span>
                     )}
@@ -708,7 +708,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                       className="w-6 h-6"
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
-                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-gray-400' : 'text-white'}`}>
+                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-slate-400' : 'text-white'}`}>
                       {fixture.awayTeam}
                     </span>
                   </div>
@@ -754,18 +754,18 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
 
       {/* Expanded Standings Table */}
       {standingsExpanded && standings.length > 0 && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-900">
+            <thead className="bg-slate-900">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase">#</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase">Team</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">W-L-T</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">PF</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">PA</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Team</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L-T</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PA</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700">
+            <tbody className="divide-y divide-slate-700">
               {standings.map((team, index) => {
                 const isCurrentUser = team.displayName === userId;
                 return (
@@ -773,22 +773,22 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                     key={team.roster_id}
                     className={`${
                       isCurrentUser
-                        ? 'bg-blue-900/30 border-l-4 border-blue-500'
-                        : 'hover:bg-gray-700'
+                        ? 'bg-violet-900/30 border-l-4 border-violet-500'
+                        : 'hover:bg-slate-700'
                     }`}
                   >
-                    <td className="px-4 py-2 text-gray-300 font-medium">{index + 1}</td>
+                    <td className="px-4 py-2 text-slate-300 font-medium">{index + 1}</td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium ${isCurrentUser ? 'text-blue-400' : 'text-white'}`}>
+                        <span className={`font-medium ${isCurrentUser ? 'text-violet-400' : 'text-white'}`}>
                           {team.displayName}
                         </span>
                         {isCurrentUser && (
-                          <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">You</span>
+                          <span className="text-xs bg-violet-600 text-white px-2 py-0.5 rounded">You</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-center text-gray-300">
+                    <td className="px-4 py-2 text-center text-slate-300">
                       {team.wins}-{team.losses}{team.ties > 0 && `-${team.ties}`}
                     </td>
                     <td className="px-4 py-2 text-center text-green-400 font-medium">
@@ -806,10 +806,10 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
       )}
 
       {/* My Current Roster */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <span>My Roster</span>
-          <span className="text-gray-400 text-sm font-normal">({myPlayers.length} players)</span>
+          <span className="text-slate-400 text-sm font-normal">({myPlayers.length} players)</span>
         </h2>
 
         {/* Players with News/Injuries */}
@@ -843,9 +843,9 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {player.news && <p className="text-xs text-gray-400">{player.news}</p>}
+                        {player.news && <p className="text-xs text-slate-400">{player.news}</p>}
                         {newsTimestamp && (
-                          <span className="text-[10px] text-gray-600">{timeAgo(newsTimestamp)}</span>
+                          <span className="text-[10px] text-slate-600">{timeAgo(newsTimestamp)}</span>
                         )}
                       </div>
                     </div>
@@ -880,12 +880,12 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
             };
 
             return (
-              <div key={position} className={`bg-gradient-to-br ${positionGradients[position]} rounded-lg p-4 border border-gray-700/50`}>
+              <div key={position} className={`bg-gradient-to-br ${positionGradients[position]} rounded-lg p-4 border border-slate-700/50`}>
                 <h3 className="font-bold text-white mb-3 flex items-center gap-2">
                   <span className={`text-sm font-bold px-2 py-0.5 rounded ${getSleeperPositionStyle(position)}`}>
                     {position}
                   </span>
-                  <span className="text-gray-400 text-sm font-normal">({positionPlayers.length})</span>
+                  <span className="text-slate-400 text-sm font-normal">({positionPlayers.length})</span>
                 </h3>
                 <div className="space-y-2">
                   {positionPlayers.map(player => {
@@ -902,7 +902,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                           >
                             {player.web_name || player.name}
                           </button>
-                          <p className="text-xs text-gray-500">{player.team_abbr}</p>
+                          <p className="text-xs text-slate-500">{player.team_abbr}</p>
                         </div>
                         <div className="flex items-center gap-2 ml-2">
                           {chance < 75 && (
@@ -920,7 +920,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                     );
                   })}
                   {positionPlayers.length === 0 && (
-                    <p className="text-gray-500 text-xs italic">No players</p>
+                    <p className="text-slate-500 text-xs italic">No players</p>
                   )}
                 </div>
               </div>
@@ -931,10 +931,10 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
 
       {/* Schedule Luck Analyzer — collapsible */}
       {!loadingStandings && standings.length > 0 && luckData && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
           <button
             onClick={() => setLuckExpanded(!luckExpanded)}
-            className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+            className="w-full px-6 py-3 flex items-center justify-between hover:bg-slate-700/50 transition-colors"
           >
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-bold text-white">Schedule Luck Analyzer</h2>
@@ -949,21 +949,21 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                 </span>
               )}
             </div>
-            <span className="text-gray-500 text-xs">{luckExpanded ? '▼' : '▶'}</span>
+            <span className="text-slate-500 text-xs">{luckExpanded ? '▼' : '▶'}</span>
           </button>
 
           {luckExpanded && (
             <div className="px-6 pb-6">
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-slate-500 mb-4">
                 Expected wins based on points scored vs points against
               </p>
 
               {/* User's Luck Meter */}
               {luckData.userLuck && (
-                <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
+                <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="text-sm font-medium text-blue-400">Your Luck</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-sm font-medium text-violet-400">Your Luck</span>
+                    <span className="text-xs text-slate-500">
                       {luckData.userLuck.wins}W from {luckData.userLuck.totalGames} games
                       (expected {luckData.userLuck.expectedWins}W)
                     </span>
@@ -979,19 +979,19 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
               {/* League Luck Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-900">
+                  <thead className="bg-slate-900">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">#</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">Manager</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">W-L</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">PF Rank</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">PPG</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">Exp W</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase">Luck</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400 uppercase w-28"></th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">Manager</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF Rank</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">PPG</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Exp W</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Luck</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase w-28"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-700">
+                  <tbody className="divide-y divide-slate-700">
                     {luckData.teams.map((team, index) => {
                       const isUser = team.displayName === userId;
                       const luckRange = (luckData.maxLuck - luckData.minLuck) || 1;
@@ -1009,39 +1009,39 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                         <tr
                           key={team.roster_id}
                           className={isUser
-                            ? 'bg-blue-900/30 border-l-4 border-blue-500'
-                            : 'hover:bg-gray-700/50'}
+                            ? 'bg-violet-900/30 border-l-4 border-violet-500'
+                            : 'hover:bg-slate-700/50'}
                         >
-                          <td className="px-3 py-2 text-gray-500">{index + 1}</td>
+                          <td className="px-3 py-2 text-slate-500">{index + 1}</td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
-                              <span className={`font-medium ${isUser ? 'text-blue-400' : 'text-white'}`}>
+                              <span className={`font-medium ${isUser ? 'text-violet-400' : 'text-white'}`}>
                                 {team.displayName}
                               </span>
                               {isUser && (
-                                <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">You</span>
+                                <span className="text-[10px] bg-violet-600 text-white px-1.5 py-0.5 rounded">You</span>
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-center text-gray-300">
+                          <td className="px-3 py-2 text-center text-slate-300">
                             {team.wins}-{team.losses}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            <span className="text-gray-300">#{team.pointsRank}</span>
+                            <span className="text-slate-300">#{team.pointsRank}</span>
                             {team.rankGap !== 0 && (
                               <span className={`ml-1 text-xs ${team.rankGap > 0 ? 'text-red-400' : 'text-green-400'}`}>
                                 ({team.rankGap > 0 ? '+' : ''}{team.rankGap})
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-center text-gray-300">{team.ppg}</td>
-                          <td className="px-3 py-2 text-center text-gray-300">{team.expectedWins}</td>
+                          <td className="px-3 py-2 text-center text-slate-300">{team.ppg}</td>
+                          <td className="px-3 py-2 text-center text-slate-300">{team.expectedWins}</td>
                           <td className={`px-3 py-2 text-center font-bold ${textColor}`}>
                             {team.luckScore > 0 ? '+' : ''}{team.luckScore}
                           </td>
                           <td className="px-3 py-2">
-                            <div className="relative h-2 bg-gray-700 rounded-full w-full">
-                              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gray-500" />
+                            <div className="relative h-2 bg-slate-700 rounded-full w-full">
+                              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-500" />
                               <div
                                 className={`absolute top-0 h-full rounded-full ${luckColor}`}
                                 style={{

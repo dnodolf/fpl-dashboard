@@ -104,9 +104,9 @@ export default function FPLDashboard() {
     const normalizedPos = position?.toUpperCase() || 'GKP';
 
     return {
-      bg: lightBgMap[normalizedPos] || 'bg-gray-100',
-      text: textMap[normalizedPos] || 'text-gray-800',
-      border: borderMap[normalizedPos] || 'border-gray-200',
+      bg: lightBgMap[normalizedPos] || 'bg-slate-100',
+      text: textMap[normalizedPos] || 'text-slate-800',
+      border: borderMap[normalizedPos] || 'border-slate-200',
       accent: colors.accent,
       pill: colors.pill
     };
@@ -249,11 +249,11 @@ export default function FPLDashboard() {
   // Render sort icon
   const renderSortIcon = (columnKey) => {
     if (sortConfig.key !== columnKey) {
-      return <span className="text-gray-400 ml-1">↕️</span>;
+      return <span className="text-slate-400 ml-1">↕️</span>;
     }
     return sortConfig.direction === 'asc' ?
-      <span className="text-blue-500 ml-1">↑</span> :
-      <span className="text-blue-500 ml-1">↓</span>;
+      <span className="text-violet-500 ml-1">↑</span> :
+      <span className="text-violet-500 ml-1">↓</span>;
   };
 
   // Setup modal — show when user hasn't configured their league
@@ -283,7 +283,7 @@ export default function FPLDashboard() {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center p-8">
             <h2 className="text-2xl font-bold text-red-600 mb-4">❌ Error Loading Data</h2>
-            <p className="mb-4 text-gray-400">{error}</p>
+            <p className="mb-4 text-slate-400">{error}</p>
             <button
               onClick={updateData}
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
@@ -346,11 +346,11 @@ export default function FPLDashboard() {
           {activeTab === 'players' && (
             <>
               {/* Filters */}
-              <div className="p-4 rounded-lg mb-6 shadow-sm bg-gray-800">
+              <div className="p-4 rounded-lg mb-6 shadow-sm bg-slate-800 border border-slate-700/60 ring-1 ring-slate-700/30">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* Position Filter - Multi-select */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">
+                    <label className="block text-sm font-medium mb-2 text-slate-300">
                       Positions ({filters.position.length > 0 ? filters.position.length : 'All'})
                     </label>
                     <div className="flex gap-2">
@@ -376,7 +376,7 @@ export default function FPLDashboard() {
                             className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${
                               isSelected
                                 ? `${colors.pill} text-white shadow-lg`
-                                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-transparent hover:border-gray-300'
+                                : 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-2 border-transparent hover:border-slate-300'
                             }`}
                           >
                             {pos}
@@ -388,11 +388,11 @@ export default function FPLDashboard() {
 
                   {/* Owner Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">Owner</label>
+                    <label className="block text-sm font-medium mb-2 text-slate-300">Owner</label>
                     <select
                       value={filters.owner}
                       onChange={(e) => setFilters(prev => ({ ...prev, owner: e.target.value }))}
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white"
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white"
                     >
                       <option value={FILTER_OPTIONS.ALL}>All Owners</option>
                       <option value={FILTER_OPTIONS.MY_PLAYERS_AND_FAS}>My Players + FAs</option>
@@ -406,26 +406,26 @@ export default function FPLDashboard() {
 
                   {/* Min Points Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">Min ROS Points</label>
+                    <label className="block text-sm font-medium mb-2 text-slate-300">Min ROS Points</label>
                     <input
                       type="number"
                       step="0.1"
                       value={filters.minPoints}
                       onChange={(e) => setFilters(prev => ({ ...prev, minPoints: parseFloat(e.target.value) || 0 }))}
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white"
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white"
                       placeholder="0"
                     />
                   </div>
 
                   {/* Search Filter */}
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">Search</label>
+                    <label className="block text-sm font-medium mb-2 text-slate-300">Search</label>
                     <input
                       type="text"
                       value={filters.search}
                       onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                       placeholder="Player name, team..."
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white placeholder-slate-400"
                     />
                   </div>
                 </div>
@@ -433,23 +433,23 @@ export default function FPLDashboard() {
 
               {/* Results Summary */}
               <div className="mb-4 flex items-center justify-between">
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-slate-400">
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
                   <span className="ml-2 text-xs">
                     (Free Agents: {processedPlayers.filter(p => !p.owned_by || p.owned_by === OWNERSHIP_STATUS.FREE_AGENT).length},
                      Owned: {processedPlayers.filter(p => p.owned_by && p.owned_by !== OWNERSHIP_STATUS.FREE_AGENT).length})
                   </span>
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-slate-500">
                   Click column headers to sort
                 </div>
               </div>
 
               {/* Players Table */}
-              <div className="rounded-lg shadow-sm border overflow-hidden bg-gray-800 border-gray-700">
+              <div className="rounded-lg shadow-sm border overflow-hidden bg-slate-800 border-slate-700">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-700">
+                  <table className="min-w-full divide-y divide-slate-700">
+                    <thead className="bg-slate-700">
                       <tr>
                         {[
                           { key: 'name', label: 'Player' },
@@ -463,7 +463,7 @@ export default function FPLDashboard() {
                         ].map(col => (
                           <th
                             key={col.key}
-                            className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gray-300 hover:bg-gray-600"
+                            className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-slate-300 hover:bg-slate-600"
                             onClick={() => handleSort(col.key)}
                           >
                             <div className="flex items-center">
@@ -473,16 +473,16 @@ export default function FPLDashboard() {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="bg-gray-800 divide-y divide-gray-700">
+                    <tbody className="bg-slate-800 divide-y divide-slate-700">
                       {sortedPlayers.map((player, index) => (
-                        <tr key={`${player.sleeper_id || player.id || index}`} className="hover:bg-gray-700">
+                        <tr key={`${player.sleeper_id || player.id || index}`} className="hover:bg-slate-700">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div>
                                 <div className="text-sm font-medium flex items-center gap-2">
                                   <button
                                     onClick={() => handlePlayerClick(player)}
-                                    className="text-white hover:text-blue-400 underline decoration-transparent hover:decoration-blue-400 transition-all cursor-pointer text-left"
+                                    className="text-white hover:text-violet-400 underline decoration-transparent hover:decoration-violet-400 transition-all cursor-pointer text-left"
                                   >
                                     {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
                                   </button>
@@ -513,7 +513,7 @@ export default function FPLDashboard() {
                               {player.position || 'N/A'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                             {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -537,7 +537,7 @@ export default function FPLDashboard() {
                               return seasonTotal > 0 ? seasonTotal.toFixed(1) : 'N/A';
                             })()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                             {(() => {
                               if (player.predictions && Array.isArray(player.predictions)) {
                                 const totalPoints = player.predictions.slice(0, 5).reduce((sum, pred) => sum + (pred.predicted_pts || 0), 0);
@@ -546,7 +546,7 @@ export default function FPLDashboard() {
                               return '0.0';
                             })()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                             {(() => {
                               if (player.predictions && Array.isArray(player.predictions)) {
                                 const first5 = player.predictions.slice(0, 5);
@@ -558,7 +558,7 @@ export default function FPLDashboard() {
                               return '0';
                             })()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                             {v3ScoringService.getScoringValue(player, 'season_avg', scoringMode).toFixed(1)}
                           </td>
                         </tr>
@@ -571,7 +571,7 @@ export default function FPLDashboard() {
               {/* No Results Message */}
               {sortedPlayers.length === 0 && (
                 <div className="text-center py-8">
-                  <div className="mb-2 text-gray-400">No players match your current filters</div>
+                  <div className="mb-2 text-slate-400">No players match your current filters</div>
                   <button
                     onClick={() => {
                       setFilters({
@@ -582,7 +582,7 @@ export default function FPLDashboard() {
                         search: ''
                       });
                     }}
-                    className="text-blue-500 hover:text-blue-600 text-sm underline"
+                    className="text-violet-500 hover:text-violet-600 text-sm underline"
                   >
                     Clear all filters
                   </button>

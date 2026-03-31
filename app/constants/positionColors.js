@@ -61,7 +61,7 @@ export function getPositionBadgeStyle(position) {
   const colors = POSITION_COLORS[normalized];
 
   if (!colors) {
-    return 'bg-gray-500 text-white border-gray-400';
+    return 'bg-slate-500 text-white border-slate-400';
   }
 
   return `${colors.bg} ${colors.text} ${colors.border}`;
@@ -77,7 +77,7 @@ export function getPositionBadgeWithBorder(position) {
   const colors = POSITION_COLORS[normalized];
 
   if (!colors) {
-    return 'bg-gray-500 text-white border border-gray-400';
+    return 'bg-slate-500 text-white border border-slate-400';
   }
 
   return `${colors.bg} ${colors.text} border ${colors.border}`;
@@ -93,7 +93,7 @@ export function getPositionBadgeDark(position) {
   const colors = POSITION_COLORS[normalized];
 
   if (!colors) {
-    return 'bg-gray-600 text-white border border-gray-500';
+    return 'bg-slate-600 text-white border border-slate-500';
   }
 
   return `${colors.bgDark} ${colors.textWhite} border ${colors.borderDark}`;
@@ -107,14 +107,14 @@ export function getPositionBadgeDark(position) {
 export function getPositionColors(position) {
   const normalized = normalizePosition(position);
   return POSITION_COLORS[normalized] || {
-    bg: 'bg-gray-500',
-    bgDark: 'bg-gray-600',
+    bg: 'bg-slate-500',
+    bgDark: 'bg-slate-600',
     text: 'text-white',
     textWhite: 'text-white',
-    border: 'border-gray-400',
-    borderDark: 'border-gray-500',
-    accent: 'bg-gray-500',
-    pill: 'bg-gray-500'
+    border: 'border-slate-400',
+    borderDark: 'border-slate-500',
+    accent: 'bg-slate-500',
+    pill: 'bg-slate-500'
   };
 }
 

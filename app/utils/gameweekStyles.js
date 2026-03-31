@@ -28,9 +28,9 @@ export function getGameweekStatusStyles(status) {
 
   return styles[status] || {
     icon: '⚽',
-    bg: 'bg-gray-900 border-gray-700',
-    hover: 'hover:bg-gray-800 hover:border-gray-600',
-    text: 'text-gray-100',
-    subText: 'text-gray-200',
+    bg: 'bg-slate-900 border-slate-700',
+    hover: 'hover:bg-slate-800 hover:border-slate-600',
+    text: 'text-slate-100',
+    subText: 'text-slate-200',
   };
 }

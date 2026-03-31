@@ -43,11 +43,11 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
     ? 'bg-green-900/30 border-green-700'
     : ownership === 'fa'
     ? 'bg-blue-900/30 border-blue-700'
-    : 'bg-gray-800/30 border-gray-700';
+    : 'bg-slate-800/30 border-slate-700';
 
   return (
     <div className={`flex items-center gap-3 px-3 py-2 mb-1 rounded border ${bgColor} hover:opacity-80 transition-opacity`}>
-      <span className="text-gray-400 text-sm font-medium min-w-[24px]">{rank}.</span>
+      <span className="text-slate-400 text-sm font-medium min-w-[24px]">{rank}.</span>
 
       {/* Player Image */}
       <PlayerAvatar player={player} size="md" />
@@ -56,7 +56,7 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => onPlayerClick?.(player)}
-            className="text-white text-sm font-medium truncate hover:text-blue-400 transition-colors text-left"
+            className="text-white text-sm font-medium truncate hover:text-violet-400 transition-colors text-left"
           >
             {player.web_name || player.name}
           </button>
@@ -66,7 +66,7 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-slate-400">
           <span>{TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team || 'N/A'}</span>
           {player.avgMinutes > 0 && (
             <>
@@ -102,7 +102,7 @@ const PositionColumn = ({ position, players, onPlayerClick }) => {
       </h3>
       <div className="space-y-1">
         {players.length === 0 ? (
-          <div className="text-gray-500 text-sm italic py-4 text-center">
+          <div className="text-slate-500 text-sm italic py-4 text-center">
             No players available
           </div>
         ) : (
@@ -185,14 +185,14 @@ export default function CheatSheetTabContent({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+      <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
           {/* GW Range selector */}
           <div className="flex flex-wrap items-center gap-2">
-            <label className="text-sm text-gray-400">GW</label>
+            <label className="text-sm text-slate-400">GW</label>
             <button
               onClick={() => setStartGW(gw => Math.max(currentGW, gw - 1))}
-              className="text-gray-400 hover:text-white px-1 text-lg"
+              className="text-slate-400 hover:text-white px-1 text-lg"
               disabled={startGW <= currentGW}
             >
               ◀
@@ -203,19 +203,19 @@ export default function CheatSheetTabContent({
               max={endGW}
               value={startGW}
               onChange={(e) => setStartGW(Math.max(currentGW, Math.min(endGW, parseInt(e.target.value) || currentGW)))}
-              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-16 sm:w-20 text-center focus:outline-none focus:border-blue-500"
+              className="bg-slate-700 text-white px-2 py-1.5 rounded border border-slate-600 text-sm w-16 sm:w-20 text-center focus:outline-none focus:border-violet-500"
             />
             <button
               onClick={() => setStartGW(gw => Math.min(endGW, gw + 1))}
-              className="text-gray-400 hover:text-white px-1 text-lg"
+              className="text-slate-400 hover:text-white px-1 text-lg"
               disabled={startGW >= endGW}
             >
               ▶
             </button>
-            <span className="text-gray-400 text-sm">to</span>
+            <span className="text-slate-400 text-sm">to</span>
             <button
               onClick={() => setEndGW(gw => Math.max(startGW, gw - 1))}
-              className="text-gray-400 hover:text-white px-1 text-lg"
+              className="text-slate-400 hover:text-white px-1 text-lg"
               disabled={endGW <= startGW}
             >
               ◀
@@ -226,25 +226,25 @@ export default function CheatSheetTabContent({
               max={TOTAL_GAMEWEEKS}
               value={endGW}
               onChange={(e) => setEndGW(Math.max(startGW, Math.min(TOTAL_GAMEWEEKS, parseInt(e.target.value) || TOTAL_GAMEWEEKS)))}
-              className="bg-gray-700 text-white px-2 py-1.5 rounded border border-gray-600 text-sm w-16 sm:w-20 text-center focus:outline-none focus:border-blue-500"
+              className="bg-slate-700 text-white px-2 py-1.5 rounded border border-slate-600 text-sm w-16 sm:w-20 text-center focus:outline-none focus:border-violet-500"
             />
             <button
               onClick={() => setEndGW(gw => Math.min(TOTAL_GAMEWEEKS, gw + 1))}
-              className="text-gray-400 hover:text-white px-1 text-lg"
+              className="text-slate-400 hover:text-white px-1 text-lg"
               disabled={endGW >= TOTAL_GAMEWEEKS}
             >
               ▶
             </button>
-            <span className="text-gray-500 text-xs ml-1">({numGWs} GW{numGWs !== 1 ? 's' : ''})</span>
+            <span className="text-slate-500 text-xs ml-1">({numGWs} GW{numGWs !== 1 ? 's' : ''})</span>
           </div>
 
           {/* Hide Others toggle */}
           <div className="flex items-center gap-2 sm:ml-auto">
-            <label className="text-sm text-gray-400">Hide Others</label>
+            <label className="text-sm text-slate-400">Hide Others</label>
             <button
               onClick={() => setHideOthers(!hideOthers)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                hideOthers ? 'bg-blue-600' : 'bg-gray-600'
+                hideOthers ? 'bg-violet-600' : 'bg-slate-600'
               }`}
             >
               <span
@@ -257,7 +257,7 @@ export default function CheatSheetTabContent({
         </div>
 
         {/* Info text */}
-        <div className="mt-3 text-xs text-gray-500">
+        <div className="mt-3 text-xs text-slate-500">
           {hideOthers
             ? `Showing your players + top 10 free agents per position (GW ${startGW}–${endGW})`
             : `Showing all players, top 50 per position (GW ${startGW}–${endGW})`}

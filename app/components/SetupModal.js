@@ -67,24 +67,24 @@ const SetupModal = ({ onComplete }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md overflow-hidden">
+      <div className="bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 p-6 text-center border-b border-gray-700">
+        <div className="bg-gradient-to-r from-slate-800 via-slate-750 to-slate-800 p-6 text-center border-b border-slate-700">
           <div className="flex justify-center mb-3">
             <AppLogo size={48} />
           </div>
           <h1 className="text-xl font-bold text-white">Fantasy FC Playbook</h1>
-          <p className="text-gray-400 text-sm mt-1">Connect your Sleeper league to get started</p>
+          <p className="text-slate-400 text-sm mt-1">Connect your Sleeper league to get started</p>
         </div>
 
         {/* Body */}
         <div className="p-6">
           {step === 1 && (
             <form onSubmit={handleValidateLeague}>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Sleeper League ID
               </label>
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-slate-500 mb-3">
                 Find this in your Sleeper app under League Settings, or copy it from your league URL.
               </p>
               <input
@@ -92,7 +92,7 @@ const SetupModal = ({ onComplete }) => {
                 value={leagueId}
                 onChange={(e) => setLeagueId(e.target.value)}
                 placeholder="e.g. 1240184286171107328"
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-sm"
                 autoFocus
                 disabled={loading}
               />
@@ -102,7 +102,7 @@ const SetupModal = ({ onComplete }) => {
               <button
                 type="submit"
                 disabled={loading || !leagueId.trim()}
-                className="w-full mt-4 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
+                className="w-full mt-4 px-4 py-3 bg-violet-600 hover:bg-violet-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -119,11 +119,11 @@ const SetupModal = ({ onComplete }) => {
           {step === 2 && leagueInfo && (
             <div>
               {/* League confirmation */}
-              <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
+              <div className="bg-slate-700/50 rounded-lg p-3 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white font-medium text-sm">{leagueInfo.name}</p>
-                    <p className="text-gray-400 text-xs">
+                    <p className="text-slate-400 text-xs">
                       {leagueInfo.season} &middot; {leagueInfo.totalRosters} teams
                     </p>
                   </div>
@@ -136,7 +136,7 @@ const SetupModal = ({ onComplete }) => {
                 </div>
               </div>
 
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Select Your Team
               </label>
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -147,12 +147,12 @@ const SetupModal = ({ onComplete }) => {
                     className={`w-full text-left px-4 py-3 rounded-lg border transition-all text-sm ${
                       selectedOwner?.rosterId === owner.rosterId
                         ? 'border-blue-500 bg-blue-500/20 text-white'
-                        : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500 hover:bg-gray-700'
+                        : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500 hover:bg-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{owner.displayName}</span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-slate-400">
                         {owner.playerCount} players &middot; {owner.wins}W-{owner.losses}L
                       </span>
                     </div>
@@ -167,7 +167,7 @@ const SetupModal = ({ onComplete }) => {
               <button
                 onClick={handleSelectRoster}
                 disabled={!selectedOwner}
-                className="w-full mt-4 px-4 py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
+                className="w-full mt-4 px-4 py-3 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
               >
                 Let&apos;s Go
               </button>

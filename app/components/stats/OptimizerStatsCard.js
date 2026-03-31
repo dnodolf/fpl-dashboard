@@ -92,10 +92,10 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
+          <div key={i} className={`p-4 rounded-lg shadow-sm bg-slate-800`}>
             <div className="animate-pulse">
-              <div className="h-8 bg-gray-300 rounded mb-2"></div>
-              <div className="h-4 bg-gray-300 rounded"></div>
+              <div className="h-8 bg-slate-300 rounded mb-2"></div>
+              <div className="h-4 bg-slate-300 rounded"></div>
             </div>
           </div>
         ))}
@@ -106,29 +106,29 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       {/* Current Roster Points */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-slate-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-blue-600">{stats.currentPoints.toFixed(1)}</div>
-            <div className={`text-sm text-gray-400`}>Current Roster Points</div>
+            <div className={`text-sm text-slate-400`}>Current Roster Points</div>
           </div>
           <div className="text-blue-500 text-2xl">⚽</div>
         </div>
       </div>
 
       {/* Optimized Roster Points */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-slate-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-green-600">{stats.optimalPoints.toFixed(1)}</div>
-            <div className={`text-sm text-gray-400`}>Optimized Roster Points</div>
+            <div className={`text-sm text-slate-400`}>Optimized Roster Points</div>
           </div>
           <div className="text-green-500 text-2xl">🎯</div>
         </div>
       </div>
 
       {/* % Optimal Players */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-slate-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className={`text-2xl font-bold ${
@@ -140,7 +140,7 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
             }`}>
               {stats.optimalPlayerPercentage.toFixed(0)}%
             </div>
-            <div className={`text-sm text-gray-400`}>
+            <div className={`text-sm text-slate-400`}>
               % Optimal Players ({stats.optimalPlayersInCurrent}/{stats.totalPlayers})
             </div>
           </div>
@@ -149,11 +149,11 @@ export function OptimizerStatsCard({ scoringMode = 'ffh', currentGameweek = { nu
       </div>
 
       {/* Players to Swap */}
-      <div className={`p-4 rounded-lg shadow-sm bg-gray-800`}>
+      <div className={`p-4 rounded-lg shadow-sm bg-slate-800`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold text-red-600">{stats.playersToSwap}</div>
-            <div className={`text-sm text-gray-400`}>Players to Swap</div>
+            <div className={`text-sm text-slate-400`}>Players to Swap</div>
           </div>
           <div className="text-red-500 text-2xl">🔄</div>
         </div>

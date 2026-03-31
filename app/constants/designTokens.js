@@ -13,23 +13,23 @@ export const COLORS = {
   // Grays (Dark Theme)
   gray: {
     bg: {
-      app: 'bg-gray-900',        // Main app background
-      primary: 'bg-gray-800',    // Primary cards/containers
-      secondary: 'bg-gray-700',  // Secondary cards, inputs, selects
-      tertiary: 'bg-gray-600',   // Borders, hover states
+      app: 'bg-slate-900',        // Main app background
+      primary: 'bg-slate-800',    // Primary cards/containers
+      secondary: 'bg-slate-700',  // Secondary cards, inputs, selects
+      tertiary: 'bg-slate-600',   // Borders, hover states
     },
     text: {
       primary: 'text-white',     // High emphasis
-      secondary: 'text-gray-300', // Medium emphasis
-      tertiary: 'text-gray-400',  // Low emphasis (MOST COMMON)
-      disabled: 'text-gray-500',  // Disabled/muted
+      secondary: 'text-slate-300', // Medium emphasis
+      tertiary: 'text-slate-400',  // Low emphasis (MOST COMMON)
+      disabled: 'text-slate-500',  // Disabled/muted
     },
     border: {
-      primary: 'border-gray-700', // Primary borders
-      secondary: 'border-gray-600', // Secondary borders
+      primary: 'border-slate-700', // Primary borders
+      secondary: 'border-slate-600', // Secondary borders
     },
-    hover: 'hover:bg-gray-700',  // Standard hover state for rows/cards
-    hoverSecondary: 'hover:bg-gray-600', // Hover for already gray-700 elements
+    hover: 'hover:bg-slate-700',  // Standard hover state for rows/cards
+    hoverSecondary: 'hover:bg-slate-600', // Hover for already gray-700 elements
   },
 
   // Primary Actions (Blue)
@@ -110,7 +110,7 @@ const DIFFICULTY_COLORS = {
   3: 'bg-yellow-500 text-black',     // Medium - Neutral
   4: 'bg-orange-500 text-white',     // Hard - Difficult
   5: 'bg-red-500 text-white',        // Hardest - Very difficult
-  default: 'bg-gray-500 text-white', // Unknown/No data
+  default: 'bg-slate-500 text-white', // Unknown/No data
 };
 
 // ==================== TYPOGRAPHY ====================
@@ -140,8 +140,8 @@ export const TYPOGRAPHY = {
   pageHeader: 'text-3xl font-bold',
   stat: 'text-2xl font-bold',
   body: 'text-sm font-medium',
-  bodySecondary: 'text-sm text-gray-400',
-  caption: 'text-xs text-gray-400',
+  bodySecondary: 'text-sm text-slate-400',
+  caption: 'text-xs text-slate-400',
 };
 
 // ==================== SPACING ====================
@@ -206,13 +206,13 @@ export const COMPONENTS = {
     withShadow: `${COLORS.gray.bg.primary} border ${COLORS.gray.border.primary} ${BORDERS.radius.lg} shadow-sm`,
     gradient: `bg-gradient-to-r from-blue-600 to-purple-600 ${BORDERS.radius.lg} shadow-lg`,
     gradientDark: `bg-gradient-to-r from-blue-900 to-purple-900`,
-    nested: `bg-gray-900/50 ${BORDERS.radius.lg}`,
+    nested: `bg-slate-900/50 ${BORDERS.radius.lg}`,
   },
 
   // Button patterns
   button: {
     primary: `${COLORS.primary.bg} ${COLORS.primary.bgHover} ${COLORS.gray.text.primary} ${TYPOGRAPHY.weight.medium} ${BORDERS.radius.lg} transition-colors`,
-    secondary: `${COLORS.gray.bg.secondary} ${COLORS.gray.hoverSecondary} text-gray-300 ${TYPOGRAPHY.weight.medium} ${BORDERS.radius.lg} transition-colors`,
+    secondary: `${COLORS.gray.bg.secondary} ${COLORS.gray.hoverSecondary} text-slate-300 ${TYPOGRAPHY.weight.medium} ${BORDERS.radius.lg} transition-colors`,
     danger: `${COLORS.error.bg} ${COLORS.error.bgHover} ${COLORS.gray.text.primary} ${TYPOGRAPHY.weight.medium} ${BORDERS.radius.lg} transition-colors`,
     padding: {
       sm: 'px-3 py-1',      // Small buttons (toggles)
@@ -230,7 +230,7 @@ export const COMPONENTS = {
   table: {
     container: `${BORDERS.radius.lg} border overflow-hidden ${COLORS.gray.bg.primary} ${COLORS.gray.border.primary}`,
     header: COLORS.gray.bg.secondary,
-    headerCell: `px-4 py-3 text-left ${TYPOGRAPHY.tableHeader} text-gray-300 cursor-pointer ${COLORS.gray.hoverSecondary}`,
+    headerCell: `px-4 py-3 text-left ${TYPOGRAPHY.tableHeader} text-slate-300 cursor-pointer ${COLORS.gray.hoverSecondary}`,
     body: `divide-y ${COLORS.gray.bg.primary} divide-gray-700`,
     row: COLORS.gray.hover,
     cell: 'px-4 py-3',
@@ -252,7 +252,7 @@ export const COMPONENTS = {
 
   // Empty state patterns
   empty: {
-    container: `${SPACING.padding.xl} text-center border-2 border-dashed ${BORDERS.radius.lg} ${COLORS.gray.bg.primary} border-gray-600 text-gray-400`,
+    container: `${SPACING.padding.xl} text-center border-2 border-dashed ${BORDERS.radius.lg} ${COLORS.gray.bg.primary} border-slate-600 text-slate-400`,
     icon: 'text-4xl mb-2',
   }
 };

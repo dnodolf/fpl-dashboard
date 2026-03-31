@@ -115,7 +115,7 @@ export const LoadingSpinner = ({ message = "Loading..." }) => {
       </h1>
 
       {/* Loading Stage Indicator */}
-      <div className="flex items-center gap-2 text-gray-300 mb-4">
+      <div className="flex items-center gap-2 text-slate-300 mb-4">
         <span className="text-xl">{stages[loadingStage].icon}</span>
         <span className="font-medium">
           {stages[loadingStage].text}
@@ -124,7 +124,7 @@ export const LoadingSpinner = ({ message = "Loading..." }) => {
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden mb-4">
+      <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden mb-4">
         <div
           className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 rounded-full"
           style={{
@@ -177,9 +177,9 @@ export const LoadingDots = ({ className = '' }) => (
  * Skeleton loader for cards
  */
 export const SkeletonCard = ({ className = '' }) => (
-  <div className={`bg-gray-800 rounded-lg p-4 animate-pulse ${className}`}>
-    <div className="h-4 bg-gray-700 rounded w-3/4 mb-3" />
-    <div className="h-8 bg-gray-700 rounded w-1/2 mb-2" />
-    <div className="h-3 bg-gray-700 rounded w-full" />
+  <div className={`bg-slate-800 rounded-lg p-4 animate-pulse ${className}`}>
+    <div className="h-4 bg-slate-700 rounded w-3/4 mb-3" />
+    <div className="h-8 bg-slate-700 rounded w-1/2 mb-2" />
+    <div className="h-3 bg-slate-700 rounded w-full" />
   </div>
 );

@@ -132,10 +132,10 @@ const getFixtureDifficulty = (player) => {
     this_week_opponent: player.v3_this_week_opponent || 'TBD',
     this_week_is_home: player.v3_this_week_is_home !== undefined ? player.v3_this_week_is_home : true,
     this_week_matchup_label: player.v3_this_week_matchup_label || '❓ Unknown',
-    this_week_matchup_color: player.v3_this_week_matchup_color || 'text-gray-500',
+    this_week_matchup_color: player.v3_this_week_matchup_color || 'text-slate-500',
     start_recommendation: player.v3_start_recommendation || 'UNKNOWN',
     start_label: player.v3_start_label || '❓ N/A',
-    start_color: player.v3_start_color || 'text-gray-500'
+    start_color: player.v3_start_color || 'text-slate-500'
   })), [filteredPlayers, scoringMode, currentGameweek]);
 
   // Sort players - memoized for performance
@@ -167,11 +167,11 @@ const getFixtureDifficulty = (player) => {
   // Render sort icon
   const renderSortIcon = (columnKey) => {
     if (sortConfig.key !== columnKey) {
-      return <span className="text-gray-400 ml-1 opacity-50">↕️</span>;
+      return <span className="text-slate-400 ml-1 opacity-50">↕️</span>;
     }
     return sortConfig.direction === 'asc' ? 
-      <span className="text-blue-500 ml-1">↑</span> : 
-      <span className="text-blue-500 ml-1">↓</span>;
+      <span className="text-violet-500 ml-1">↑</span> : 
+      <span className="text-violet-500 ml-1">↓</span>;
   };
 
   // Get SLEEPER position badge color - now using centralized utility
@@ -193,12 +193,12 @@ const getSleeperPositionBadgeColor = (position) => {
 
   if (myPlayers.length === 0) {
     return (
-      <div className="rounded-lg border p-8 text-center bg-gray-800 border-gray-700">
+      <div className="rounded-lg border p-8 text-center bg-slate-800 border-slate-700">
         <div className="text-4xl mb-2">👤</div>
         <h3 className="text-lg font-medium mb-2 text-white">
           No Players Found
         </h3>
-        <p className="text-gray-400">
+        <p className="text-slate-400">
           No players found for user "{userId}". Check ownership data.
         </p>
       </div>
@@ -213,7 +213,7 @@ const getSleeperPositionBadgeColor = (position) => {
           <h3 className="text-lg font-medium text-white">
             My Players ({sortedPlayers.length})
           </h3>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-slate-400">
             Gameweek {currentGameweek?.number || 'N/A'} predictions
           </p>
         </div>
@@ -225,79 +225,79 @@ const getSleeperPositionBadgeColor = (position) => {
             placeholder="Search players..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+            className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white placeholder-slate-400"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border overflow-hidden bg-gray-800 border-gray-700">
+      <div className="rounded-lg border overflow-hidden bg-slate-800 border-slate-700">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-700 border-b border-gray-600 sticky top-0 z-10">
+            <thead className="bg-slate-700 border-b border-slate-600 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-300">
                   Status
                 </th>
                 <th 
                   onClick={() => handleSort('name')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   Player {renderSortIcon('name')}
                 </th>
                 <th 
                   onClick={() => handleSort('position')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   Position {renderSortIcon('position')}
                 </th>
                 <th 
                   onClick={() => handleSort('team')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   Team {renderSortIcon('team')}
                 </th>
                 <th 
                   onClick={() => handleSort('predicted_points')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   Predicted Points {scoringMode === 'v4' ? '⚡' : scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('predicted_points')}
                 </th>
                 <th
                   onClick={() => handleSort('predicted_minutes')}
-                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   Predicted Minutes {renderSortIcon('predicted_minutes')}
                 </th>
                 {!hideColumns.includes('ppg') && (
                   <th
                     onClick={() => handleSort('ppg_value')}
-                    className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                    className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                   >
                     PPG {scoringMode === 'v4' ? '⚡' : scoringMode === 'v3' ? '🚀' : '📊'} {renderSortIcon('ppg_value')}
                   </th>
                 )}
                 <th
                   onClick={() => handleSort('fixture_difficulty_value')}
-                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   Fixture Difficulty {renderSortIcon('fixture_difficulty_value')}
                 </th>
                 <th
                   onClick={() => handleSort('this_week_opponent')}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   THIS WEEK 🔥 {renderSortIcon('this_week_opponent')}
                 </th>
                 <th
                   onClick={() => handleSort('start_percentage')}
-                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-gray-300 hover:bg-gray-600"
+                  className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-75 text-slate-300 hover:bg-slate-600"
                 >
                   START % {renderSortIcon('start_percentage')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-600">
+            <tbody className="divide-y divide-slate-600">
               {sortedPlayers.map((player, index) => {
                 const playerId = player.player_id || player.sleeper_id || player.id;
                 const isOptimal = Array.isArray(optimalPlayerIds) ? optimalPlayerIds.includes(playerId) : false;
@@ -305,7 +305,7 @@ const getSleeperPositionBadgeColor = (position) => {
                 return (
                   <tr 
                     key={playerId || index}
-                    className="hover:bg-opacity-50 hover:bg-gray-700"
+                    className="hover:bg-opacity-50 hover:bg-slate-700"
                   >
                     {/* Optimization Status */}
                     <td className="px-4 py-3">
@@ -324,7 +324,7 @@ const getSleeperPositionBadgeColor = (position) => {
                         <PlayerAvatar player={player} size="sm" />
                         <button
                           onClick={() => onPlayerClick?.(player)}
-                          className="text-sm font-medium text-white hover:text-blue-400 transition-colors text-left"
+                          className="text-sm font-medium text-white hover:text-violet-400 transition-colors text-left"
                         >
                           {player.full_name || player.web_name || player.name || 'Unknown Player'}
                         </button>
@@ -340,7 +340,7 @@ const getSleeperPositionBadgeColor = (position) => {
 
                     {/* Team */}
                     <td className="px-4 py-3">
-                      <span className="text-sm font-medium text-gray-200">
+                      <span className="text-sm font-medium text-slate-200">
                         {player.team_abbr || player.team || 'N/A'}
                       </span>
                     </td>
@@ -350,7 +350,7 @@ const getSleeperPositionBadgeColor = (position) => {
                       <span className={`text-sm font-semibold ${
                         player.predicted_points > 0
                           ? 'text-green-400'
-                          : 'text-gray-400'
+                          : 'text-slate-400'
                       }`}>
                         {formatPoints(player.predicted_points)}
                       </span>
@@ -358,7 +358,7 @@ const getSleeperPositionBadgeColor = (position) => {
 
                     {/* Predicted Minutes */}
                     <td className="hidden md:table-cell px-4 py-3">
-                      <span className="text-sm text-gray-300">
+                      <span className="text-sm text-slate-300">
                         {formatMinutes(player.predicted_minutes)}
                       </span>
                     </td>
@@ -366,7 +366,7 @@ const getSleeperPositionBadgeColor = (position) => {
                     {/* PPG */}
                     {!hideColumns.includes('ppg') && (
                       <td className="hidden md:table-cell px-4 py-3">
-                        <span className="text-sm font-medium text-blue-400">
+                        <span className="text-sm font-medium text-violet-400">
                           {formatPoints(player.ppg_value)}
                         </span>
                       </td>
@@ -384,7 +384,7 @@ const getSleeperPositionBadgeColor = (position) => {
                     {/* THIS WEEK Matchup - NEW */}
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-gray-200">
+                        <span className="text-sm font-medium text-slate-200">
                           vs {player.this_week_opponent} {player.this_week_is_home ? '(H)' : '(A)'}
                         </span>
                         <span className={`text-xs font-medium ${player.this_week_matchup_color}`}>
@@ -396,7 +396,7 @@ const getSleeperPositionBadgeColor = (position) => {
                     {/* START % - Chance of playing */}
                     <td className="hidden md:table-cell px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold ${
-                        player.start_percentage === null || player.start_percentage === undefined ? 'text-gray-400' :
+                        player.start_percentage === null || player.start_percentage === undefined ? 'text-slate-400' :
                         player.start_percentage >= 75 ? 'text-green-400' :
                         player.start_percentage >= 50 ? 'text-yellow-400' :
                         player.start_percentage >= 25 ? 'text-orange-400' :
@@ -417,7 +417,7 @@ const getSleeperPositionBadgeColor = (position) => {
         {/* No results message */}
         {sortedPlayers.length === 0 && searchTerm && (
           <div className="text-center py-8">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-slate-400">
               No players found matching "{searchTerm}"
             </p>
           </div>

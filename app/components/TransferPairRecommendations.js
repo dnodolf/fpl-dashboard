@@ -41,11 +41,11 @@ export default function TransferPairRecommendations({
   // Render sort indicator
   const renderSortIcon = (column) => {
     if (sortColumn !== column) {
-      return <span className="ml-1 text-gray-600">⇅</span>;
+      return <span className="ml-1 text-slate-600">⇅</span>;
     }
     return sortDirection === 'desc' 
-      ? <span className="ml-1 text-blue-400">↓</span>
-      : <span className="ml-1 text-blue-400">↑</span>;
+      ? <span className="ml-1 text-violet-400">↓</span>
+      : <span className="ml-1 text-violet-400">↑</span>;
   };
   const [showAll, setShowAll] = useState(false); // Show all recommendations or just top 5
   const [minRating, setMinRating] = useState(0); // Minimum rating filter: 0=all, 20=weak+, 40=consider+, 60=good+, 80=strong
@@ -362,11 +362,11 @@ export default function TransferPairRecommendations({
   const hasMore = transferPairs.length > 5;
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6 mb-6">
+    <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700/60 shadow-md">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-bold text-white">Transfer Recommendations</h2>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-slate-400 mt-1">
             Smart transfer suggestions with confidence ratings based on short & long-term gains
           </p>
         </div>
@@ -377,7 +377,7 @@ export default function TransferPairRecommendations({
           <select
             value={selectedPosition}
             onChange={(e) => setSelectedPosition(e.target.value)}
-            className="px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value="ALL">All Positions</option>
             <option value="GKP">GKP Only</option>
@@ -388,23 +388,23 @@ export default function TransferPairRecommendations({
 
           {/* Min Gain Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400">Min Gain:</label>
+            <label className="text-sm text-slate-400">Min Gain:</label>
             <input
               type="number"
               value={minGain}
               onChange={(e) => setMinGain(Number(e.target.value))}
               min="0"
               step="5"
-              className="w-20 px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-20 px-3 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
-            <span className="text-sm text-gray-400">pts</span>
+            <span className="text-sm text-slate-400">pts</span>
           </div>
           
           {/* Rating Filter */}
           <select
             value={minRating}
             onChange={(e) => setMinRating(Number(e.target.value))}
-            className="px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value={0}>All Ratings</option>
             <option value={20}>Weak+ (20%+)</option>
@@ -417,19 +417,19 @@ export default function TransferPairRecommendations({
 
       {/* Statistics */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-sm text-gray-400">Total Opportunities</div>
+        <div className="bg-slate-700 rounded-lg p-4">
+          <div className="text-sm text-slate-400">Total Opportunities</div>
           <div className="text-2xl font-bold text-white">{transferPairs.length}</div>
         </div>
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-sm text-gray-400">Best Gain Available</div>
+        <div className="bg-slate-700 rounded-lg p-4">
+          <div className="text-sm text-slate-400">Best Gain Available</div>
           <div className="text-2xl font-bold text-green-400">
             +{transferPairs[0]?.netGain?.toFixed(1) || 0} pts
           </div>
         </div>
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-sm text-gray-400">Avg Top 5 Gain</div>
-          <div className="text-2xl font-bold text-blue-400">
+        <div className="bg-slate-700 rounded-lg p-4">
+          <div className="text-sm text-slate-400">Avg Top 5 Gain</div>
+          <div className="text-2xl font-bold text-violet-400">
             +{(transferPairs.slice(0, 5).reduce((sum, p) => sum + p.netGain, 0) / Math.min(5, transferPairs.length) || 0).toFixed(1)} pts
           </div>
         </div>
@@ -437,59 +437,59 @@ export default function TransferPairRecommendations({
 
       {/* Transfer Pairs Table */}
       {topRecommendations.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
+        <div className="text-center py-8 text-slate-400">
           No transfer recommendations found with min gain of {minGain} pts
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-700">
-                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
+              <tr className="border-b border-slate-700">
+                <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4">
                   Rank
                 </th>
-                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
+                <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4">
                   Drop Player
                 </th>
-                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4">
+                <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4">
                   Add Player
                 </th>
                 <th 
                   onClick={() => handleSort('rating')}
-                  className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                  className="text-center text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
                 >
                   Rating{renderSortIcon('rating')}
                 </th>
                 <th 
                   onClick={() => handleSort('next1')}
-                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                  className="text-right text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
                 >
                   Next GW{renderSortIcon('next1')}
                 </th>
                 <th 
                   onClick={() => handleSort('next3')}
-                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                  className="text-right text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
                 >
                   Next 3{renderSortIcon('next3')}
                 </th>
                 <th 
                   onClick={() => handleSort('next5')}
-                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                  className="text-right text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
                 >
                   Next 5{renderSortIcon('next5')}
                 </th>
                 <th 
                   onClick={() => handleSort('season')}
-                  className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
+                  className="text-right text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 pr-4 cursor-pointer hover:text-white transition-colors"
                 >
                   Season{renderSortIcon('season')}
                 </th>
-                <th className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 px-4">
+                <th className="text-center text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 px-4">
                   Fixtures
                 </th>
                 <th
                   onClick={() => handleSort('risk')}
-                  className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3 px-4 cursor-pointer hover:text-white transition-colors"
+                  className="text-center text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3 px-4 cursor-pointer hover:text-white transition-colors"
                 >
                   Risk{renderSortIcon('risk')}
                 </th>
@@ -497,15 +497,15 @@ export default function TransferPairRecommendations({
             </thead>
             <tbody>
               {topRecommendations.map((pair, index) => (
-                <tr key={index} className="border-b border-gray-700 hover:bg-gray-700 transition-colors">
+                <tr key={index} className="border-b border-slate-700 hover:bg-slate-700 transition-colors">
                   {/* Rank */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
                       <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                         index === 0 ? 'bg-yellow-600 text-white' :
-                        index === 1 ? 'bg-gray-400 text-white' :
+                        index === 1 ? 'bg-slate-400 text-white' :
                         index === 2 ? 'bg-orange-600 text-white' :
-                        'bg-gray-600 text-white'
+                        'bg-slate-600 text-white'
                       }`}>
                         {index + 1}
                       </span>
@@ -522,13 +522,13 @@ export default function TransferPairRecommendations({
                       <div>
                         <button
                           onClick={() => onPlayerClick?.(pair.drop)}
-                          className="font-semibold text-white hover:text-blue-400 transition-colors text-left"
+                          className="font-semibold text-white hover:text-violet-400 transition-colors text-left"
                         >
                           {pair.drop.name}
                         </button>
-                        <div className="text-xs text-gray-400">{pair.drop.team} {pair.dropForm}</div>
+                        <div className="text-xs text-slate-400">{pair.drop.team} {pair.dropForm}</div>
                         {pair.drop.opta_stats && (
-                          <div className="text-[10px] text-gray-500">
+                          <div className="text-[10px] text-slate-500">
                             xG {Number(pair.drop.opta_stats.xg || 0).toFixed(1)} · xA {Number(pair.drop.opta_stats.xa || 0).toFixed(1)} · KP {pair.drop.opta_stats.key_pass || 0}
                           </div>
                         )}
@@ -543,13 +543,13 @@ export default function TransferPairRecommendations({
                       <div>
                         <button
                           onClick={() => onPlayerClick?.(pair.add)}
-                          className="font-semibold text-white hover:text-blue-400 transition-colors text-left"
+                          className="font-semibold text-white hover:text-violet-400 transition-colors text-left"
                         >
                           {pair.add.name}
                         </button>
-                        <div className="text-xs text-gray-400">{pair.add.team} {pair.addForm}</div>
+                        <div className="text-xs text-slate-400">{pair.add.team} {pair.addForm}</div>
                         {pair.add.opta_stats && (
-                          <div className="text-[10px] text-gray-500">
+                          <div className="text-[10px] text-slate-500">
                             xG {Number(pair.add.opta_stats.xg || 0).toFixed(1)} · xA {Number(pair.add.opta_stats.xa || 0).toFixed(1)} · KP {pair.add.opta_stats.key_pass || 0}
                           </div>
                         )}
@@ -566,7 +566,7 @@ export default function TransferPairRecommendations({
                           <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${rec.color}`}>
                             {rec.icon} {rec.label}
                           </span>
-                          <span className="text-xs text-gray-400">{rec.percentage}</span>
+                          <span className="text-xs text-slate-400">{rec.percentage}</span>
                         </div>
                       );
                     })()}
@@ -604,13 +604,13 @@ export default function TransferPairRecommendations({
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-center gap-2">
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-400">Drop:</span>
+                        <span className="text-xs text-slate-400">Drop:</span>
                         <span className={`px-2 py-1 rounded text-xs font-bold text-white ${getDifficultyColor(pair.dropFixtures)}`}>
                           {pair.dropFixtures.toFixed(1)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-400">Add:</span>
+                        <span className="text-xs text-slate-400">Add:</span>
                         <span className={`px-2 py-1 rounded text-xs font-bold text-white ${getDifficultyColor(pair.addFixtures)}`}>
                           {pair.addFixtures.toFixed(1)}
                         </span>
@@ -630,7 +630,7 @@ export default function TransferPairRecommendations({
                       }`}>
                         {pair.risk.score > 0 ? '+' : ''}{pair.risk.score}%
                       </span>
-                      <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500">
                         <span title={`Drop: ${pair.risk.dropAvail}% → Add: ${pair.risk.addAvail}%`}>
                           {pair.risk.addAvail < 100 && (
                             <span className={pair.risk.addAvail < 75 ? 'text-yellow-400' : ''}>
@@ -656,7 +656,7 @@ export default function TransferPairRecommendations({
         <div className="mt-4 text-center">
           <button
             onClick={() => setShowAll(!showAll)}
-            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
           >
             {showAll ? `Show Less` : `Show More (${transferPairs.length - 5} more)`}
           </button>
@@ -664,7 +664,7 @@ export default function TransferPairRecommendations({
       )}
 
       {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-gray-700 space-y-2 text-xs text-gray-400">
+      <div className="mt-4 pt-4 border-t border-slate-700 space-y-2 text-xs text-slate-400">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <span className="font-semibold">Rating:</span>

@@ -97,7 +97,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   if (!lineup || !lineup.players || lineup.players.length === 0) {
     return (
       <div className={`p-8 text-center border-2 border-dashed rounded-lg ${
-        'bg-gray-800 border-gray-600 text-gray-400'
+        'bg-slate-800 border-slate-600 text-slate-400'
       }`}>
         <div className="text-4xl mb-2">⚽</div>
         <p>No lineup data available</p>
@@ -206,7 +206,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
       MID: 'bg-pink-900/50 border-pink-700/50',
       FWD: 'bg-purple-900/50 border-purple-700/50'
     };
-    const positionBg = positionBgMap[player.position?.toUpperCase()] || 'bg-gray-700 border-gray-600';
+    const positionBg = positionBgMap[player.position?.toUpperCase()] || 'bg-slate-700 border-slate-600';
 
     return (
       <button
@@ -217,7 +217,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 
         {/* Locked badge — match started/finished, player can't be moved */}
         {isLocked && (
-          <div className="absolute top-0 left-0 right-0 bg-gray-900/80 text-[7px] text-gray-300 text-center font-bold rounded-t-lg py-[1px] tracking-wider z-10">
+          <div className="absolute top-0 left-0 right-0 bg-slate-900/80 text-[7px] text-slate-300 text-center font-bold rounded-t-lg py-[1px] tracking-wider z-10">
             LOCKED
           </div>
         )}
@@ -227,7 +227,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
             isInCurrentLineup
               ? 'bg-green-500 text-white'
-              : 'bg-blue-500 text-white'
+              : 'bg-violet-500 text-white'
           }`}>
             {isInCurrentLineup ? '✓' : '+'}
           </div>
@@ -248,7 +248,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         {fplBadge && (
           <div className={`absolute -top-1 -left-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${
             player.fpl_status === 'i' || player.fpl_status === 's' ? 'bg-red-500' :
-            player.fpl_status === 'd' ? 'bg-orange-500' : 'bg-gray-500'
+            player.fpl_status === 'd' ? 'bg-orange-500' : 'bg-slate-500'
           }`} title={`${fplBadge.badge}${player.fpl_news ? ': ' + player.fpl_news : ''}`}>
             {fplBadge.icon}
           </div>
@@ -266,7 +266,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         {/* Predicted Points - green if optimal, red if should be benched */}
         <div className={`font-semibold text-[11px] ${
           isOptimal
-            ? (isInCurrentLineup ? 'text-green-400' : 'text-blue-400')
+            ? (isInCurrentLineup ? 'text-green-400' : 'text-violet-400')
             : (isInOptimalLineup ? 'text-green-400' : 'text-red-400')
         }`}>
           {getGWPoints(player, scoringMode, currentGameweek).toFixed(1)}
@@ -282,7 +282,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
         {/* Minutes + Opponent row */}
         <div className="flex items-center gap-1 text-[9px] mt-0.5">
           {predictedMinutes != null && (
-            <span className="text-gray-400">{predictedMinutes}m</span>
+            <span className="text-slate-400">{predictedMinutes}m</span>
           )}
           {opponent && (
             <span className={`px-1 rounded ${getDifficultyColor(opponent.difficulty)} text-[9px] font-medium`}>
@@ -303,7 +303,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
   
   return (
     <div className={`border-2 rounded-lg overflow-hidden ${
-      'bg-gray-800 border-gray-600'
+      'bg-slate-800 border-slate-600'
       } ${isOptimal ? 'ring-2 ring-green-500' : ''}`}>
 
       {/* Pitch area */}
@@ -313,13 +313,13 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 
         {/* Formation and Points Header */}
         <div className="absolute top-3 left-4 right-4 flex justify-between items-center z-20">
-          <span className={`text-sm font-medium text-gray-300`}>
+          <span className={`text-sm font-medium text-slate-300`}>
             {currentFormation}
           </span>
           <span className={`text-sm font-semibold ${
             isOptimal
               ? 'text-green-400'
-              : 'text-blue-400'
+              : 'text-violet-400'
           }`}>
             {totalPoints.toFixed(1)} pts
           </span>
@@ -337,7 +337,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {/* Fill missing FWD slots if needed */}
             {Array.from({ length: Math.max(0, layout.fwd - playersByPosition.FWD.length) }).map((_, idx) => (
               <div key={`empty-fwd-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-                'border-gray-600 text-gray-500'
+                'border-slate-600 text-slate-500'
               }`} style={{ width: 'clamp(56px, 14vw, 80px)' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">FWD</div>
@@ -355,7 +355,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {/* Fill missing MID slots if needed */}
             {Array.from({ length: Math.max(0, layout.mid - playersByPosition.MID.length) }).map((_, idx) => (
               <div key={`empty-mid-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-                'border-gray-600 text-gray-500'
+                'border-slate-600 text-slate-500'
               }`} style={{ width: 'clamp(56px, 14vw, 80px)' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">MID</div>
@@ -373,7 +373,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
             {/* Fill missing DEF slots if needed */}
             {Array.from({ length: Math.max(0, layout.def - playersByPosition.DEF.length) }).map((_, idx) => (
               <div key={`empty-def-${idx}`} className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-                'border-gray-600 text-gray-500'
+                'border-slate-600 text-slate-500'
               }`} style={{ width: 'clamp(56px, 14vw, 80px)' }}>
                 <div>Empty</div>
                 <div className="text-xs opacity-50">DEF</div>
@@ -390,7 +390,7 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
           {/* Show empty GKP slot if needed */}
           {playersByPosition.GKP.length === 0 && (
             <div className={`flex flex-col items-center p-2 m-1 rounded-lg border-2 border-dashed text-xs ${
-              'border-gray-600 text-gray-500'
+              'border-slate-600 text-slate-500'
             }`} style={{ width: 'clamp(56px, 14vw, 80px)' }}>
               <div>Empty</div>
               <div className="text-xs opacity-50">GKP</div>
@@ -402,8 +402,8 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 
       {/* Bench Players */}
       {benchPlayers && benchPlayers.length > 0 && (
-        <div className="border-t border-gray-600 px-3 py-2">
-          <div className="text-[10px] text-gray-500 uppercase tracking-wider text-center mb-1">Bench</div>
+        <div className="border-t border-slate-600 px-3 py-2">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider text-center mb-1">Bench</div>
           <div className="flex justify-center gap-1 flex-wrap">
             {benchPlayers.map((player, idx) => (
               <PlayerCard key={`bench-${player.id || idx}`} player={player} isInOptimal={isOptimal} scoringMode={scoringMode} currentLineup={currentLineup} optimalLineup={optimalLineup} />
@@ -504,13 +504,13 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
   if (toBench.length === 0 && toStart.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
-        'bg-gray-800 border-gray-700'
+        'bg-slate-800 border-slate-700'
       }`}>
         <div className="text-green-600 text-4xl mb-2">✅</div>
         <h3 className={`text-lg font-medium mb-2 text-white`}>
           Perfect Lineup!
         </h3>
-        <p className={'text-gray-400'}>
+        <p className={'text-slate-400'}>
           Your current lineup is already optimized.
         </p>
       </div>
@@ -518,12 +518,12 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
   }
 
   return (
-    <div className={`rounded-lg border ${'bg-gray-800 border-gray-700'}`}>
-      <div className="p-4 border-b border-gray-600">
+    <div className={`rounded-lg border ${'bg-slate-800 border-slate-700'}`}>
+      <div className="p-4 border-b border-slate-600">
         <h3 className={`text-lg font-medium flex items-center gap-2 text-white`}>
           🎯 Lineup Changes
         </h3>
-        <p className={`text-sm mt-1 text-gray-400`}>
+        <p className={`text-sm mt-1 text-slate-400`}>
           Make these changes for <span className="font-bold text-green-400">+{netGain.toFixed(1)} pts</span>
         </p>
       </div>
@@ -542,13 +542,13 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                     <div>
                       <div className="text-sm font-medium text-white flex items-center gap-1.5">
                         {player.name}
-                        {isTeamLocked(player.team) && <span className="text-[9px] px-1 py-0.5 rounded bg-gray-600 text-gray-300">LOCKED</span>}
+                        {isTeamLocked(player.team) && <span className="text-[9px] px-1 py-0.5 rounded bg-slate-600 text-slate-300">LOCKED</span>}
                         {player.fplStatus && player.fplStatus !== 'a' && (() => {
                           const badge = getFPLStatusBadge(player.fplStatus);
                           return badge ? <span className={`text-[9px] px-1 py-0.5 rounded ${badge.color}`}>{badge.badge}</span> : null;
                         })()}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-slate-400">
                         {player.position} • {player.team}
                         {player.opponent && (
                           <span className="ml-1">
@@ -557,15 +557,15 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                             </span>
                           </span>
                         )}
-                        {player.minutes != null && <span className="ml-1 text-gray-500">{player.minutes}m</span>}
+                        {player.minutes != null && <span className="ml-1 text-slate-500">{player.minutes}m</span>}
                       </div>
                       {player.opta_stats && player.position !== 'GKP' && (
-                        <div className="text-[10px] text-gray-500">xG {Number(player.opta_stats.xg || 0).toFixed(1)} · xA {Number(player.opta_stats.xa || 0).toFixed(1)}</div>
+                        <div className="text-[10px] text-slate-500">xG {Number(player.opta_stats.xg || 0).toFixed(1)} · xA {Number(player.opta_stats.xa || 0).toFixed(1)}</div>
                       )}
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold text-red-400">{player.points.toFixed(1)}</div>
-                      <div className="text-xs text-gray-500">pts</div>
+                      <div className="text-xs text-slate-500">pts</div>
                     </div>
                   </div>
                 </div>
@@ -587,13 +587,13 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                     <div>
                       <div className="text-sm font-medium text-white flex items-center gap-1.5">
                         {player.name}
-                        {isTeamLocked(player.team) && <span className="text-[9px] px-1 py-0.5 rounded bg-gray-600 text-gray-300">LOCKED</span>}
+                        {isTeamLocked(player.team) && <span className="text-[9px] px-1 py-0.5 rounded bg-slate-600 text-slate-300">LOCKED</span>}
                         {player.fplStatus && player.fplStatus !== 'a' && (() => {
                           const badge = getFPLStatusBadge(player.fplStatus);
                           return badge ? <span className={`text-[9px] px-1 py-0.5 rounded ${badge.color}`}>{badge.badge}</span> : null;
                         })()}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-slate-400">
                         {player.position} • {player.team}
                         {player.opponent && (
                           <span className="ml-1">
@@ -602,15 +602,15 @@ const ActionableRecommendations = ({ recommendations, current, optimal, recalcul
                             </span>
                           </span>
                         )}
-                        {player.minutes != null && <span className="ml-1 text-gray-500">{player.minutes}m</span>}
+                        {player.minutes != null && <span className="ml-1 text-slate-500">{player.minutes}m</span>}
                       </div>
                       {player.opta_stats && player.position !== 'GKP' && (
-                        <div className="text-[10px] text-gray-500">xG {Number(player.opta_stats.xg || 0).toFixed(1)} · xA {Number(player.opta_stats.xa || 0).toFixed(1)}</div>
+                        <div className="text-[10px] text-slate-500">xG {Number(player.opta_stats.xg || 0).toFixed(1)} · xA {Number(player.opta_stats.xa || 0).toFixed(1)}</div>
                       )}
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold text-green-400">{player.points.toFixed(1)}</div>
-                      <div className="text-xs text-gray-500">pts</div>
+                      <div className="text-xs text-slate-500">pts</div>
                     </div>
                   </div>
                 </div>
@@ -628,13 +628,13 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
   if (!allFormations || allFormations.length === 0) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
-        'bg-gray-800 border-gray-700'
+        'bg-slate-800 border-slate-700'
       }`}>
         <div className="text-4xl mb-2">📊</div>
         <h3 className={`text-lg font-medium mb-2 text-white`}>
           Formation Analysis
         </h3>
-        <p className={'text-gray-400'}>
+        <p className={'text-slate-400'}>
           No formation comparison data available.
         </p>
       </div>
@@ -671,8 +671,8 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
   const bestPoints = bestFormation?.recalculatedPoints || 0;
 
   return (
-    <div className={`rounded-lg border ${'bg-gray-800 border-gray-700'}`}>
-      <div className="p-4 border-b border-gray-200">
+    <div className={`rounded-lg border ${'bg-slate-800 border-slate-700'}`}>
+      <div className="p-4 border-b border-slate-200">
         <h3 className={`text-lg font-medium text-white`}>
           📊 Formation Comparison
         </h3>
@@ -691,21 +691,21 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
               <div key={formationName || index} 
                 className={`flex items-center justify-between p-4 rounded-lg ${
                   isInvalid
-                    ? 'bg-gray-900 border border-gray-600 opacity-60'
+                    ? 'bg-slate-900 border border-slate-600 opacity-60'
                     : isCurrent
-                      ? 'bg-blue-900 border border-blue-700'
+                      ? 'bg-violet-900 border border-violet-700'
                       : isBest
                         ? 'bg-green-900 border border-green-700'
-                        : 'bg-gray-700'
+                        : 'bg-slate-700'
                 }`}>
                 
                 {/* Left: Formation Name */}
                 <div className="flex items-center gap-3 flex-1">
                   <span className={`text-2xl font-bold ${
                     isInvalid
-                      ? 'text-gray-500'
+                      ? 'text-slate-500'
                       : isCurrent 
-                        ? 'text-blue-100' 
+                        ? 'text-violet-100' 
                         : isBest
                           ? 'text-green-100'
                           : 'text-white'
@@ -714,7 +714,7 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
                   </span>
                   
                   {isCurrent && !isInvalid && (
-                    <span className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white">
+                    <span className="px-2 py-1 text-xs font-medium rounded bg-violet-600 text-white">
                       CURRENT
                     </span>
                   )}
@@ -730,9 +730,9 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
                 <div className="flex-1 text-center">
                   <span className={`text-xl font-bold ${
                     isInvalid
-                      ? 'text-gray-500'
+                      ? 'text-slate-500'
                       : isCurrent 
-                        ? 'text-blue-100' 
+                        ? 'text-violet-100' 
                         : isBest
                           ? 'text-green-100'
                           : 'text-white'
@@ -744,7 +744,7 @@ const FormationComparison = ({ allFormations, currentFormation, scoringMode = 'f
                 {/* Right: Status */}
                 <div className="flex-1 text-right">
                   {isInvalid ? (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-slate-500">
                       Not enough players
                     </span>
                   ) : isBest ? (
@@ -771,8 +771,8 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
   // Don't render if gameweek data isn't loaded for v3/v4 scoring
   if ((scoringMode === 'v3' || scoringMode === 'v4') && !currentGameweek?.number) {
     return (
-      <div className={`p-8 text-center text-gray-300`}>
-        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+      <div className={`p-8 text-center text-slate-300`}>
+        <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
         <p>Loading gameweek data for v3 scoring...</p>
       </div>
     );
@@ -834,7 +834,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mr-3"></div>
         <span className="text-white">
           Analyzing your lineup...
         </span>
@@ -845,18 +845,18 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
   if (error) {
     return (
       <div className={`rounded-lg border p-6 text-center ${
-        'bg-gray-800 border-gray-700'
+        'bg-slate-800 border-slate-700'
       }`}>
         <div className="text-red-500 text-4xl mb-2">❌</div>
         <h3 className={`text-lg font-medium mb-2 text-white`}>
           Optimization Failed
         </h3>
-        <p className={`mb-4 text-gray-400`}>
+        <p className={`mb-4 text-slate-400`}>
           {error}
         </p>
         <button
           onClick={() => refetch(true)}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+          className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-lg transition-colors"
         >
           Try Again
         </button>
@@ -868,14 +868,14 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
     <div className="space-y-6">
 
       {/* Gameweek Header - Prominent Display */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-center border border-blue-500">
+      <div className="bg-gradient-to-r from-violet-600 to-violet-700 rounded-lg shadow-lg p-6 text-center border border-violet-500">
         <div className="flex items-center justify-center gap-3">
           <span className="text-4xl">⚽</span>
           <div>
             <h2 className="text-3xl font-bold text-white">
               Gameweek {currentGameweek?.number || 'N/A'}
             </h2>
-            <p className="text-blue-100 text-sm mt-1">
+            <p className="text-violet-100 text-sm mt-1">
               Start/Sit Recommendations
             </p>
           </div>
@@ -907,10 +907,10 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
                   Current Lineup
                 </h3>
                 <div className="flex items-center justify-center gap-2 mt-1">
-                  <span className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white">
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-violet-600 text-white">
                     ACTIVE
                   </span>
-                  <span className={`text-sm text-gray-400`}>
+                  <span className={`text-sm text-slate-400`}>
                     {current?.formation || 'N/A'} • {currentPoints.toFixed(1)} points
                   </span>
                 </div>
@@ -937,7 +937,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
                   <span className="px-2 py-1 text-xs font-medium rounded bg-green-600 text-white">
                     RECOMMENDED
                   </span>
-                  <span className={`text-sm text-gray-400`}>
+                  <span className={`text-sm text-slate-400`}>
                     {optimal?.formation || 'N/A'} • {optimalPoints.toFixed(1)} points
                   </span>
                 </div>
@@ -977,7 +977,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
       </div>
 
       {/* My Players Table */}
-      <div className={`p-6 rounded-lg border ${'bg-gray-800 border-gray-700'}`}>
+      <div className={`p-6 rounded-lg border ${'bg-slate-800 border-slate-700'}`}>
         <MyPlayersTable
           players={players || []}
           currentGameweek={currentGameweek}
@@ -993,7 +993,7 @@ export const OptimizerTabContent = ({ players, currentGameweek, scoringMode = 'f
       <div className="text-center">
         <button
           onClick={() => refetch(true)}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
+          className="bg-violet-500 hover:bg-violet-600 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
         >
           🔄 Refresh Analysis
         </button>

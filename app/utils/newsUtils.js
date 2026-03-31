@@ -34,8 +34,8 @@ export function getFPLStatusBadge(fplStatus) {
     case 'i': return { badge: 'INJURED',      color: 'bg-red-500 text-white',   icon: '🏥' };
     case 'd': return { badge: 'DOUBTFUL',     color: 'bg-orange-500 text-white', icon: '⚠️' };
     case 's': return { badge: 'SUSPENDED',    color: 'bg-red-600 text-white',   icon: '🚫' };
-    case 'u': return { badge: 'UNAVAILABLE',  color: 'bg-gray-500 text-white',  icon: '❌' };
-    case 'n': return { badge: 'NOT IN SQUAD', color: 'bg-gray-600 text-white',  icon: '➖' };
+    case 'u': return { badge: 'UNAVAILABLE',  color: 'bg-slate-500 text-white',  icon: '❌' };
+    case 'n': return { badge: 'NOT IN SQUAD', color: 'bg-slate-600 text-white',  icon: '➖' };
     case 'a': return null; // Available - no badge needed
     default:  return null;
   }

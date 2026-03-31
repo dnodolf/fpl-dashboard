@@ -43,15 +43,15 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
 
   if (loading) {
     return (
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-        <div className="text-sm text-gray-400">Loading standings...</div>
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+        <div className="text-sm text-slate-400">Loading standings...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
         <div className="text-sm text-red-400">Failed to load standings</div>
       </div>
     );
@@ -62,40 +62,40 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
   const userRank = userStanding ? standings.indexOf(userStanding) + 1 : null;
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg">
+    <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
       {/* Header - Always Visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700 transition-colors rounded-t-lg"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700 transition-colors rounded-t-lg"
       >
         <div className="flex items-center gap-3">
           <span className="text-xl">🏆</span>
           <div className="text-left">
             <div className="text-sm font-bold text-white">League Standings</div>
             {userRank && (
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-slate-400">
                 You're #{userRank} • {userStanding.wins}-{userStanding.losses}
                 {userStanding.ties > 0 && `-${userStanding.ties}`}
               </div>
             )}
           </div>
         </div>
-        <span className="text-gray-400 text-sm">
+        <span className="text-slate-400 text-sm">
           {isExpanded ? '▼' : '▶'}
         </span>
       </button>
 
       {/* Expanded Standings Table */}
       {isExpanded && (
-        <div className="border-t border-gray-700">
+        <div className="border-t border-slate-700">
           <table className="w-full text-sm">
-            <thead className="bg-gray-900">
+            <thead className="bg-slate-900">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase">#</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase">Team</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">W-L-T</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">PF</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase">PA</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Team</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L-T</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PA</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
@@ -106,24 +106,24 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
                     key={team.roster_id}
                     className={`${
                       isCurrentUser
-                        ? 'bg-blue-900/30 border-l-4 border-blue-500'
-                        : 'hover:bg-gray-700'
+                        ? 'bg-violet-900/30 border-l-4 border-violet-500'
+                        : 'hover:bg-slate-700'
                     }`}
                   >
-                    <td className="px-4 py-2 text-gray-300 font-medium">
+                    <td className="px-4 py-2 text-slate-300 font-medium">
                       {index + 1}
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium ${isCurrentUser ? 'text-blue-400' : 'text-white'}`}>
+                        <span className={`font-medium ${isCurrentUser ? 'text-violet-400' : 'text-white'}`}>
                           {team.displayName}
                         </span>
                         {isCurrentUser && (
-                          <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">You</span>
+                          <span className="text-xs bg-violet-600 text-white px-2 py-0.5 rounded">You</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-center text-gray-300">
+                    <td className="px-4 py-2 text-center text-slate-300">
                       {team.wins}-{team.losses}
                       {team.ties > 0 && `-${team.ties}`}
                     </td>

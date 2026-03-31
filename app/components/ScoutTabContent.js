@@ -76,7 +76,7 @@ const PlayerPill = ({ player, scoringMode, currentGW, onPlayerClick }) => {
   return (
     <button
       onClick={() => onPlayerClick?.(player)}
-      className="flex items-center gap-1.5 px-2 py-1 rounded bg-gray-700/60 hover:bg-gray-600/60 transition-colors text-xs group"
+      className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-700/60 hover:bg-slate-600/60 transition-colors text-xs group"
     >
       <PlayerAvatar player={player} size="xs" />
       <span className="font-medium text-white truncate max-w-[80px]">{player.web_name || player.name}</span>
@@ -101,10 +101,10 @@ const PlayerPill = ({ player, scoringMode, currentGW, onPlayerClick }) => {
 // ─── League Projection Table ──────────────────────────────────────
 const LeagueTable = ({ teams, myDisplayName, onSelectRival }) => {
   return (
-    <div className="rounded-lg border bg-gray-800 border-gray-700 overflow-hidden">
+    <div className="rounded-lg border bg-slate-800 border-slate-700 overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-600 text-gray-400 text-xs uppercase">
+          <tr className="border-b border-slate-600 text-slate-400 text-xs uppercase">
             <th className="px-3 py-3 text-left w-8">#</th>
             <th className="px-3 py-3 text-left">Team</th>
             <th className="px-3 py-3 text-center">Proj Pts</th>
@@ -121,29 +121,29 @@ const LeagueTable = ({ teams, myDisplayName, onSelectRival }) => {
             return (
               <tr
                 key={team.roster_id}
-                className={`border-b border-gray-700/50 transition-colors ${
+                className={`border-b border-slate-700/50 transition-colors ${
                   isMe
-                    ? 'bg-blue-900/30 border-l-4 border-l-blue-500'
-                    : 'hover:bg-gray-700/40'
+                    ? 'bg-violet-900/30 border-l-4 border-l-violet-500'
+                    : 'hover:bg-slate-700/40'
                 }`}
               >
-                <td className="px-3 py-3 text-gray-400 font-mono">{idx + 1}</td>
+                <td className="px-3 py-3 text-slate-400 font-mono">{idx + 1}</td>
                 <td className="px-3 py-3">
                   <div className="font-medium text-white">{team.displayName}</div>
-                  <div className="text-xs text-gray-500">{team.rosterSize} players</div>
+                  <div className="text-xs text-slate-500">{team.rosterSize} players</div>
                 </td>
                 <td className="px-3 py-3 text-center">
-                  <span className={`font-bold text-lg ${isMe ? 'text-blue-400' : 'text-white'}`}>
+                  <span className={`font-bold text-lg ${isMe ? 'text-violet-400' : 'text-white'}`}>
                     {team.projectedPoints.toFixed(1)}
                   </span>
                 </td>
-                <td className="px-3 py-3 text-center hidden sm:table-cell text-gray-300">
+                <td className="px-3 py-3 text-center hidden sm:table-cell text-slate-300">
                   {team.optimalFormation}
                 </td>
-                <td className="px-3 py-3 text-center hidden md:table-cell text-gray-400">
+                <td className="px-3 py-3 text-center hidden md:table-cell text-slate-400">
                   {team.wins}-{team.losses}{team.ties ? `-${team.ties}` : ''}
                 </td>
-                <td className="px-3 py-3 text-center hidden md:table-cell text-gray-400">
+                <td className="px-3 py-3 text-center hidden md:table-cell text-slate-400">
                   {team.pointsFor}
                 </td>
                 <td className="px-3 py-3 text-center hidden sm:table-cell">
@@ -157,13 +157,13 @@ const LeagueTable = ({ teams, myDisplayName, onSelectRival }) => {
                   {!isMe && (
                     <button
                       onClick={() => onSelectRival(team)}
-                      className="px-3 py-1 text-xs font-medium rounded bg-gray-600 hover:bg-gray-500 text-white transition-colors"
+                      className="px-3 py-1 text-xs font-medium rounded bg-slate-600 hover:bg-slate-500 text-white transition-colors"
                     >
                       Scout
                     </button>
                   )}
                   {isMe && (
-                    <span className="px-3 py-1 text-xs font-medium rounded bg-blue-600 text-white">You</span>
+                    <span className="px-3 py-1 text-xs font-medium rounded bg-violet-600 text-white">You</span>
                   )}
                 </td>
               </tr>
@@ -203,7 +203,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button onClick={onBack} className="px-3 py-1.5 text-sm rounded bg-gray-700 hover:bg-gray-600 text-white transition-colors">
+        <button onClick={onBack} className="px-3 py-1.5 text-sm rounded bg-slate-700 hover:bg-slate-600 text-white transition-colors">
           ← Back
         </button>
         <h3 className="text-lg font-bold text-white flex-1 text-center">
@@ -213,26 +213,26 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
 
       {/* Score comparison banner */}
       <div className="grid grid-cols-3 gap-4 text-center">
-        <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
-          <div className="text-sm text-blue-300 mb-1">{myTeam.displayName}</div>
-          <div className="text-3xl font-bold text-blue-400">{myTotal.toFixed(1)}</div>
-          <div className="text-xs text-gray-400 mt-1">{myTeam.optimalFormation}</div>
+        <div className="bg-violet-900/30 border border-violet-700/50 rounded-lg p-4">
+          <div className="text-sm text-violet-300 mb-1">{myTeam.displayName}</div>
+          <div className="text-3xl font-bold text-violet-400">{myTotal.toFixed(1)}</div>
+          <div className="text-xs text-slate-400 mt-1">{myTeam.optimalFormation}</div>
         </div>
         <div className="flex items-center justify-center">
-          <div className={`text-2xl font-bold ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+          <div className={`text-2xl font-bold ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-slate-400'}`}>
             {diff > 0 ? '+' : ''}{diff.toFixed(1)}
           </div>
         </div>
         <div className="bg-red-900/20 border border-red-700/40 rounded-lg p-4">
           <div className="text-sm text-red-300 mb-1">{rival.displayName}</div>
           <div className="text-3xl font-bold text-red-400">{rivalTotal.toFixed(1)}</div>
-          <div className="text-xs text-gray-400 mt-1">{rival.optimalFormation}</div>
+          <div className="text-xs text-slate-400 mt-1">{rival.optimalFormation}</div>
         </div>
       </div>
 
       {/* Position-by-position matchup */}
-      <div className="rounded-lg border bg-gray-800 border-gray-700 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-600">
+      <div className="rounded-lg border bg-slate-800 border-slate-700 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-600">
           <h4 className="text-sm font-semibold text-white uppercase">Position Matchups</h4>
         </div>
         <div className="divide-y divide-gray-700/50">
@@ -243,7 +243,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
                 {m.myPlayers.map((p, i) => (
                   <PlayerPill key={i} player={p} scoringMode={scoringMode} currentGW={currentGW} onPlayerClick={onPlayerClick} />
                 ))}
-                {m.myPlayers.length === 0 && <div className="text-xs text-gray-500 italic">None</div>}
+                {m.myPlayers.length === 0 && <div className="text-xs text-slate-500 italic">None</div>}
               </div>
 
               {/* Position badge + diff */}
@@ -252,7 +252,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
                   {m.pos}
                 </span>
                 <span className={`text-sm font-bold ${
-                  m.diff > 0.3 ? 'text-green-400' : m.diff < -0.3 ? 'text-red-400' : 'text-gray-400'
+                  m.diff > 0.3 ? 'text-green-400' : m.diff < -0.3 ? 'text-red-400' : 'text-slate-400'
                 }`}>
                   {m.diff > 0 ? '+' : ''}{m.diff.toFixed(1)}
                 </span>
@@ -263,7 +263,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
                 {m.rivalPlayers.map((p, i) => (
                   <PlayerPill key={i} player={p} scoringMode={scoringMode} currentGW={currentGW} onPlayerClick={onPlayerClick} />
                 ))}
-                {m.rivalPlayers.length === 0 && <div className="text-xs text-gray-500 italic">None</div>}
+                {m.rivalPlayers.length === 0 && <div className="text-xs text-slate-500 italic">None</div>}
               </div>
             </div>
           ))}
@@ -273,9 +273,9 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
       {/* Edges & Vulnerabilities + Key Threats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Edges & Vulnerabilities */}
-        <div className="rounded-lg border bg-gray-800 border-gray-700 p-4 space-y-3">
+        <div className="rounded-lg border bg-slate-800 border-slate-700 p-4 space-y-3">
           <h4 className="text-sm font-semibold text-white uppercase">Your Edges</h4>
-          {edges.length === 0 && <p className="text-xs text-gray-500">No clear edges this GW</p>}
+          {edges.length === 0 && <p className="text-xs text-slate-500">No clear edges this GW</p>}
           {edges.map(e => (
             <div key={e.pos} className="flex items-center justify-between text-sm">
               <span className={`px-2 py-0.5 rounded text-xs font-bold ${getSleeperPositionBadgeClasses(e.pos)}`}>{e.pos}</span>
@@ -284,7 +284,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
           ))}
 
           <h4 className="text-sm font-semibold text-white uppercase pt-2">Vulnerabilities</h4>
-          {vulnerabilities.length === 0 && <p className="text-xs text-gray-500">No weak spots this GW</p>}
+          {vulnerabilities.length === 0 && <p className="text-xs text-slate-500">No weak spots this GW</p>}
           {vulnerabilities.map(v => (
             <div key={v.pos} className="flex items-center justify-between text-sm">
               <span className={`px-2 py-0.5 rounded text-xs font-bold ${getSleeperPositionBadgeClasses(v.pos)}`}>{v.pos}</span>
@@ -294,19 +294,19 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
         </div>
 
         {/* Key threats + rival injuries */}
-        <div className="rounded-lg border bg-gray-800 border-gray-700 p-4 space-y-3">
+        <div className="rounded-lg border bg-slate-800 border-slate-700 p-4 space-y-3">
           <h4 className="text-sm font-semibold text-white uppercase">Key Threats</h4>
           {rivalTop3.map((p, i) => {
             const pts = getNextNGameweeksTotal(p, scoringMode, currentGW, 1);
             return (
               <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="text-gray-500 w-4">{i === 0 ? '1.' : i === 1 ? '2.' : '3.'}</span>
+                <span className="text-slate-500 w-4">{i === 0 ? '1.' : i === 1 ? '2.' : '3.'}</span>
                 <PlayerAvatar player={p} size="xs" />
                 <span className="text-white font-medium truncate flex-1">{p.web_name || p.name}</span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getSleeperPositionBadgeClasses(p.position)}`}>{p.position}</span>
                 <span className="text-red-400 font-bold">{pts.toFixed(1)}</span>
                 {p.opta_stats && (
-                  <span className="text-[10px] text-gray-500" title={`xG: ${Number(p.opta_stats.xg || 0).toFixed(1)}, xA: ${Number(p.opta_stats.xa || 0).toFixed(1)}, Shots: ${p.opta_stats.shots || 0}`}>
+                  <span className="text-[10px] text-slate-500" title={`xG: ${Number(p.opta_stats.xg || 0).toFixed(1)}, xA: ${Number(p.opta_stats.xa || 0).toFixed(1)}, Shots: ${p.opta_stats.shots || 0}`}>
                     xG {Number(p.opta_stats.xg || 0).toFixed(1)}
                   </span>
                 )}
@@ -322,9 +322,9 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
                 return (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     {badge && <span className={`px-1 rounded ${badge.color}`}>{badge.icon}</span>}
-                    <span className="text-gray-300">{inj.name}</span>
-                    <span className="text-gray-500">{inj.position}</span>
-                    {inj.news && <span className="text-gray-500 truncate ml-auto max-w-[150px]" title={inj.news}>{inj.news}</span>}
+                    <span className="text-slate-300">{inj.name}</span>
+                    <span className="text-slate-500">{inj.position}</span>
+                    {inj.news && <span className="text-slate-500 truncate ml-auto max-w-[150px]" title={inj.news}>{inj.news}</span>}
                   </div>
                 );
               })}
@@ -351,7 +351,7 @@ const ScoutTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlay
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mr-3"></div>
         <span className="text-white">Scouting the league...</span>
       </div>
     );
@@ -359,10 +359,10 @@ const ScoutTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlay
 
   if (error) {
     return (
-      <div className="rounded-lg border bg-gray-800 border-gray-700 p-6 text-center">
+      <div className="rounded-lg border bg-slate-800 border-slate-700 p-6 text-center">
         <div className="text-red-500 text-4xl mb-2">❌</div>
-        <p className="text-gray-400 mb-4">{error}</p>
-        <button onClick={() => refetch(true)} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+        <p className="text-slate-400 mb-4">{error}</p>
+        <button onClick={() => refetch(true)} className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-lg transition-colors">
           Try Again
         </button>
       </div>
@@ -396,24 +396,24 @@ const ScoutTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlay
           {/* Projection summary */}
           {myTeam && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-400 uppercase">Your Projected</div>
-                <div className="text-2xl font-bold text-blue-400">{myTeam.projectedPoints.toFixed(1)}</div>
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+                <div className="text-xs text-slate-400 uppercase">Your Projected</div>
+                <div className="text-2xl font-bold text-violet-400">{myTeam.projectedPoints.toFixed(1)}</div>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-400 uppercase">League Rank</div>
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+                <div className="text-xs text-slate-400 uppercase">League Rank</div>
                 <div className="text-2xl font-bold text-white">
-                  {teams.findIndex(t => t.roster_id === myTeam.roster_id) + 1}<span className="text-sm text-gray-400">/{teams.length}</span>
+                  {teams.findIndex(t => t.roster_id === myTeam.roster_id) + 1}<span className="text-sm text-slate-400">/{teams.length}</span>
                 </div>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-400 uppercase">League Avg</div>
-                <div className="text-2xl font-bold text-gray-300">
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+                <div className="text-xs text-slate-400 uppercase">League Avg</div>
+                <div className="text-2xl font-bold text-slate-300">
                   {(teams.reduce((s, t) => s + t.projectedPoints, 0) / teams.length).toFixed(1)}
                 </div>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-400 uppercase">vs Leader</div>
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+                <div className="text-xs text-slate-400 uppercase">vs Leader</div>
                 <div className={`text-2xl font-bold ${teams[0]?.roster_id === myTeam.roster_id ? 'text-green-400' : 'text-red-400'}`}>
                   {teams[0]?.roster_id === myTeam.roster_id
                     ? 'You'
@@ -429,7 +429,7 @@ const ScoutTabContent = ({ players, currentGameweek, scoringMode = 'ffh', onPlay
           <div className="text-center">
             <button
               onClick={() => refetch(true)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
+              className="bg-violet-500 hover:bg-violet-600 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
             >
               🔄 Refresh Scouting
             </button>

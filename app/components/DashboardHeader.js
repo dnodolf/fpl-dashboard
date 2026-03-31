@@ -45,7 +45,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                   {onChangeLeague && (
                     <button
                       onClick={onChangeLeague}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
                       title="Change league"
                     >
                       ✏️
