@@ -1,154 +1,192 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
-const DIFF_STYLES = {
-  1: { bg: 'bg-green-800/70 border-green-600/40',   bar: 'bg-green-500',   badge: 'bg-green-900/60 text-green-300',   label: 'Easy' },
-  2: { bg: 'bg-green-900/60 border-green-700/30',   bar: 'bg-green-600',   badge: 'bg-green-900/50 text-green-400',   label: 'Easy' },
-  3: { bg: 'bg-yellow-900/50 border-yellow-700/30', bar: 'bg-yellow-500',  badge: 'bg-yellow-900/60 text-yellow-300', label: 'Med' },
-  4: { bg: 'bg-orange-900/50 border-orange-700/30', bar: 'bg-orange-500',  badge: 'bg-orange-900/60 text-orange-300', label: 'Hard' },
-  5: { bg: 'bg-red-900/50 border-red-700/30',       bar: 'bg-red-500',     badge: 'bg-red-900/60 text-red-300',       label: 'V.Hard' },
+const POSITION_ORDER = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
+
+const POSITION_LABEL_COLORS = {
+  GKP: 'text-yellow-400',
+  DEF: 'text-blue-400',
+  MID: 'text-green-400',
+  FWD: 'text-red-400',
 };
 
-function getDiffStyle(avgDiff) {
-  const rounded = Math.round(avgDiff);
-  return DIFF_STYLES[Math.min(5, Math.max(1, rounded))] || DIFF_STYLES[3];
-}
+const DIFF_CELL = {
+  1: { bg: 'bg-green-800',  border: 'border-green-700/50',  text: 'text-green-200'  },
+  2: { bg: 'bg-lime-800',   border: 'border-lime-700/50',   text: 'text-lime-200'   },
+  3: { bg: 'bg-yellow-800', border: 'border-yellow-700/50', text: 'text-yellow-200' },
+  4: { bg: 'bg-orange-800', border: 'border-orange-700/50', text: 'text-orange-200' },
+  5: { bg: 'bg-red-900',    border: 'border-red-800/50',    text: 'text-red-200'    },
+};
+
+const GW_COUNT = 5;
 
 const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
-  const gwData = useMemo(() => {
-    if (!myPlayers?.length || !currentGW) return [];
+  const [expanded, setExpanded] = useState(false);
 
-    const results = [];
-    for (let i = 0; i < 8; i++) {
+  const gwRange = useMemo(() => {
+    if (!currentGW) return [];
+    const range = [];
+    for (let i = 0; i < GW_COUNT; i++) {
       const gw = currentGW + i;
       if (gw > 38) break;
-      let totalDiff = 0;
-      let diffCount = 0;
-      let totalPts = 0;
-      let ptsCount = 0;
+      range.push(gw);
+    }
+    return range;
+  }, [currentGW]);
 
-      for (const player of myPlayers) {
-        if (!player.predictions?.length) continue;
-        const pred = player.predictions.find(p => p.gw === gw);
-        if (!pred) continue;
+  const sortedPlayers = useMemo(() => {
+    if (!myPlayers?.length) return [];
+    return [...myPlayers].sort((a, b) => {
+      const posA = POSITION_ORDER[a.position] ?? 4;
+      const posB = POSITION_ORDER[b.position] ?? 4;
+      if (posA !== posB) return posA - posB;
+      // Starters before bench within each position
+      return (b.is_starter ? 1 : 0) - (a.is_starter ? 1 : 0);
+    });
+  }, [myPlayers]);
 
-        // Extract difficulty from opp field: [[code, full, difficulty], ...]
-        if (pred.opp?.[0] && Array.isArray(pred.opp[0]) && pred.opp[0].length >= 3) {
-          const diff = pred.opp[0][2];
-          if (typeof diff === 'number' && diff >= 1 && diff <= 5) {
-            totalDiff += diff;
-            diffCount++;
-          }
-        }
-
-        // Extract predicted points based on scoring mode
-        const pts = scoringMode === 'v4'
-          ? (pred.v4_pts ?? pred.v3_pts ?? pred.predicted_pts ?? 0)
-          : scoringMode === 'v3'
-            ? (pred.v3_pts ?? pred.predicted_pts ?? 0)
-            : (pred.predicted_pts ?? 0);
-
-        if (pts >= 0) {
-          totalPts += pts;
-          ptsCount++;
-        }
+  const rows = useMemo(() => {
+    const result = [];
+    let currentPos = null;
+    for (const player of sortedPlayers) {
+      if (player.position !== currentPos) {
+        currentPos = player.position;
+        result.push({ type: 'header', pos: currentPos });
       }
-
-      results.push({
-        gw,
-        avgDiff: diffCount > 0 ? totalDiff / diffCount : 3,
-        avgPts:  ptsCount  > 0 ? totalPts  / ptsCount  : 0,
-        hasData: diffCount > 0 || ptsCount > 0,
-      });
+      result.push({ type: 'player', player });
     }
-    return results;
-  }, [myPlayers, currentGW, scoringMode]);
+    return result;
+  }, [sortedPlayers]);
 
-  // Find best & worst consecutive 2-GW windows (by avg difficulty)
-  const { bestWindow, worstWindow } = useMemo(() => {
-    if (gwData.length < 2) return { bestWindow: -1, worstWindow: -1 };
-    let bestIdx = 0, worstIdx = 0;
-    let bestScore = Infinity, worstScore = -Infinity;
-    for (let i = 0; i < gwData.length - 1; i++) {
-      const score = (gwData[i].avgDiff + gwData[i + 1].avgDiff) / 2;
-      if (score < bestScore) { bestScore = score; bestIdx = i; }
-      if (score > worstScore) { worstScore = score; worstIdx = i; }
-    }
-    return { bestWindow: bestIdx, worstWindow: worstIdx };
-  }, [gwData]);
-
-  if (!gwData.length) return null;
+  if (!sortedPlayers.length || !gwRange.length) return null;
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-slate-400">Squad Fixture Forecast</h3>
-        <span className="text-xs text-slate-500">Next {gwData.length} GWs · avg difficulty &amp; predicted pts</span>
-      </div>
+    <div className="bg-slate-800 border border-slate-700 rounded-lg">
+      {/* Collapsed header — always visible */}
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        onClick={() => setExpanded(v => !v)}
+      >
+        <span className="text-sm font-bold text-white">Squad Fixture Forecast</span>
+        <div className="flex items-center gap-2">
+          {!expanded && (
+            <span className="text-[10px] text-slate-500">Next {gwRange.length} GWs</span>
+          )}
+          {expanded
+            ? <ChevronDown size={14} className="text-slate-500" />
+            : <ChevronRight size={14} className="text-slate-500" />
+          }
+        </div>
+      </button>
 
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
-        {gwData.map((d, i) => {
-          const style = getDiffStyle(d.avgDiff);
-          const isBest  = i === bestWindow  || i === bestWindow  + 1;
-          const isWorst = i === worstWindow || i === worstWindow + 1;
-          // Best takes priority if windows overlap
-          const ring = isBest  ? 'ring-2 ring-green-400 ring-offset-1 ring-offset-gray-800'
-                     : isWorst ? 'ring-2 ring-red-500/60 ring-offset-1 ring-offset-gray-800'
-                     : '';
+      {expanded && (
+        <div className="px-4 pb-4">
+          {/* Legend */}
+          <div className="flex items-center gap-1.5 text-[10px] mb-3">
+            <span className="text-slate-500 mr-0.5">Difficulty:</span>
+            <span className="px-1.5 py-0.5 rounded bg-green-800 text-green-200">Easy</span>
+            <span className="px-1.5 py-0.5 rounded bg-lime-800 text-lime-200">Fav</span>
+            <span className="px-1.5 py-0.5 rounded bg-yellow-800 text-yellow-200">Med</span>
+            <span className="px-1.5 py-0.5 rounded bg-orange-800 text-orange-200">Hard</span>
+            <span className="px-1.5 py-0.5 rounded bg-red-900 text-red-200">V.Hard</span>
+          </div>
 
-          return (
-            <div
-              key={d.gw}
-              className={`${style.bg} border rounded-lg p-2 flex flex-col items-center gap-1 relative ${ring}`}
-              title={`GW${d.gw}: avg difficulty ${d.avgDiff.toFixed(1)}/5 · avg ${d.avgPts.toFixed(1)} pts`}
-            >
-              {/* Window badges */}
-              {i === bestWindow && (
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] bg-green-500 text-white px-1 rounded whitespace-nowrap font-bold">
-                  Best
-                </span>
-              )}
-              {i === worstWindow && bestWindow !== worstWindow && (
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] bg-red-500 text-white px-1 rounded whitespace-nowrap font-bold">
-                  Hard
-                </span>
-              )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr>
+                  <th className="text-left text-slate-500 font-medium pb-1.5 pr-3 w-24 min-w-[96px]">
+                    Player
+                  </th>
+                  {gwRange.map(gw => (
+                    <th key={gw} className="text-center text-slate-500 font-medium pb-1.5 px-0.5 min-w-[56px]">
+                      GW{gw}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => {
+                  if (row.type === 'header') {
+                    return (
+                      <tr key={`hdr-${row.pos}-${i}`}>
+                        <td colSpan={gwRange.length + 1} className="pt-2.5 pb-0.5">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${POSITION_LABEL_COLORS[row.pos] || 'text-slate-400'}`}>
+                            {row.pos}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  }
 
-              <span className="text-[10px] font-bold text-slate-300">GW{d.gw}</span>
+                  const { player } = row;
+                  return (
+                    <tr key={player.sleeper_id || player.player_id || i}>
+                      <td className="pr-3 py-0.5">
+                        <div className="flex items-center gap-1">
+                          <span
+                            className="text-slate-300 block truncate max-w-[88px]"
+                            title={player.web_name || player.name}
+                          >
+                            {player.web_name || player.name}
+                          </span>
+                          {!player.is_starter && (
+                            <span className="text-[8px] text-slate-600 shrink-0">BN</span>
+                          )}
+                        </div>
+                      </td>
+                      {gwRange.map(gw => {
+                        const pred = player.predictions?.find(p => p.gw === gw);
+                        if (!pred?.opp?.[0] || !Array.isArray(pred.opp[0])) {
+                          return (
+                            <td key={gw} className="px-0.5 py-0.5">
+                              <div className="flex items-center justify-center h-10 rounded bg-slate-700/20 text-slate-600 text-[10px]">
+                                —
+                              </div>
+                            </td>
+                          );
+                        }
 
-              {/* Difficulty mini-bar */}
-              <div className="w-full bg-slate-700 rounded-full h-1">
-                <div
-                  className={`${style.bar} h-1 rounded-full`}
-                  style={{ width: `${(d.avgDiff / 5) * 100}%` }}
-                />
-              </div>
+                        const [code, full, difficulty] = pred.opp[0];
+                        const isHome = (full || '').includes('(H)');
+                        const diff = Math.min(5, Math.max(1, Math.round(difficulty || 3)));
+                        const style = DIFF_CELL[diff];
 
-              <span className="text-xs font-bold text-white">{d.avgDiff.toFixed(1)}</span>
-              <span className="text-[10px] text-slate-400">{d.avgPts.toFixed(1)}pt</span>
+                        const pts = scoringMode === 'v4'
+                          ? (pred.v4_pts ?? pred.v3_pts ?? pred.predicted_pts ?? 0)
+                          : scoringMode === 'v3'
+                            ? (pred.v3_pts ?? pred.predicted_pts ?? 0)
+                            : (pred.predicted_pts ?? 0);
 
-              <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${style.badge}`}>
-                {style.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        <span className="text-[10px] text-slate-500">Difficulty:</span>
-        {[1, 2, 3, 4, 5].map(d => (
-          <span key={d} className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${DIFF_STYLES[d].badge}`}>
-            {d} — {DIFF_STYLES[d].label}
-          </span>
-        ))}
-        <span className="w-full sm:w-auto mt-1 sm:mt-0 ml-0 sm:ml-auto text-[10px] text-slate-500 flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full bg-green-400"></span> best 2-GW window
-          <span className="inline-block w-2 h-2 rounded-full bg-red-500/60 ml-1"></span> hardest window
-        </span>
-      </div>
+                        return (
+                          <td key={gw} className="px-0.5 py-0.5">
+                            <div
+                              className={`flex flex-col items-center justify-center h-10 rounded border ${style.bg} ${style.border} cursor-default`}
+                              title={`${player.web_name || player.name} vs ${full} — Difficulty ${diff}/5 · ${pts.toFixed(1)} pts`}
+                            >
+                              <span className={`font-bold text-[10px] leading-tight ${style.text}`}>
+                                {(code || '').toUpperCase()}
+                                <span className={`font-normal opacity-60 text-[8px] ml-0.5`}>
+                                  {isHome ? 'H' : 'A'}
+                                </span>
+                              </span>
+                              <span className={`text-[10px] leading-tight font-medium ${style.text} opacity-80`}>
+                                {pts.toFixed(1)}
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
