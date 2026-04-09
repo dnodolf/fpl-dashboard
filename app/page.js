@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import v3ScoringService from './services/v3ScoringService';
 import { OptimizerTabContent } from './components/OptimizerTabContent';
 import TransferTabContent from './components/TransferTabContent';
+import TradeAnalyzerTabContent from './components/TradeAnalyzerTabContent';
 import ComparisonTabContent from './components/ComparisonTabContent';
 import CheatSheetTabContent from './components/CheatSheetTabContent';
 import HomeTabContent from './components/HomeTabContent';
@@ -619,6 +620,15 @@ export default function FPLDashboard() {
               gameweekRange={transferGameweekRange}
               onGameweekRangeChange={setTransferGameweekRange}
               onPlayerClick={handlePlayerClick}
+              userId={userId}
+            />
+          )}
+
+          {activeTab === 'trades' && (
+            <TradeAnalyzerTabContent
+              players={processedPlayers}
+              currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
               userId={userId}
             />
           )}
