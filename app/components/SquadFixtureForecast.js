@@ -22,7 +22,7 @@ const DIFF_CELL = {
 
 const GW_COUNT = 5;
 
-const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
+const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode, isGWActive = false }) => {
   const [expanded, setExpanded] = useState(false);
 
   const gwRange = useMemo(() => {
@@ -102,7 +102,12 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
                   </th>
                   {gwRange.map(gw => (
                     <th key={gw} className="text-center text-slate-500 font-medium pb-1.5 px-0.5 min-w-[56px]">
-                      GW{gw}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span>GW{gw}</span>
+                        {gw === currentGW && isGWActive && (
+                          <span className="text-[8px] font-bold text-orange-400 tracking-wider">● LIVE</span>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -142,8 +147,11 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode }) => {
                         if (!pred?.opp?.[0] || !Array.isArray(pred.opp[0])) {
                           return (
                             <td key={gw} className="px-0.5 py-0.5">
-                              <div className="flex items-center justify-center h-10 rounded bg-slate-700/20 text-slate-600 text-[10px]">
-                                —
+                              <div className="flex flex-col items-center justify-center h-10 rounded bg-slate-700/20 text-[9px] leading-tight text-center">
+                                {gw === currentGW && isGWActive
+                                  ? <span className="text-orange-400 font-bold">GW<br/>Active</span>
+                                  : <span className="text-slate-600">—</span>
+                                }
                               </div>
                             </td>
                           );

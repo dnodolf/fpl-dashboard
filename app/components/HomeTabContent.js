@@ -749,6 +749,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
           myPlayers={myPlayers}
           currentGW={currentGW}
           scoringMode={scoringMode}
+          isGWActive={myPlayers.some(p => p._locked)}
         />
       )}
 
@@ -892,16 +893,20 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                     const chance = player.chance_next_round ?? player.chance_of_playing_next_round ?? 100;
                     const points = getPlayerPoints(player);
 
+                    const isLocked = player._locked || false;
                     return (
-                      <div key={player.sleeper_id} className="flex items-center gap-2 text-sm">
+                      <div key={player.sleeper_id} className={`flex items-center gap-2 text-sm ${isLocked ? 'opacity-50' : ''}`}>
                         <PlayerAvatar player={player} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <button
-                            onClick={() => onPlayerClick?.(player)}
-                            className={`truncate font-medium hover:underline transition-colors text-left block w-full ${getPositionTextColor(position)}`}
-                          >
-                            {player.web_name || player.name}
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => onPlayerClick?.(player)}
+                              className={`truncate font-medium hover:underline transition-colors text-left ${getPositionTextColor(position)}`}
+                            >
+                              {player.web_name || player.name}
+                            </button>
+                            {isLocked && <span className="text-[10px] shrink-0" title="Match in progress">🔒</span>}
+                          </div>
                           <p className="text-xs text-slate-500">{player.team_abbr}</p>
                         </div>
                         <div className="flex items-center gap-2 ml-2">
