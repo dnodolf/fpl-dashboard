@@ -211,36 +211,36 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
     return (
       <button
         onClick={() => onPlayerClick?.(player)}
-        className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg} hover:brightness-125 transition-all cursor-pointer ${isLocked ? 'opacity-60' : ''}`}
+        className={`relative flex flex-col items-center p-1.5 m-0.5 rounded-lg border text-xs text-white ${positionBg} hover:brightness-125 transition-all cursor-pointer`}
         style={{ width: 'clamp(56px, 14vw, 80px)' }}
       >
 
-        {/* Locked badge — match started/finished, player can't be moved */}
-        {isLocked && (
-          <div className="absolute top-0 left-0 right-0 bg-slate-900/80 text-[7px] text-slate-300 text-center font-bold rounded-t-lg py-[1px] tracking-wider z-10">
-            LOCKED
-          </div>
-        )}
+        {/* Dim overlay for locked players — keeps badge at full opacity */}
+        {isLocked && <div className="absolute inset-0 rounded-lg bg-slate-900/50 z-0" />}
 
-        {/* Show indicators on optimal lineup: ✓ for players in current lineup, ✗ for swaps needed */}
+        {/* Show indicators on optimal lineup: lock if match started, ✓ if in current lineup, + if swap needed */}
         {isOptimal && (
-          <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-            isInCurrentLineup
-              ? 'bg-green-500 text-white'
-              : 'bg-violet-500 text-white'
-          }`}>
-            {isInCurrentLineup ? '✓' : '+'}
+          <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${
+            isLocked
+              ? 'bg-slate-600 text-white'
+              : isInCurrentLineup
+                ? 'bg-green-500 text-white'
+                : 'bg-violet-500 text-white'
+          }`} title={isLocked ? 'Match in progress — player is locked' : undefined}>
+            {isLocked ? '🔒' : isInCurrentLineup ? '✓' : '+'}
           </div>
         )}
 
-        {/* Show indicators on current lineup: ✓ for players also in optimal, ✗ for players to bench */}
+        {/* Show indicators on current lineup: lock if match started, ✓ if in optimal, ✗ if should be benched */}
         {!isOptimal && optimalLineup && (
-          <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-            isInOptimalLineup
-              ? 'bg-green-500 text-white'
-              : 'bg-red-500 text-white'
-          }`}>
-            {isInOptimalLineup ? '✓' : '✗'}
+          <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${
+            isLocked
+              ? 'bg-slate-600 text-white'
+              : isInOptimalLineup
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+          }`} title={isLocked ? 'Match in progress — player is locked' : undefined}>
+            {isLocked ? '🔒' : isInOptimalLineup ? '✓' : '✗'}
           </div>
         )}
 
