@@ -76,6 +76,7 @@ app/
 - **Opta Advanced Stats**: xG, xA, ICT surfaced across decision tabs
 - **FPL Injury Status**: Real-time injury badges and news timestamps
 - **Hardcoded Gameweek System**: 100% reliability, zero external dependencies
+- **Live GW Auto-Expand**: Home tab fixtures section auto-expands when GW status is `live`
 
 ## Environment Configuration
 
@@ -170,6 +171,7 @@ V3 represents the optimal balance - more complex approaches added variance witho
 - **SetupModal**: First-run onboarding - paste Sleeper league ID → validate → pick roster
 - **Dynamic routing**: `integrated-players` and `optimizer` routes accept `leagueId` in request body
 - **Scoped caching**: Server cache keys use `integrated-players-{leagueId}`; client cache keyed by league
+- **Optimizer cache key**: Includes GW number (`optimizer_{userId}_{type}_{mode}_gw{N}`) — ensures live-GW locked-player detection is never served from a stale wrong-GW cache entry
 - **No auth server required**: Config persists via localStorage
 
 ### v4.4 - Mobile Responsiveness Pass (March 2026)
@@ -185,6 +187,7 @@ V3 represents the optimal balance - more complex approaches added variance witho
 ## Development Notes
 
 - **JSX Compilation**: Avoid styled-jsx; use global CSS instead
+- **Gameweek Schedule Maintenance**: Each entry in `gameweekService.js` must have `end` set 2–3 days after `start`. If `start === end`, the live detection window is zero — the GW flips to "upcoming" the instant it starts. Annual schedule updates must include proper end dates.
 - **V3 Scoring**: Minutes weighting critical for realistic predictions
 - **Error Handling**: Always implement graceful fallbacks for external API dependencies
 - **Theme System**: Application uses dark theme exclusively
