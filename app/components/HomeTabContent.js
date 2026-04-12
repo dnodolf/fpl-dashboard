@@ -209,6 +209,13 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
   const [loadingStandings, setLoadingStandings] = useState(true);
   const [standingsExpanded, setStandingsExpanded] = useState(false);
   const [fixtureExpanded, setFixtureExpanded] = useState(false);
+
+  // Auto-expand fixtures when GW is live
+  useEffect(() => {
+    if (currentGameweek?.status === 'live') {
+      setFixtureExpanded(true);
+    }
+  }, [currentGameweek?.status]);
   const [fixtureCounts, setFixtureCounts] = useState(null);
   const [fixtureList, setFixtureList] = useState(null);
 

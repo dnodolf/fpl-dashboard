@@ -112,7 +112,7 @@ export async function POST(request) {
     const scoringMode = requestData.scoringMode || 'ffh';
 
     // Check cache
-    const cacheKey = `optimizer_${userId}_${analysisType}_${scoringMode}`;
+    const cacheKey = `optimizer_${userId}_${analysisType}_${scoringMode}_gw${requestData.currentGameweek || 0}`;
     if (!forceRefresh) {
       const cached = cacheService.get(cacheKey);
       if (cached) {
