@@ -10,6 +10,7 @@ import CheatSheetTabContent from './components/CheatSheetTabContent';
 import HomeTabContent from './components/HomeTabContent';
 
 import ScoutTabContent from './components/ScoutTabContent';
+import DraftTabContent from './components/DraftTabContent';
 import DashboardHeader from './components/DashboardHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -652,6 +653,17 @@ export default function FPLDashboard() {
               currentGameweek={currentGameweek}
               onPlayerClick={handlePlayerClick}
               userId={userId}
+            />
+          )}
+
+          {activeTab === 'draft' && (
+            <DraftTabContent
+              players={processedPlayers}
+              currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
+              onPlayerClick={handlePlayerClick}
+              userId={userId}
+              leagueId={configLeagueId}
             />
           )}
 

@@ -15,7 +15,7 @@ npm run check:scoring # Scoring consistency lint (catches banned field usage)
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v4.5 - Multi-User Support
+**Current Version**: v5.0 - Draft Assistant
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -34,7 +34,8 @@ app/
 │   ├── integrated-players/route.js   # Main data integration (Sleeper + FFH)
 │   ├── optimizer/route.js            # Formation optimization
 │   ├── fpl-gameweek/route.js        # Hardcoded gameweek service
-│   └── validate-league/route.js     # Sleeper league ID validation + roster owners
+│   ├── validate-league/route.js     # Sleeper league ID validation + roster owners
+│   └── draft-analysis/route.js      # Sleeper draft data proxy (1-hr cache)
 ├── services/                      # Business logic services
 │   ├── gameweekService.js            # Hardcoded 2025-26 schedule
 │   ├── playerMatchingService.js      # Opta ID-based matching (98% success)
@@ -42,13 +43,19 @@ app/
 │   ├── v3ScoringService.js           # V3 Sleeper scoring with FPL conversion
 │   ├── scoringConversionService.js   # Pure FFH data extraction
 │   ├── fplNewsService.js             # FPL bootstrap-static news/status
-│   └── ffhCustomStatsService.js      # FFH players-custom Opta stats
+│   ├── ffhCustomStatsService.js      # FFH players-custom Opta stats
+│   ├── draftRankingService.js        # VORP, tiers, pick suggestions (pure, no React)
+│   └── draftAnalysisService.js       # Post-draft strategy analysis
 ├── components/                    # UI components
 │   ├── DashboardHeader.js, SetupModal.js, PlayerModal.js
 │   ├── OptimizerTabContent.js, TransferTabContent.js, ComparisonTabContent.js
+│   ├── DraftTabContent.js            # Draft board UI (tier board, suggestions, roster)
+│   ├── draft/
+│   │   └── DraftAnalysisPanel.js    # Draft analysis sub-view (post-draft insights)
 │   └── stats/OptimizerStatsCard.js
 ├── hooks/                         # Custom React hooks
 │   ├── usePlayerData.js, useGameweek.js, useUserConfig.js
+│   └── useDraftBoard.js              # Draft session state (picks, watchlist, DND)
 └── utils/                         # Utility functions
     ├── predictionUtils.js            # Centralized scoring utilities
     └── cacheManager.js               # Client-side caching with compression
@@ -77,6 +84,7 @@ app/
 - **FPL Injury Status**: Real-time injury badges and news timestamps
 - **Hardcoded Gameweek System**: 100% reliability, zero external dependencies
 - **Live GW Auto-Expand**: Home tab fixtures section auto-expands when GW status is `live`
+- **Draft Assistant**: VORP-based tier board with pick suggestions, watchlist, roster tracking, and post-draft strategy analysis
 
 ## Environment Configuration
 
@@ -164,7 +172,66 @@ V3 scoring uses ONLY position ratios. Complex adjustments (form, fixture, injury
 
 V3 represents the optimal balance - more complex approaches added variance without improving accuracy.
 
+## Draft Assistant (v5.0)
+
+The Draft tab is an offline mock-draft cheat sheet inspired by FantasyPros Draft Wizard, adapted for the Sleeper FC EPL league format.
+
+### Sleeper FC Roster Structure (17 players)
+```
+Starters (11): GK(1), DEF(3), MID(3), FWD(1), FM FLEX(1), FMD FLEX(1), MD FLEX(1)
+Bench (6):     any position
+Flex eligibility: FM = FWD/MID, FMD = FWD/MID/DEF, MD = MID/DEF
+```
+
+Position caps enforced in suggestions:
+- **Maximums**: GKP:2, DEF:6, MID:7, FWD:4
+- **Minimums** (must fill for legal lineup): GKP:1, DEF:3, MID:3, FWD:1
+
+### VORP (Value Over Replacement Player)
+`VORP = player_season_projection - replacement_level_at_position`
+
+Replacement level = season projection of the `(leagueSize × maxStarterSlots + 1)`th-best player at each position. Represents the best freely-available player if all teams fill their starter slots. Higher VORP = more value over what you'd get if you waited.
+
+### Tier Algorithm
+Tiers use **pyramid-shaped geometric distribution**: elite tiers are intentionally small, lower tiers progressively larger (mimicking FantasyPros). Each tier is ~1.35× the size of the previous. With ~455 players / 11 tiers: T1≈6, T2≈8, T3≈11 ... T11≈122.
+
+**Critical**: Tiers are computed once from ALL eligible players (everyone except DND list) and never recomputed as picks are made. Drafted players remain in their tier, marked as taken. This keeps tiers stable throughout the draft. Only suggestions use the available-player subset.
+
+Per-position tiers are computed independently within each position, scaling tier count to pool size (~10 players per tier, capped at 11).
+
+### Pick Suggestion Algorithm
+Three-phase weighting in `getPickSuggestions()`:
+1. **Mandatory need** — positions below minimum get a large boost; near-critical (picks remaining ≈ mandatory slots needed) triggers "Must Fill" at 3.0× multiplier
+2. **Diminishing returns** — each extra player beyond minimum at a position reduces multiplier (0.7 → 0.55 → 0.4...)
+3. **Hard cap** — positions at or above maximum get 0.05× (effectively excluded)
+
+Suggestions always guarantee at least one pick per unfilled mandatory position when available.
+
+### State Persistence
+Draft state persists to `localStorage` across page reloads:
+- `fpl_draft_session` — drafted players map: `{ [sleeperId]: { draftedBy, pickNumber, name, position } }`
+- `fpl_draft_watchlist` — array of sleeper IDs
+- `fpl_draft_dnd` — do-not-draft sleeper IDs (also excluded from tier ranking)
+
+### Draft Analysis (Phase 1.5)
+Post-draft analysis pulls actual league draft data from Sleeper API via `/api/draft-analysis?leagueId=X`. Retroactively evaluates every pick using VORP-at-time, grades managers, detects position runs, and generates plain-English strategy takeaways with actionable tips for next year's draft.
+
+Sleeper draft API endpoints used (all public, no auth):
+- `GET /league/{id}/drafts`
+- `GET /draft/{id}/picks`
+- `GET /draft/{id}/traded_picks`
+- `GET /league/{id}/users`
+
 ## Recent Technical Updates
+
+### v5.0 - Draft Assistant (April 2026)
+- **Draft tab**: VORP-based tier board, pick suggestions, watchlist, DND list, my roster sidebar
+- **Stable tiers**: Rankings computed from all eligible players once; drafted players stay in tier marked as taken (not removed)
+- **Pyramid tier distribution**: Geometric growth (1.35×/tier) gives small elite tiers, larger lower tiers
+- **Position-aware suggestions**: Mandatory minimums, urgency detection, diminishing returns, hard caps per position
+- **By-position tier view**: Independent per-position tiers alongside overall tier board
+- **Draft Analysis tab**: Retroactive analysis of actual Sleeper draft with manager grades, position flow, steals/reaches, strategy takeaways
+- **localStorage persistence**: Draft session, watchlist, and DND survive page reloads; Reset clears all three
 
 ### v4.5 - Multi-User Support (March 2026)
 - **Per-user league config**: `useUserConfig` hook stores `leagueId` + `userId` in localStorage
