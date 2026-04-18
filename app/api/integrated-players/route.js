@@ -457,7 +457,7 @@ const sleeperPlayersArray = Object.entries(sleeperData.players)
 export async function POST(request) {
   try {
     const requestData = await request.json();
-    const forceRefresh = requestData.forceRefresh || false;
+    const forceRefresh = requestData.forceRefresh || process.env.DISABLE_CACHE === 'true' || false;
     const requestLeagueId = requestData.leagueId || null;
     const cacheKey = requestLeagueId ? `integrated-players-${requestLeagueId}` : 'integrated-players';
 
