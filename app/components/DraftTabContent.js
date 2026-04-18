@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useDraftBoard } from '../hooks/useDraftBoard';
 import { getTierLabel, getTierColor, ROSTER_SLOTS } from '../services/draftRankingService';
@@ -66,12 +66,22 @@ const SuggestionCard = ({ player, rank, onDraft, onPlayerClick }) => {
 };
 
 // ─── Player Row in Tier Board ───────────────────────────────────────────────
-const PlayerRow = ({ player, isWatchlisted, myRosterFull, onDraft, onUndraft, onToggleWatchlist, onToggleDND, onPlayerClick }) => {
+const PlayerRow = ({ player, isWatchlisted, myRosterFull, leagueTeams, onDraft, onUndraft, onToggleWatchlist, onToggleDND, onPlayerClick }) => {
   const isDrafted = player.isDrafted;
   const isMyPick = player.draftedBy === 'me';
+  const [capturingTeam, setCapturingTeam] = useState(false);
+
+  const handleTakenClick = () => setCapturingTeam(true);
+
+  const handleTeamSelect = (e) => {
+    const name = e.target.value;
+    if (!name) return;
+    onDraft(player, name);
+    setCapturingTeam(false);
+  };
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded transition-colors group ${isDrafted ? 'opacity-40' : 'hover:bg-slate-700/30'}`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded transition-colors group ${isDrafted ? 'bg-slate-800/30' : 'hover:bg-slate-700/30'}`}>
       <span className="text-slate-500 text-xs font-mono min-w-[28px]">{player.draftOverallRank}</span>
 
       <PlayerAvatar player={player} size="sm" />
@@ -87,11 +97,6 @@ const PlayerRow = ({ player, isWatchlisted, myRosterFull, onDraft, onUndraft, on
           <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(player.position)}`}>
             {player.draftPosition}
           </span>
-          {isDrafted && (
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${isMyPick ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : 'bg-slate-600/30 text-slate-500 border-slate-600/30'}`}>
-              {isMyPick ? 'My Pick' : 'Taken'}
-            </span>
-          )}
           {!isDrafted && player.draftSleeperTag && (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400 border border-green-500/30">
               Sleeper
@@ -103,7 +108,7 @@ const PlayerRow = ({ player, isWatchlisted, myRosterFull, onDraft, onUndraft, on
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats — always visible */}
       <div className="hidden md:flex items-center gap-4 text-xs text-slate-400">
         <div className="text-right min-w-[48px]">
           <div className="text-slate-300 font-medium">{player.draftProjection?.toFixed(1)}</div>
@@ -116,24 +121,47 @@ const PlayerRow = ({ player, isWatchlisted, myRosterFull, onDraft, onUndraft, on
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-1.5 flex-shrink-0 w-44">
+        {/* Star — always visible */}
+        <button
+          onClick={() => onToggleWatchlist(player.sleeper_id || player.id)}
+          className={`p-1 rounded transition-colors ${isWatchlisted ? 'text-amber-400' : 'text-slate-500 hover:text-amber-400'}`}
+          title={isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
+        >
+          {isWatchlisted ? '\u2605' : '\u2606'}
+        </button>
+
         {isDrafted ? (
-          <button
-            onClick={() => onUndraft(player.sleeper_id || player.id)}
-            className="px-2 py-1 text-slate-600 hover:text-slate-400 text-[10px] rounded transition-colors opacity-0 group-hover:opacity-100"
-            title="Undo pick"
-          >
-            Undo
-          </button>
+          <>
+            <span className={`text-xs font-medium truncate w-24 ${isMyPick ? 'text-violet-400' : 'text-slate-400'}`} title={`Drafted: ${player.draftedBy === 'me' ? 'Me' : player.draftedBy}`}>
+              Drafted: {player.draftedBy === 'me' ? 'Me' : player.draftedBy}
+            </span>
+            <button
+              onClick={() => onUndraft(player.sleeper_id || player.id)}
+              className="px-2 py-1 text-slate-600 hover:text-slate-400 text-[10px] rounded transition-colors opacity-0 group-hover:opacity-100"
+              title="Undo pick"
+            >
+              Undo
+            </button>
+          </>
+        ) : capturingTeam ? (
+          <div className="flex items-center gap-1">
+            <select
+              ref={el => { if (el) setTimeout(() => { try { el.showPicker(); } catch(e) {} }, 0); }}
+              defaultValue=""
+              onChange={handleTeamSelect}
+              onBlur={() => setCapturingTeam(false)}
+              onKeyDown={e => e.key === 'Escape' && setCapturingTeam(false)}
+              className="px-1.5 py-0.5 bg-slate-700 border border-slate-500 rounded text-[10px] text-white focus:outline-none focus:border-violet-500"
+            >
+              <option value="" disabled>— pick team —</option>
+              {leagueTeams.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
         ) : (
           <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={() => onToggleWatchlist(player.sleeper_id || player.id)}
-              className={`p-1 rounded transition-colors ${isWatchlisted ? 'text-amber-400' : 'text-slate-500 hover:text-amber-400'}`}
-              title={isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
-            >
-              {isWatchlisted ? '\u2605' : '\u2606'}
-            </button>
             <button
               onClick={() => onDraft(player, 'me')}
               disabled={myRosterFull}
@@ -142,7 +170,7 @@ const PlayerRow = ({ player, isWatchlisted, myRosterFull, onDraft, onUndraft, on
               Mine
             </button>
             <button
-              onClick={() => onDraft(player, 'other')}
+              onClick={handleTakenClick}
               className="px-2 py-1 bg-slate-600/80 hover:bg-slate-500 text-white text-[10px] font-medium rounded transition-colors"
             >
               Taken
@@ -162,7 +190,7 @@ const PlayerRow = ({ player, isWatchlisted, myRosterFull, onDraft, onUndraft, on
 };
 
 // ─── Tier Group ─────────────────────────────────────────────────────────────
-const TierGroup = ({ tierNumber, players, watchlist, myRosterFull, onDraft, onUndraft, onToggleWatchlist, onToggleDND, onPlayerClick, isLast }) => {
+const TierGroup = ({ tierNumber, players, watchlist, myRosterFull, leagueTeams, onDraft, onUndraft, onToggleWatchlist, onToggleDND, onPlayerClick, isLast }) => {
   const [collapsed, setCollapsed] = useState(tierNumber >= 7);
   const tierColor = getTierColor(tierNumber);
 
@@ -196,6 +224,7 @@ const TierGroup = ({ tierNumber, players, watchlist, myRosterFull, onDraft, onUn
               player={player}
               isWatchlisted={watchlist.includes(player.sleeper_id || player.id)}
               myRosterFull={myRosterFull}
+              leagueTeams={leagueTeams}
               onDraft={onDraft}
               onUndraft={onUndraft}
               onToggleWatchlist={onToggleWatchlist}
@@ -252,20 +281,29 @@ const PositionTierGroup = ({ tierNumber, position, players, watchlist, myRosterF
             return (
               <div key={playerId} className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors group ${isDrafted ? 'opacity-40' : 'hover:bg-slate-700/30'}`}>
                 <span className="text-slate-500 text-[10px] font-mono min-w-[20px]">{player.draftOverallRank}</span>
-                <button
-                  onClick={() => onPlayerClick?.(player)}
-                  className={`text-xs font-medium truncate transition-colors text-left flex-1 min-w-0 ${isDrafted ? 'text-slate-500 line-through' : 'text-white hover:text-violet-400'}`}
-                >
-                  {player.web_name || player.name}
-                </button>
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => onPlayerClick?.(player)}
+                    className={`text-xs font-medium truncate transition-colors text-left w-full ${isDrafted ? 'text-slate-500 line-through' : 'text-white hover:text-violet-400'}`}
+                  >
+                    {player.web_name || player.name}
+                  </button>
+                  <div className="text-[9px] text-slate-500 truncate">{player.team_abbr || player.team}</div>
+                </div>
                 {isDrafted ? (
-                  <span className={`text-[9px] font-medium ${isMyPick ? 'text-violet-400' : 'text-slate-600'}`}>
+                  <span className={`text-[9px] font-medium min-w-[56px] text-right ${isMyPick ? 'text-violet-400' : 'text-slate-600'}`}>
                     {isMyPick ? 'Mine' : 'Taken'}
                   </span>
                 ) : (
                   <>
-                    <span className="text-[10px] text-slate-500 hidden sm:inline">{player.team_abbr || player.team}</span>
-                    <span className="text-[10px] text-slate-400 min-w-[28px] text-right">{player.draftVorp?.toFixed(0)}</span>
+                    <div className="text-right min-w-[28px]">
+                      <div className="text-[10px] text-slate-300">{player.draftProjection?.toFixed(0)}</div>
+                      <div className="text-[9px] text-slate-600">Proj</div>
+                    </div>
+                    <div className="text-right min-w-[28px]">
+                      <div className="text-[10px] text-slate-400">{player.draftVorp?.toFixed(0)}</div>
+                      <div className="text-[9px] text-slate-600">VORP</div>
+                    </div>
                   </>
                 )}
                 <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -398,6 +436,11 @@ const RosterSidebar = ({ myRoster, onUndraft, onPlayerClick }) => {
             </span>
             {s.player ? (
               <>
+                {!['GK', 'DEF', 'MID', 'FWD'].includes(s.slot) && (
+                  <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(s.player.position)}`}>
+                    {(s.player.position || '').substring(0, 3).toUpperCase()}
+                  </span>
+                )}
                 <button
                   onClick={() => onPlayerClick?.(s.player)}
                   className="text-xs text-slate-300 hover:text-violet-400 truncate flex-1 text-left"
@@ -463,6 +506,23 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
   const [activeView, setActiveView] = useState('board'); // 'board' | 'analysis'
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [tierView, setTierView] = useState('overall'); // 'overall' | 'byPosition'
+
+  const [leagueTeams, setLeagueTeams] = useState([]);
+
+  useEffect(() => {
+    if (!leagueId) return;
+    fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`)
+      .then(r => r.json())
+      .then(users => {
+        const teams = users
+          .filter(u => u.user_id !== userId)
+          .map(u => u.metadata?.team_name || u.display_name)
+          .filter(Boolean)
+          .sort();
+        setLeagueTeams(teams);
+      })
+      .catch(() => {});
+  }, [leagueId, userId]);
 
   const {
     draftedPlayers,
@@ -596,15 +656,20 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
         </div>
 
         {/* Draft Progress */}
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="text-sm text-slate-400">
-            Pick <span className="text-white font-bold">{pickNumber + 1}</span> of {totalPicks}
-          </span>
-          <span className="text-xs text-slate-600">|</span>
-          <span className="text-xs text-slate-500">
-            My roster: {myRoster.length}/17
-          </span>
-        </div>
+        {(() => {
+          const leagueSize = Math.round(totalPicks / 17) || 10;
+          const currentRound = Math.ceil((pickNumber + 1) / leagueSize);
+          return (
+            <div className="flex items-center gap-3 ml-auto">
+              <span className="text-3xl font-bold text-white leading-none">
+                Pick {pickNumber + 1}
+                <span className="text-lg font-normal text-slate-500"> / {totalPicks}</span>
+              </span>
+              <span className="text-slate-600">·</span>
+              <span className="text-xl font-semibold text-slate-300 leading-none">Round {currentRound}</span>
+            </div>
+          );
+        })()}
 
         {/* Reset */}
         {showResetConfirm ? (
@@ -614,7 +679,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
               onClick={handleReset}
               className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded"
             >
-              Yes, reset
+              Yes
             </button>
             <button
               onClick={() => setShowResetConfirm(false)}
@@ -626,8 +691,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
         ) : (
           <button
             onClick={() => setShowResetConfirm(true)}
-            className="px-2 py-1 text-xs text-slate-500 hover:text-red-400 transition-colors"
-            title="Reset draft"
+            className="px-3 py-1.5 text-xs font-medium bg-red-600/80 hover:bg-red-500 text-white rounded transition-colors"
           >
             Reset
           </button>
@@ -729,6 +793,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
                     players={group.players}
                     watchlist={watchlist}
                     myRosterFull={myRosterFull}
+                    leagueTeams={leagueTeams}
                     onDraft={draftPlayer}
                     onUndraft={undraftPlayer}
                     onToggleWatchlist={toggleWatchlist}
@@ -759,7 +824,6 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
                         {pos}
                       </span>
                       <span className="text-xs text-slate-500">{totalPlayers} available</span>
-                      <span className="ml-auto text-[10px] text-slate-600 pr-1">VORP</span>
                     </div>
                     {groups.length > 0 ? (
                       groups.map((group, i) => (
@@ -801,11 +865,11 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
           </div>
 
           {/* Watchlist */}
-          {watchlistPlayers.length > 0 && (
-            <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
-              <h3 className="text-sm font-bold text-amber-400 mb-2">
-                Watchlist ({watchlistPlayers.length})
-              </h3>
+          <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
+            <h3 className="text-sm font-bold text-amber-400 mb-2">
+              Watchlist {watchlistPlayers.length > 0 && `(${watchlistPlayers.length})`}
+            </h3>
+            {watchlistPlayers.length > 0 ? (
               <div className="space-y-1">
                 {watchlistPlayers.map(player => (
                   <div key={player.sleeper_id || player.id} className="flex items-center gap-2">
@@ -819,42 +883,75 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
                       {player.draftPosition}
                     </span>
                     <span className="text-[10px] text-slate-500">{player.draftVorp?.toFixed(1)}</span>
+                    <button
+                      onClick={() => toggleWatchlist(player.sleeper_id || player.id)}
+                      className="text-amber-400 hover:text-slate-500 text-xs transition-colors flex-shrink-0"
+                      title="Remove from watchlist"
+                    >
+                      &#9733;
+                    </button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-xs text-slate-600 italic">Star players to add them here</p>
+            )}
+          </div>
 
-          {/* Scarcity Info */}
-          {rankings.scarcity && (
-            <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
-              <h3 className="text-sm font-bold text-white mb-2">Position Scarcity</h3>
-              <div className="space-y-1.5">
-                {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
-                  const val = rankings.scarcity[pos] || 1;
-                  const barWidth = Math.min(100, val * 50); // Normalize for display
-                  const isHigh = val > 1.3;
-                  return (
-                    <div key={pos} className="flex items-center gap-2">
-                      <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(pos)} min-w-[32px] text-center`}>
-                        {pos}
-                      </span>
-                      <div className="flex-1 bg-slate-700/50 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${isHigh ? 'bg-orange-500' : 'bg-slate-500'}`}
-                          style={{ width: `${barWidth}%` }}
-                        />
+          {/* Tier Depth */}
+          {Object.keys(positionTierGroups).length > 0 && (() => {
+            const TIER_COLS = [
+              { tier: 1, label: 'Elite' },
+              { tier: 2, label: 'Prem' },
+              { tier: 3, label: 'High' },
+              { tier: 4, label: 'Start' },
+              { tier: 5, label: 'Solid' },
+            ];
+            return (
+              <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
+                <h3 className="text-sm font-bold text-white mb-2">Tier Depth</h3>
+                <p className="text-[10px] text-slate-500 mb-2">Players remaining per quality tier</p>
+                {/* Column headers */}
+                <div className="flex items-center gap-1 mb-1 pl-9">
+                  {TIER_COLS.map(({ tier, label }) => (
+                    <div key={tier} className="flex-1 text-center text-[9px] text-slate-500 font-medium">{label}</div>
+                  ))}
+                </div>
+                {/* Position rows */}
+                <div className="space-y-1">
+                  {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                    const groups = positionTierGroups[pos] || [];
+                    const byTier = Object.fromEntries(groups.map(g => [g.tierNumber, g.players.filter(p => !p.isDrafted).length]));
+                    return (
+                      <div key={pos} className="flex items-center gap-1">
+                        <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(pos)} w-8 text-center flex-shrink-0`}>
+                          {pos}
+                        </span>
+                        {TIER_COLS.map(({ tier }) => {
+                          const count = byTier[tier] ?? '–';
+                          const n = typeof count === 'number' ? count : null;
+                          const cellStyle = n === null
+                            ? 'text-slate-700'
+                            : n === 0
+                            ? 'text-slate-600 line-through'
+                            : n <= 2
+                            ? 'text-red-400 font-bold'
+                            : n <= 4
+                            ? 'text-orange-400 font-medium'
+                            : 'text-slate-300';
+                          return (
+                            <div key={tier} className={`flex-1 text-center text-xs ${cellStyle}`}>
+                              {count}
+                            </div>
+                          );
+                        })}
                       </div>
-                      <span className={`text-[10px] ${isHigh ? 'text-orange-400' : 'text-slate-500'}`}>
-                        {val.toFixed(2)}x
-                      </span>
-                    </div>
-                  );
-                })}
-                <p className="text-[10px] text-slate-600 mt-1">Higher = scarcer = draft sooner</p>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>
