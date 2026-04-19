@@ -141,6 +141,63 @@ function assignTiers(sortedPlayersWithProjections, numTiers) {
 }
 
 /**
+ * Compute the number of flex starter slots each position can fill.
+ * Derived directly from ROSTER_SLOTS so it stays in sync with league rules.
+ *
+ * Results for current Sleeper FC structure:
+ *   GKP: 0 flex slots  (only fills GK)
+ *   DEF: 2 flex slots  (FMD FLEX + MD FLEX)
+ *   MID: 3 flex slots  (FM FLEX + FMD FLEX + MD FLEX)
+ *   FWD: 2 flex slots  (FM FLEX + FMD FLEX)
+ */
+function computeFlexSlotCounts() {
+  const flexCounts = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
+  const flexSlotNames = ['FM FLEX', 'FMD FLEX', 'MD FLEX'];
+
+  ROSTER_SLOTS.starters.forEach(slot => {
+    if (flexSlotNames.includes(slot.slot)) {
+      slot.positions.forEach(pos => {
+        const normalized = normalizePosition(pos);
+        if (normalized && flexCounts[normalized] !== undefined) {
+          flexCounts[normalized] += slot.count;
+        }
+      });
+    }
+  });
+
+  return flexCounts;
+}
+
+/**
+ * Maximum bonus applied to the most flex-eligible position (MID).
+ * 0.12 = up to 12% VORP boost. Keeps rankings mostly projection-driven
+ * while nudging versatile players up relative to specialists.
+ */
+const FLEX_WEIGHT = 0.12;
+
+/**
+ * Compute flex multipliers for VORP adjustment.
+ * Players eligible for more flex slots get a modest VORP bonus
+ * reflecting their higher roster utility.
+ *
+ * Formula: 1 + (flexSlots / maxFlexSlots) * FLEX_WEIGHT
+ *
+ * With current structure:
+ *   GKP: 1.00x, DEF: 1.08x, MID: 1.12x, FWD: 1.08x
+ */
+export function computeFlexMultipliers() {
+  const flexCounts = computeFlexSlotCounts();
+  const maxFlex = Math.max(...Object.values(flexCounts), 1);
+
+  const multipliers = {};
+  for (const [pos, count] of Object.entries(flexCounts)) {
+    multipliers[pos] = 1 + (count / maxFlex) * FLEX_WEIGHT;
+  }
+
+  return multipliers;
+}
+
+/**
  * Compute position scarcity multipliers.
  * Higher = scarcer = more valuable to draft early.
  * Formula: (totalStarterSlots / availableAtPosition) normalized to baseline of 1.0
@@ -192,17 +249,24 @@ export function computeDraftRankings(players, scoringMode, leagueSize = 10) {
   // Compute scarcity
   const scarcity = computePositionScarcity(players);
 
-  // Rank all players by VORP
+  // Flex multipliers: reward players who can fill more starter slots
+  const flexMultipliers = computeFlexMultipliers();
+
+  // Rank all players by VORP (flex-adjusted)
   const rankedPlayers = players
     .map(player => {
       const pos = normalizePosition(player.position);
       const projection = getSeasonProjection(player, scoringMode);
-      const vorp = pos ? projection - (replacementValues[pos] || 0) : 0;
+      const rawVorp = pos ? projection - (replacementValues[pos] || 0) : 0;
+      const flexMultiplier = flexMultipliers[pos] || 1.0;
+      const vorp = rawVorp * flexMultiplier;
 
       return {
         ...player,
         draftProjection: projection,
         draftVorp: vorp,
+        draftRawVorp: rawVorp,
+        draftFlexMultiplier: flexMultiplier,
         draftPosition: pos,
       };
     })
@@ -341,7 +405,8 @@ export function getPickSuggestions(availablePlayers, myRoster, scoringMode, leag
   const scored = availablePlayers.map(player => {
     const pos = normalizePosition(player.position);
     const vorp = player.draftVorp || 0;
-    if (vorp <= 0) return null;
+    // Don't filter negative VORP — in late rounds all bench picks are below
+    // replacement level, but we still need to suggest the best available.
 
     let multiplier = 1.0;
     let reason = 'Value';
@@ -375,7 +440,10 @@ export function getPickSuggestions(availablePlayers, myRoster, scoringMode, leag
     // Sleeper tag override
     if (player.draftSleeperTag && reason === 'Value') reason = 'Sleeper';
 
-    const score = vorp * multiplier * scarcityBoost;
+    // For negative VORP (late-round bench picks), use rank-based score so
+    // multipliers still boost needed positions rather than penalising them.
+    const baseScore = vorp >= 0 ? vorp : 1 / (player.draftOverallRank || 999);
+    const score = baseScore * multiplier * scarcityBoost;
 
     return { ...player, draftScore: score, draftReason: reason, draftNeedWeight: multiplier };
   }).filter(Boolean);
@@ -451,4 +519,4 @@ export function getTierColor(tierNumber) {
   return colors[tierNumber] || colors[11];
 }
 
-export { SLEEPER_FC_ROSTER, ROSTER_SLOTS, getSeasonProjection, normalizePosition };
+export { SLEEPER_FC_ROSTER, ROSTER_SLOTS, FLEX_WEIGHT, POSITION_MINIMUMS, POSITION_MAXIMUMS, getSeasonProjection, normalizePosition };

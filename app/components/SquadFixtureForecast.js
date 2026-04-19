@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
-const POSITION_ORDER = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
+const POSITION_ORDER = { FWD: 0, MID: 1, DEF: 2, GKP: 3 };
 
 const POSITION_LABEL_COLORS = {
   GKP: 'text-yellow-400',

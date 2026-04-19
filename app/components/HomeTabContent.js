@@ -875,7 +875,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
 
         {/* Roster by Position */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {['GKP', 'DEF', 'MID', 'FWD'].map(position => {
+          {['FWD', 'MID', 'DEF', 'GKP'].map(position => {
             const positionPlayers = myPlayers
               .filter(p => p.position === position)
               .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a));

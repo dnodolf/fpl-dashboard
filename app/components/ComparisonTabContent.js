@@ -24,7 +24,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
     return players.filter(p =>
       p.owned_by === userId || p.owned_by === 'You'
     ).sort((a, b) => {
-      const posOrder = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
+      const posOrder = { FWD: 0, MID: 1, DEF: 2, GKP: 3 };
       if (posOrder[a.position] !== posOrder[b.position]) {
         return posOrder[a.position] - posOrder[b.position];
       }
@@ -207,7 +207,7 @@ const ComparisonTabContent = ({ players = [], currentGameweek, scoringMode = 'ff
                 className="w-full px-3 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none text-sm"
               >
                 <option value="">Select from your team...</option>
-                {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
                   const posPlayers = myPlayers.filter(p => p.position === pos);
                   if (posPlayers.length === 0) return null;
                   return (
