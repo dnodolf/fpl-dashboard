@@ -7,11 +7,10 @@ node_modules/
 # Local env files
 .env*.local
 
-# Claude Code local settings
+# Claude Code local settings and worktrees
 .claude/settings.local.json
+.claude/plans/
+.claire/
 
 # Development temp files
 temp/
-
-# Claude Code plans
-.claude/plans/
