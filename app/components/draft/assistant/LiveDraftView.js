@@ -24,10 +24,55 @@ import PositionBadge from '../../common/PositionBadge';
 
 const POSITIONS = ['ALL', 'FWD', 'MID', 'DEF', 'GKP'];
 
+// ─── Demo Controls Bar ───────────────────────────────────────────────────────
+function DemoBar({ demoPickIndex, totalDemoPicks, demoSpeed, demoPlaying, onAdvance, onRewind, onTogglePlay, onChangeSpeed, onReset }) {
+  const pct = totalDemoPicks ? Math.round((demoPickIndex / totalDemoPicks) * 100) : 0;
+  return (
+    <div className="bg-violet-900/20 border border-violet-500/40 rounded-lg px-3 py-2 space-y-2">
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-violet-400 font-bold">▶ DEMO</span>
+          <span className="text-slate-500">pick {demoPickIndex} / {totalDemoPicks}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {/* Speed selector */}
+          {(['manual', 'slow', 'fast']).map(s => (
+            <button
+              key={s}
+              onClick={() => onChangeSpeed(s)}
+              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                demoSpeed === s ? 'bg-violet-600 text-white' : 'bg-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              {s === 'manual' ? '⏸ Step' : s === 'slow' ? '🐢 Slow' : '⚡ Fast'}
+            </button>
+          ))}
+          <span className="text-slate-700">|</span>
+          {/* Rewind */}
+          <button onClick={onRewind} disabled={demoPickIndex === 0} className="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-slate-300 rounded text-xs transition-colors">◀</button>
+          {/* Step / Play-pause */}
+          {demoSpeed === 'manual' ? (
+            <button onClick={onAdvance} disabled={demoPickIndex >= totalDemoPicks} className="px-2.5 py-0.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-slate-300 rounded text-xs font-medium transition-colors">Next ▶</button>
+          ) : (
+            <button onClick={onTogglePlay} className={`px-2.5 py-0.5 rounded text-xs font-medium transition-colors ${demoPlaying ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}>
+              {demoPlaying ? '⏸ Pause' : '▶ Play'}
+            </button>
+          )}
+          <span className="text-slate-700">|</span>
+          <button onClick={onReset} className="px-2 py-0.5 text-slate-500 hover:text-slate-300 text-xs transition-colors">✕ Exit</button>
+        </div>
+      </div>
+      {/* Progress bar */}
+      <div className="w-full bg-slate-700 rounded-full h-1">
+        <div className="bg-violet-500 h-1 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Sync Status Bar ─────────────────────────────────────────────────────────
 function SyncBar({ syncStatus, syncError, lastSyncAt, onResync, onReset }) {
   const secondsAgo = lastSyncAt ? Math.round((Date.now() - lastSyncAt) / 1000) : null;
-
   const isOutOfSync = syncStatus === 'out_of_sync';
   const isError     = syncStatus === 'error';
 
@@ -38,39 +83,17 @@ function SyncBar({ syncStatus, syncError, lastSyncAt, onResync, onReset }) {
                     'bg-slate-800/60 border-slate-700'
     }`}>
       <div className="flex items-center gap-2">
-        {syncStatus === 'polling' && (
-          <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />
-        )}
-        {syncStatus === 'synced' && (
-          <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
-        )}
-        {isOutOfSync && (
-          <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-        )}
-        {isError && (
-          <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
-        )}
-
+        {syncStatus === 'polling' && <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />}
+        {syncStatus === 'synced'  && <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />}
+        {isOutOfSync              && <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />}
+        {isError                  && <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />}
         {isOutOfSync && <span className="text-amber-400 font-medium">⚠️ Out of sync — picks may be missing</span>}
         {isError     && <span className="text-red-400">Connection error: {syncError}</span>}
-        {!isOutOfSync && !isError && secondsAgo !== null && (
-          <span className="text-slate-500">Last synced {secondsAgo}s ago</span>
-        )}
+        {!isOutOfSync && !isError && secondsAgo !== null && <span className="text-slate-500">Last synced {secondsAgo}s ago</span>}
       </div>
-
       <div className="flex items-center gap-2">
-        <button
-          onClick={onResync}
-          className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
-        >
-          ⟳ Resync
-        </button>
-        <button
-          onClick={onReset}
-          className="px-2.5 py-1 text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          ✕ Exit
-        </button>
+        <button onClick={onResync} className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors">⟳ Resync</button>
+        <button onClick={onReset}  className="px-2.5 py-1 text-slate-500 hover:text-slate-300 transition-colors">✕ Exit</button>
       </div>
     </div>
   );
@@ -212,10 +235,22 @@ export default function LiveDraftView({
   takenIds,
   suggestions,
   userMap,
+  // Sync (live mode)
   syncStatus,
   syncError,
   lastSyncAt,
   onResync,
+  // Demo mode
+  isDemoMode,
+  demoPickIndex,
+  demoAllPicksCount,
+  demoSpeed,
+  demoPlaying,
+  onAdvanceDemo,
+  onRewindDemo,
+  onToggleDemoPlay,
+  onChangeDemoSpeed,
+  // Shared
   onReset,
 }) {
   const [posFilter, setPosFilter] = useState('ALL');
@@ -257,10 +292,27 @@ export default function LiveDraftView({
     });
   }, [picks, rankings, leagueSize]);
 
+  // The top bar — demo controls or sync status
+  const topBar = isDemoMode ? (
+    <DemoBar
+      demoPickIndex={demoPickIndex}
+      totalDemoPicks={demoAllPicksCount}
+      demoSpeed={demoSpeed}
+      demoPlaying={demoPlaying}
+      onAdvance={onAdvanceDemo}
+      onRewind={onRewindDemo}
+      onTogglePlay={onToggleDemoPlay}
+      onChangeSpeed={onChangeDemoSpeed}
+      onReset={onReset}
+    />
+  ) : (
+    <SyncBar syncStatus={syncStatus} syncError={syncError} lastSyncAt={lastSyncAt} onResync={onResync} onReset={onReset} />
+  );
+
   if (phase === 'waiting') {
     return (
       <div className="space-y-4">
-        <SyncBar syncStatus={syncStatus} syncError={syncError} lastSyncAt={lastSyncAt} onResync={onResync} onReset={onReset} />
+        {topBar}
         <WaitingScreen draftMeta={draftMeta} onResync={onResync} onReset={onReset} />
       </div>
     );
@@ -268,8 +320,8 @@ export default function LiveDraftView({
 
   return (
     <div className="space-y-4">
-      {/* Sync bar */}
-      <SyncBar syncStatus={syncStatus} syncError={syncError} lastSyncAt={lastSyncAt} onResync={onResync} onReset={onReset} />
+      {/* Sync / demo bar */}
+      {topBar}
 
       {/* Pick banner */}
       <PickBanner

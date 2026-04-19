@@ -28,6 +28,20 @@ export default function DraftAssistantPanel({ players, scoringMode, leagueId, us
     detectedSlot,
     confirmAndStart,
 
+    // Demo
+    isDemoMode,
+    demoLoading,
+    demoAllPicks,
+    demoPickIndex,
+    demoSpeed,
+    demoPlaying,
+    fetchDemoData,
+    startDemoReplay,
+    advanceDemoPick,
+    rewindDemoPick,
+    toggleDemoPlay,
+    changeDemoSpeed,
+
     // Live draft data
     picks,
     mySlot,
@@ -63,10 +77,14 @@ export default function DraftAssistantPanel({ players, scoringMode, leagueId, us
         setSetupLeagueId={setSetupLeagueId}
         setupError={setupError}
         setupLoading={setupLoading}
+        demoLoading={demoLoading}
         draftMeta={draftMeta}
         detectedSlot={detectedSlot}
+        demoAllPicks={demoAllPicks}
         onFetchDraft={fetchDraftForLeague}
+        onFetchDemo={fetchDemoData}
         onConfirmAndStart={confirmAndStart}
+        onStartDemoReplay={startDemoReplay}
       />
     );
   }
@@ -103,6 +121,15 @@ export default function DraftAssistantPanel({ players, scoringMode, leagueId, us
       syncError={syncError}
       lastSyncAt={lastSyncAt}
       onResync={resync}
+      isDemoMode={isDemoMode}
+      demoPickIndex={demoPickIndex}
+      demoAllPicksCount={demoAllPicks?.length || 0}
+      demoSpeed={demoSpeed}
+      demoPlaying={demoPlaying}
+      onAdvanceDemo={advanceDemoPick}
+      onRewindDemo={rewindDemoPick}
+      onToggleDemoPlay={toggleDemoPlay}
+      onChangeDemoSpeed={changeDemoSpeed}
       onReset={reset}
     />
   );
