@@ -14,7 +14,7 @@ import PlayerAvatar from './common/PlayerAvatar';
 import PositionBadge from './common/PositionBadge';
 import DraftAnalysisPanel from './draft/DraftAnalysisPanel';
 import MockDraftTab from './draft/MockDraftTab';
-import DraftAssistantPlaceholder from './draft/DraftAssistantPlaceholder';
+import DraftAssistantPanel from './draft/DraftAssistantPanel';
 
 
 const POS_PANEL_STYLE = {
@@ -112,11 +112,17 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
   }
 
   // ── Draft Assistant tab ────────────────────────────────────────────────────
+  // DraftAssistantPanel is lazy-mounted: useLiveDraft only runs when this tab is active.
   if (activeTab === 'assistant') {
     return (
       <div className="space-y-4">
         {tabBar}
-        <DraftAssistantPlaceholder />
+        <DraftAssistantPanel
+          players={players}
+          scoringMode={scoringMode}
+          leagueId={leagueId}
+          userId={userId}
+        />
       </div>
     );
   }
