@@ -360,14 +360,14 @@ export default function MockDraftBoard({
     return (
       <div className={`rounded-lg border px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${
         isMyTurn
-          ? 'bg-violet-900/30 border-violet-500/60'
+          ? 'bg-emerald-900/30 border-emerald-500/60'
           : 'bg-slate-800/60 border-slate-700'
       }`}>
         {/* Left: pick info */}
         <div className="flex items-center gap-4">
           <div>
-            <div className={`text-lg font-bold ${isMyTurn ? 'text-violet-300' : 'text-slate-300'}`}>
-              {isMyTurn ? '🟣 Your Turn!' : `⏳ ${teamLabel} is picking…`}
+            <div className={`text-lg font-bold ${isMyTurn ? 'text-emerald-400' : 'text-slate-300'}`}>
+              {isMyTurn ? '🟢 Your Turn!' : `⏳ ${teamLabel} is picking…`}
             </div>
             {!isMyTurn && archName && (
               <div className="text-xs text-slate-500">{archName}</div>
