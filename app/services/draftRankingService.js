@@ -405,7 +405,8 @@ export function getPickSuggestions(availablePlayers, myRoster, scoringMode, leag
   const scored = availablePlayers.map(player => {
     const pos = normalizePosition(player.position);
     const vorp = player.draftVorp || 0;
-    if (vorp <= 0) return null;
+    // Don't filter negative VORP — in late rounds all bench picks are below
+    // replacement level, but we still need to suggest the best available.
 
     let multiplier = 1.0;
     let reason = 'Value';
@@ -439,7 +440,10 @@ export function getPickSuggestions(availablePlayers, myRoster, scoringMode, leag
     // Sleeper tag override
     if (player.draftSleeperTag && reason === 'Value') reason = 'Sleeper';
 
-    const score = vorp * multiplier * scarcityBoost;
+    // For negative VORP (late-round bench picks), use rank-based score so
+    // multipliers still boost needed positions rather than penalising them.
+    const baseScore = vorp >= 0 ? vorp : 1 / (player.draftOverallRank || 999);
+    const score = baseScore * multiplier * scarcityBoost;
 
     return { ...player, draftScore: score, draftReason: reason, draftNeedWeight: multiplier };
   }).filter(Boolean);
