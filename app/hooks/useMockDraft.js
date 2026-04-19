@@ -41,7 +41,7 @@ function saveToStorage(key, value) {
 
 export const DEFAULT_SETTINGS = {
   leagueSize: 12,
-  myDraftPosition: 6,   // 1-indexed (middle of 12)
+  myDraftPosition: 'random',
   scoringMode: 'v4',
   speed: 'fast',        // 'instant' | 'fast' | 'slow'
   difficulty: 'balanced',
