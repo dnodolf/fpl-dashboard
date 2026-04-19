@@ -8,18 +8,14 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDraftBoard } from '../hooks/useDraftBoard';
-import { useMockDraft } from '../hooks/useMockDraft';
 import { getTierLabel, getTierColor } from '../services/draftRankingService';
-import { getPositionBadgeStyle } from '../constants/positionColors';
 import { getPlayerId, getPlayerName, getTeamDisplay, buildTierGroups } from '../utils/playerUtils';
 import PlayerAvatar from './common/PlayerAvatar';
+import PositionBadge from './common/PositionBadge';
 import DraftAnalysisPanel from './draft/DraftAnalysisPanel';
-import MockDraftSetup from './draft/MockDraftSetup';
-import MockDraftBoard from './draft/MockDraftBoard';
-import MockDraftResults from './draft/MockDraftResults';
+import MockDraftTab from './draft/MockDraftTab';
 import DraftAssistantPlaceholder from './draft/DraftAssistantPlaceholder';
 
-const POSITIONS = ['ALL', 'FWD', 'MID', 'DEF', 'GKP'];
 
 const POS_PANEL_STYLE = {
   GKP: { badge: 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300', header: 'bg-yellow-900/20 border-yellow-700/30', label: 'Goalkeepers' },
@@ -36,14 +32,9 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
   // Cheat sheet view toggle: 'overall' | 'byPosition'
   const [tierView, setTierView] = useState('overall');
 
-  // Mock draft hook
-  const mock = useMockDraft(players, scoringMode);
-
   const {
     rankings,
     displayPlayers,
-    positionFilter,
-    setPositionFilter,
     searchQuery,
     setSearchQuery,
   } = useDraftBoard(players, scoringMode);
@@ -110,54 +101,12 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
   );
 
   // ── Mock Draft tab ─────────────────────────────────────────────────────────
+  // MockDraftTab is lazy-mounted: useMockDraft only runs when this tab is active.
   if (activeTab === 'mock') {
-    const { phase, settings, draftState, results, rankedPlayers, availablePlayers,
-            allRosters, myRoster, currentPickInfo, isMyTurn, takenIds,
-            myPickSlotsPreview, draftHistory,
-            getAvailabilityAtNextPick,
-            updateSettings, startMockDraft, makeMyPick, autoPickBest, undoLastPick, resetMock } = mock;
-
     return (
       <div className="space-y-4">
         {tabBar}
-        {phase === 'idle' && (
-          <MockDraftSetup
-            settings={settings}
-            updateSettings={updateSettings}
-            onStart={startMockDraft}
-            draftHistory={draftHistory}
-            myPickSlots={myPickSlotsPreview}
-            isLoading={!players?.length}
-          />
-        )}
-        {phase === 'drafting' && (
-          <MockDraftBoard
-            draftState={draftState}
-            phase={phase}
-            settings={settings}
-            availablePlayers={availablePlayers}
-            allRosters={allRosters}
-            myRoster={myRoster}
-            currentPickInfo={currentPickInfo}
-            isMyTurn={isMyTurn}
-            takenIds={takenIds}
-            rankedPlayers={rankedPlayers}
-            getAvailabilityAtNextPick={getAvailabilityAtNextPick}
-            onMakeMyPick={makeMyPick}
-            onAutoPick={autoPickBest}
-            onUndo={undoLastPick}
-            onReset={resetMock}
-          />
-        )}
-        {phase === 'complete' && (
-          <MockDraftResults
-            results={results}
-            settings={settings}
-            draftState={draftState}
-            onPlayAgain={resetMock}
-            onReset={resetMock}
-          />
-        )}
+        <MockDraftTab players={players} scoringMode={scoringMode} />
       </div>
     );
   }
@@ -250,9 +199,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
                       <span className="text-sm text-white font-medium truncate group-hover:text-violet-300 transition-colors">
                         {getPlayerName(player)}
                       </span>
-                      <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(player.position)}`}>
-                        {player.draftPosition}
-                      </span>
+                      <PositionBadge position={player.position} label={player.draftPosition} />
                     </div>
                     <span className="text-xs text-slate-500">
                       {getTeamDisplay(player)}

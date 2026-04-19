@@ -14,7 +14,7 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import PlayerAvatar from '../common/PlayerAvatar';
-import { getPositionBadgeStyle } from '../../constants/positionColors';
+import PositionBadge from '../common/PositionBadge';
 import { getPlayerId, getPlayerName, getTeamDisplay } from '../../utils/playerUtils';
 import { ARCHETYPES } from '../../services/mockDraftAiService';
 
@@ -125,7 +125,7 @@ export default function MockDraftResults({ results, settings, draftState, onPlay
           players.length > 0 && (
             <div key={pos}>
               <div className="flex items-center gap-1.5 mb-2">
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(pos)}`}>{pos}</span>
+                <PositionBadge position={pos} size="md" />
                 <span className="text-xs text-slate-500">{players.length} players</span>
               </div>
               <div className="space-y-1">

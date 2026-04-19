@@ -530,25 +530,10 @@ export default function FPLDashboard() {
                             })()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                            {(() => {
-                              if (player.predictions && Array.isArray(player.predictions)) {
-                                const totalPoints = player.predictions.slice(0, 5).reduce((sum, pred) => sum + (pred.predicted_pts || 0), 0);
-                                return totalPoints.toFixed(1);
-                              }
-                              return '0.0';
-                            })()}
+                            {getNextNGameweeksTotal(player, scoringMode, currentGameweek?.number, 5).toFixed(1)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                            {(() => {
-                              if (player.predictions && Array.isArray(player.predictions)) {
-                                const first5 = player.predictions.slice(0, 5);
-                                if (first5.length > 0) {
-                                  const avgMinutes = first5.reduce((sum, pred) => sum + (pred.xmins || 0), 0) / first5.length;
-                                  return avgMinutes.toFixed(0);
-                                }
-                              }
-                              return '0';
-                            })()}
+                            {Math.round(getAvgMinutesNextN(player, currentGameweek?.number, 5))}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                             {v3ScoringService.getScoringValue(player, 'season_avg', scoringMode).toFixed(1)}

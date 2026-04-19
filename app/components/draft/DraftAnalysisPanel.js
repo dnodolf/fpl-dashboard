@@ -8,17 +8,16 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { getPositionBadgeStyle, POSITION_COLORS } from '../../constants/positionColors';
+import { POSITION_COLORS } from '../../constants/positionColors';
 import { analyzeDraft } from '../../services/draftAnalysisService';
+import PositionBadge from '../common/PositionBadge';
 
 // ─── Overview Stats Bar ─────────────────────────────────────────────────────
 const OverviewBar = ({ overview, positionDemand }) => (
   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
     {positionDemand.map(pd => (
       <div key={pd.position} className="bg-slate-800/50 rounded-lg border border-slate-700 p-3 text-center">
-        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getPositionBadgeStyle(pd.position)}`}>
-          {pd.position}
-        </span>
+        <PositionBadge position={pd.position} size="lg" />
         <div className="text-lg font-bold text-white mt-1.5">{pd.count}</div>
         <div className="text-[10px] text-slate-500 leading-tight">
           {pd.count > 0 ? (
@@ -110,9 +109,7 @@ const StealsAndReaches = ({ valuePicks, reaches }) => {
           <div className="space-y-1.5">
             {valuePicks.map((pick, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(pick.position)}`}>
-                  {pick.position}
-                </span>
+                <PositionBadge position={pick.position} />
                 <span className="text-xs text-white flex-1 truncate">{pick.playerName}</span>
                 <span className="text-[10px] text-slate-500">Pick #{pick.pickNo}</span>
                 <span className="text-[10px] text-emerald-400 font-medium">+{pick.delta} value</span>
@@ -130,9 +127,7 @@ const StealsAndReaches = ({ valuePicks, reaches }) => {
           <div className="space-y-1.5">
             {reaches.map((pick, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(pick.position)}`}>
-                  {pick.position}
-                </span>
+                <PositionBadge position={pick.position} />
                 <span className="text-xs text-white flex-1 truncate">{pick.playerName}</span>
                 <span className="text-[10px] text-slate-500">Pick #{pick.pickNo}</span>
                 <span className="text-[10px] text-orange-400 font-medium">-{pick.delta} overpay</span>
@@ -194,9 +189,7 @@ const ManagerGrades = ({ managerGrades }) => {
                 </div>
                 <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-slate-700/50">
                   {['FWD', 'MID', 'DEF', 'GKP'].map(pos => (
-                    <span key={pos} className={`px-1 py-0.5 rounded text-[10px] border ${getPositionBadgeStyle(pos)} opacity-60`}>
-                      {grade.positionCounts?.[pos] || 0}
-                    </span>
+                    <PositionBadge key={pos} position={pos} label={String(grade.positionCounts?.[pos] || 0)} className="opacity-60" />
                   ))}
                 </div>
               </div>
@@ -258,9 +251,7 @@ const DraftRecapTable = ({ pickAnalysis }) => {
                     </td>
                     <td className="px-3 py-1.5 text-white text-xs">{pick.playerName}</td>
                     <td className="px-3 py-1.5">
-                      <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(pick.position)}`}>
-                        {pick.position}
-                      </span>
+                      <PositionBadge position={pick.position} />
                     </td>
                     <td className="px-3 py-1.5 text-slate-400 text-xs hidden sm:table-cell truncate max-w-[120px]">
                       {pick.managerName}
