@@ -138,6 +138,55 @@ function PlayerRow({ player, isTaken, availProb, isMyTurn, onPick }) {
   );
 }
 
+// ─── Running Draft Picks List ─────────────────────────────────────────────────
+function DraftPicksList({ picks, myTeamIndex, leagueSize }) {
+  if (!picks?.length) return (
+    <p className="text-xs text-slate-600 italic">No picks yet</p>
+  );
+
+  // Group picks by round
+  const byRound = {};
+  picks.forEach(p => {
+    if (!byRound[p.round]) byRound[p.round] = [];
+    byRound[p.round].push(p);
+  });
+
+  return (
+    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+      {Object.entries(byRound)
+        .sort(([a], [b]) => Number(b) - Number(a)) // most recent round first
+        .map(([round, roundPicks]) => (
+          <div key={round}>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1 sticky top-0 bg-slate-800/90 py-0.5">
+              Round {round}
+            </div>
+            <div className="space-y-0.5">
+              {[...roundPicks].reverse().map(pick => {
+                const isMe = pick.teamIndex === myTeamIndex;
+                return (
+                  <div
+                    key={pick.overall}
+                    className={`flex items-center gap-2 py-1 px-1.5 rounded ${isMe ? 'bg-emerald-900/20' : ''}`}
+                  >
+                    <span className="text-[10px] text-slate-600 font-mono min-w-[22px]">#{pick.overall}</span>
+                    <span className={`px-1 py-0.5 rounded text-[9px] font-bold border ${getPositionBadgeStyle(pick.player.position)}`}>
+                      {(pick.player.position || '').substring(0, 3).toUpperCase()}
+                    </span>
+                    <span className={`text-[11px] truncate flex-1 ${isMe ? 'text-emerald-300 font-medium' : 'text-slate-400'}`}>
+                      {pick.player.web_name || pick.player.name}
+                    </span>
+                    {isMe && <span className="text-[9px] text-emerald-500 flex-shrink-0">you</span>}
+                    {!isMe && <span className="text-[9px] text-slate-600 flex-shrink-0">T{pick.teamIndex + 1}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+}
+
 // ─── My Roster Sidebar ────────────────────────────────────────────────────────
 function MyRosterPanel({ myRoster, leagueSize, round }) {
   const byPos = useMemo(() => {
@@ -517,6 +566,19 @@ export default function MockDraftBoard({
               myRoster={myRoster}
               leagueSize={leagueSize}
               round={round}
+            />
+          </div>
+
+          {/* Draft Picks Log */}
+          <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-white">Draft Picks</h3>
+              <span className="text-xs text-slate-500">{draftState?.picks?.length || 0} made</span>
+            </div>
+            <DraftPicksList
+              picks={draftState?.picks}
+              myTeamIndex={myTeamIndex}
+              leagueSize={leagueSize}
             />
           </div>
 
