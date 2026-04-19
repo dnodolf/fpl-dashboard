@@ -24,15 +24,21 @@ import { getTierLabel, getTierColor, getPickSuggestions } from '../../services/d
 const POSITIONS = ['ALL', 'GKP', 'DEF', 'MID', 'FWD'];
 
 // ─── Availability badge ───────────────────────────────────────────────────────
+// Only shown when the value is in the actionable 5–95% range.
+// Green = safe to wait, Amber = borderline, Red = take now.
 function AvailBadge({ prob }) {
   if (prob === null || prob === undefined) return null;
   const pct = Math.round(prob * 100);
+  if (pct < 5 || pct > 95) return null; // not actionable — hide
   const style =
     pct >= 75 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
     pct >= 35 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
                'bg-red-500/20 text-red-400 border-red-500/30';
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${style}`} title="% chance available at your next pick">
+    <span
+      className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${style}`}
+      title={`${pct}% chance still available at your next pick`}
+    >
       {pct}%
     </span>
   );
@@ -539,6 +545,9 @@ export default function MockDraftBoard({
               className="flex-1 min-w-[140px] max-w-[240px] px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
             />
             <span className="text-xs text-slate-600">{availablePlayers.length} available</span>
+            <span className="text-[10px] text-slate-600 ml-auto hidden sm:block">
+              Coloured % = chance still available at your next pick
+            </span>
           </div>
 
           {/* Tier groups */}
