@@ -19,7 +19,7 @@ import PlayerAvatar from '../common/PlayerAvatar';
 import { getPositionBadgeStyle } from '../../constants/positionColors';
 import { TEAM_DISPLAY_NAMES } from '../../constants/teams';
 import { ARCHETYPES } from '../../services/mockDraftAiService';
-import { getTierLabel, getTierColor } from '../../services/draftRankingService';
+import { getTierLabel, getTierColor, getPickSuggestions } from '../../services/draftRankingService';
 
 const POSITIONS = ['ALL', 'GKP', 'DEF', 'MID', 'FWD'];
 
@@ -271,8 +271,10 @@ export default function MockDraftBoard({
     );
   }, [archetypes]);
 
-  // Suggestions (top 3 from available sorted by rank)
-  const suggestions = useMemo(() => availablePlayers.slice(0, 3), [availablePlayers]);
+  // Suggestions — position-aware (mandatory minimums, diminishing returns, hard caps)
+  const suggestions = useMemo(() =>
+    getPickSuggestions(availablePlayers, myRoster, settings.scoringMode, settings.leagueSize, 3),
+  [availablePlayers, myRoster, settings.scoringMode, settings.leagueSize]);
 
   // Filtered + searched players (all ranked, with taken flag)
   const displayPlayers = useMemo(() => {
