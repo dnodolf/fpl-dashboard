@@ -40,9 +40,9 @@ function saveToStorage(key, value) {
 }
 
 export const DEFAULT_SETTINGS = {
-  leagueSize: 10,
-  myDraftPosition: 5,   // 1-indexed
-  scoringMode: 'v3',
+  leagueSize: 12,
+  myDraftPosition: 6,   // 1-indexed (middle of 12)
+  scoringMode: 'v4',
   speed: 'fast',        // 'instant' | 'fast' | 'slow'
   difficulty: 'balanced',
 };
