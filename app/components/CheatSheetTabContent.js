@@ -8,8 +8,8 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { TOTAL_GAMEWEEKS } from '../config/constants';
-import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import { getPositionBadgeStyle } from '../constants/positionColors';
+import { getPlayerName, getTeamDisplay } from '../utils/playerUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 
@@ -58,7 +58,7 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
             onClick={() => onPlayerClick?.(player)}
             className="text-white text-sm font-medium truncate hover:text-violet-400 transition-colors text-left"
           >
-            {player.web_name || player.name}
+            {getPlayerName(player)}
           </button>
           {injury && (
             <span className={`text-xs font-bold ${injury.color}`} title="Injury status">
@@ -67,7 +67,7 @@ const PlayerCard = ({ player, rank, ownership, onPlayerClick }) => {
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span>{TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team || 'N/A'}</span>
+          <span>{getTeamDisplay(player) || 'N/A'}</span>
           {player.avgMinutes > 0 && (
             <>
               <span>•</span>

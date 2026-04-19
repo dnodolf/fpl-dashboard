@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getSleeperPositionBadgeClasses } from '../../utils/positionUtils';
+import { getPlayerName } from '../utils/playerUtils';
 import { getDifficultyColor } from '../constants/designTokens';
 import { getFPLStatusBadge } from '../utils/newsUtils';
 import PlayerAvatar from './common/PlayerAvatar';
@@ -79,7 +80,7 @@ const PlayerPill = ({ player, scoringMode, currentGW, onPlayerClick }) => {
       className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-700/60 hover:bg-slate-600/60 transition-colors text-xs group"
     >
       <PlayerAvatar player={player} size="xs" />
-      <span className="font-medium text-white truncate max-w-[80px]">{player.web_name || player.name}</span>
+      <span className="font-medium text-white truncate max-w-[80px]">{getPlayerName(player)}</span>
       {fplBadge && (
         <span className={`text-[8px] px-1 rounded ${fplBadge.color}`}>{fplBadge.icon}</span>
       )}
@@ -302,7 +303,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
               <div key={i} className="flex items-center gap-2 text-sm">
                 <span className="text-slate-500 w-4">{i === 0 ? '1.' : i === 1 ? '2.' : '3.'}</span>
                 <PlayerAvatar player={p} size="xs" />
-                <span className="text-white font-medium truncate flex-1">{p.web_name || p.name}</span>
+                <span className="text-white font-medium truncate flex-1">{getPlayerName(p)}</span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getSleeperPositionBadgeClasses(p.position)}`}>{p.position}</span>
                 <span className="text-red-400 font-bold">{pts.toFixed(1)}</span>
                 {p.opta_stats && (

@@ -7,6 +7,7 @@ import { getSleeperPositionStyle } from '../constants/positionColors';
 import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import { getTeamLogoUrl } from '../utils/teamImage';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
+import { getPlayerName } from '../utils/playerUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 import SquadFixtureForecast from './SquadFixtureForecast';
 
@@ -586,7 +587,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                     onClick={() => onPlayerClick?.(player)}
                     className={`truncate max-w-[120px] sm:max-w-none flex-1 text-left font-medium hover:underline transition-colors ${getPositionTextColor(player.position)}`}
                   >
-                    {player.web_name || player.name}
+                    {getPlayerName(player)}
                   </button>
                   <span className="text-green-400 font-bold">{getPlayerPoints(player).toFixed(1)}</span>
                 </div>
@@ -732,14 +733,14 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                               ? 'bg-red-900/40 text-red-300 ring-1 ring-red-500/30'
                               : getSleeperPositionStyle(p.position)
                         }`}
-                        title={`${p.web_name || p.name} (${p.position}) — ${
+                        title={`${getPlayerName(p)} (${p.position}) — ${
                           fixture.status === 'finished' ? 'Done' :
                           fixture.status === 'live' ? 'Playing now' : 'Not started'
                         }`}
                       >
                         {fixture.status === 'finished' && '✓ '}
                         {fixture.status === 'live' && '● '}
-                        {p.web_name || p.name}
+                        {getPlayerName(p)}
                       </span>
                     ))}
                   </div>
@@ -910,7 +911,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                               onClick={() => onPlayerClick?.(player)}
                               className={`truncate font-medium hover:underline transition-colors text-left ${getPositionTextColor(position)}`}
                             >
-                              {player.web_name || player.name}
+                              {getPlayerName(player)}
                             </button>
                             {isLocked && <span className="text-[10px] shrink-0" title="Match in progress">🔒</span>}
                           </div>

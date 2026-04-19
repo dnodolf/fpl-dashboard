@@ -11,7 +11,7 @@ import { useDraftBoard } from '../hooks/useDraftBoard';
 import { useMockDraft } from '../hooks/useMockDraft';
 import { getTierLabel, getTierColor } from '../services/draftRankingService';
 import { getPositionBadgeStyle } from '../constants/positionColors';
-import { TEAM_DISPLAY_NAMES } from '../constants/teams';
+import { getPlayerId, getPlayerName, getTeamDisplay, buildTierGroups } from '../utils/playerUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 import DraftAnalysisPanel from './draft/DraftAnalysisPanel';
 import MockDraftSetup from './draft/MockDraftSetup';
@@ -49,17 +49,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
   } = useDraftBoard(players, scoringMode);
 
   // Overall tier groups (respects position filter + search via displayPlayers)
-  const tierGroups = useMemo(() => {
-    const groups = {};
-    displayPlayers.forEach(p => {
-      const tier = p.draftTier || 99;
-      if (!groups[tier]) groups[tier] = [];
-      groups[tier].push(p);
-    });
-    return Object.entries(groups)
-      .map(([tier, players]) => ({ tierNumber: parseInt(tier), players }))
-      .sort((a, b) => a.tierNumber - b.tierNumber);
-  }, [displayPlayers]);
+  const tierGroups = useMemo(() => buildTierGroups(displayPlayers), [displayPlayers]);
 
   // Per-position tier groups — independent tier model for each position
   const positionTierGroups = useMemo(() => {
@@ -249,7 +239,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
               </div>
               {group.players.map(player => (
                 <button
-                  key={player.sleeper_id || player.id}
+                  key={getPlayerId(player)}
                   onClick={() => onPlayerClick?.(player)}
                   className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-700/40 transition-colors text-left group"
                 >
@@ -258,14 +248,14 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm text-white font-medium truncate group-hover:text-violet-300 transition-colors">
-                        {player.web_name || player.name}
+                        {getPlayerName(player)}
                       </span>
                       <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(player.position)}`}>
                         {player.draftPosition}
                       </span>
                     </div>
                     <span className="text-xs text-slate-500">
-                      {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team}
+                      {getTeamDisplay(player)}
                     </span>
                   </div>
                   <div className="hidden md:flex items-center gap-4 text-xs text-slate-400 flex-shrink-0">
@@ -329,7 +319,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
                       const rank = posRank;
                       return (
                         <button
-                          key={player.sleeper_id || player.id}
+                          key={getPlayerId(player)}
                           onClick={() => onPlayerClick?.(player)}
                           className="w-full flex items-center gap-1 px-2 py-1.5 hover:bg-slate-700/40 transition-colors text-left group"
                         >
@@ -337,10 +327,10 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
                           <PlayerAvatar player={player} size="sm" />
                           <div className="flex-1 min-w-0">
                             <div className="text-xs text-white font-medium truncate group-hover:text-violet-300 transition-colors">
-                              {player.web_name || player.name}
+                              {getPlayerName(player)}
                             </div>
                             <div className="text-[9px] text-slate-500 truncate">
-                              {player.team_abbr || player.team}
+                              {getTeamDisplay(player)}
                             </div>
                           </div>
                           <div className="flex items-center gap-1 text-[10px] text-slate-400 flex-shrink-0">

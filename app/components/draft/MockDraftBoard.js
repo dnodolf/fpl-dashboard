@@ -17,7 +17,7 @@ import { useState, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import PlayerAvatar from '../common/PlayerAvatar';
 import { getPositionBadgeStyle } from '../../constants/positionColors';
-import { TEAM_DISPLAY_NAMES } from '../../constants/teams';
+import { getPlayerId, getPlayerName, getTeamDisplay, buildTierGroups } from '../../utils/playerUtils';
 import { ARCHETYPES } from '../../services/mockDraftAiService';
 import { getTierLabel, getTierColor, getPickSuggestions } from '../../services/draftRankingService';
 
@@ -60,7 +60,7 @@ function SuggestionCard({ player, rank, availProb, onPick }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-white text-sm font-medium truncate">
-            {player.web_name || player.name}
+            {getPlayerName(player)}
           </span>
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(player.position)}`}>
             {player.draftPosition}
@@ -72,7 +72,7 @@ function SuggestionCard({ player, rank, availProb, onPick }) {
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
-          <span>{TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team}</span>
+          <span>{getTeamDisplay(player)}</span>
           <span className="text-slate-600">·</span>
           <span>VORP {player.draftVorp?.toFixed(1)}</span>
           <span className="text-slate-600">·</span>
@@ -104,14 +104,14 @@ function PlayerRow({ player, isTaken, availProb, isMyTurn, onPick }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className={`text-sm font-medium truncate ${isTaken ? 'text-slate-500 line-through' : 'text-white'}`}>
-            {player.web_name || player.name}
+            {getPlayerName(player)}
           </span>
           <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(player.position)}`}>
             {player.draftPosition}
           </span>
         </div>
         <div className="text-xs text-slate-500 hidden sm:block">
-          {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team}
+          {getTeamDisplay(player)}
           {isTaken && ' · Taken'}
         </div>
       </div>
@@ -178,7 +178,7 @@ function DraftPicksList({ picks, myTeamIndex, leagueSize }) {
                       {(pick.player.position || '').substring(0, 3).toUpperCase()}
                     </span>
                     <span className={`text-[11px] truncate flex-1 ${isMe ? 'text-emerald-300 font-medium' : 'text-slate-400'}`}>
-                      {pick.player.web_name || pick.player.name}
+                      {getPlayerName(pick.player)}
                     </span>
                     {isMe && <span className="text-[9px] text-emerald-500 flex-shrink-0">you</span>}
                     {!isMe && <span className="text-[9px] text-slate-600 flex-shrink-0">T{pick.teamIndex + 1}</span>}
@@ -217,8 +217,8 @@ function MyRosterPanel({ myRoster, leagueSize, round }) {
           ) : (
             <div className="space-y-0.5">
               {players.map(p => (
-                <div key={p.sleeper_id || p.id} className="flex items-center gap-1.5 pl-1">
-                  <span className="text-[11px] text-slate-300 truncate flex-1">{p.web_name || p.name}</span>
+                <div key={getPlayerId(p)} className="flex items-center gap-1.5 pl-1">
+                  <span className="text-[11px] text-slate-300 truncate flex-1">{getPlayerName(p)}</span>
                   <span className="text-[10px] text-slate-500">{p.draftVorp?.toFixed(1)}</span>
                 </div>
               ))}
@@ -257,11 +257,11 @@ function AllRostersPanel({ allRosters, myTeamIndex, leagueSize, archetypes, arch
               </div>
               <div className="space-y-0.5 max-h-28 overflow-y-auto">
                 {roster.map(p => (
-                  <div key={p.sleeper_id || p.id} className="flex items-center gap-1">
+                  <div key={getPlayerId(p)} className="flex items-center gap-1">
                     <span className={`px-1 rounded text-[9px] font-bold border ${getPositionBadgeStyle(p.position)}`}>
                       {(p.position || '').substring(0, 3).toUpperCase()}
                     </span>
-                    <span className="text-slate-400 truncate">{p.web_name || p.name}</span>
+                    <span className="text-slate-400 truncate">{getPlayerName(p)}</span>
                   </div>
                 ))}
                 {roster.length === 0 && <span className="text-slate-700 italic">No picks yet</span>}
@@ -278,7 +278,7 @@ function AllRostersPanel({ allRosters, myTeamIndex, leagueSize, archetypes, arch
 function TierGroup({ tierNumber, players, takenIds, isMyTurn, getAvailabilityAtNextPick, onPick, isLast }) {
   const [collapsed, setCollapsed] = useState(tierNumber >= 7);
   const tierColor = getTierColor(tierNumber);
-  const available = players.filter(p => !takenIds.has(p.sleeper_id || p.id)).length;
+  const available = players.filter(p => !takenIds.has(getPlayerId(p))).length;
 
   return (
     <div className="mb-1">
@@ -300,7 +300,7 @@ function TierGroup({ tierNumber, players, takenIds, isMyTurn, getAvailabilityAtN
       {!collapsed && (
         <div className="border-x border-b border-slate-700/50 rounded-b bg-slate-800/20">
           {players.map(p => {
-            const id = p.sleeper_id || p.id;
+            const id = getPlayerId(p);
             const isTaken = takenIds.has(id);
             const availProb = getAvailabilityAtNextPick(id);
             return (
@@ -387,17 +387,7 @@ export default function MockDraftBoard({
   }, [rankedPlayers, posFilter, search]);
 
   // Build tier groups
-  const tierGroups = useMemo(() => {
-    const groups = {};
-    displayPlayers.forEach(p => {
-      const tier = p.draftTier || 99;
-      if (!groups[tier]) groups[tier] = [];
-      groups[tier].push(p);
-    });
-    return Object.entries(groups)
-      .map(([tier, players]) => ({ tierNumber: parseInt(tier), players }))
-      .sort((a, b) => a.tierNumber - b.tierNumber);
-  }, [displayPlayers]);
+  const tierGroups = useMemo(() => buildTierGroups(displayPlayers), [displayPlayers]);
 
   const handlePick = useCallback((player) => {
     if (isMyTurn) onMakeMyPick(player);
@@ -443,9 +433,9 @@ export default function MockDraftBoard({
             <button
               onClick={onAutoPick}
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded transition-colors"
-              title={suggestions[0] ? `Auto-pick: ${suggestions[0].web_name || suggestions[0].name}` : undefined}
+              title={suggestions[0] ? `Auto-pick: ${getPlayerName(suggestions[0])}` : undefined}
             >
-              Auto-pick{suggestions[0] ? `: ${suggestions[0].web_name || suggestions[0].name}` : ' Best'}
+              Auto-pick{suggestions[0] ? `: ${getPlayerName(suggestions[0])}` : ' Best'}
             </button>
             {draftState?.snapshots?.length > 0 && (
               <button
@@ -505,7 +495,7 @@ export default function MockDraftBoard({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             {suggestions.map((player, i) => (
               <SuggestionCard
-                key={player.sleeper_id || player.id}
+                key={getPlayerId(player)}
                 player={player}
                 rank={i + 1}
                 availProb={null}

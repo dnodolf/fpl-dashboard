@@ -15,7 +15,7 @@ import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import PlayerAvatar from '../common/PlayerAvatar';
 import { getPositionBadgeStyle } from '../../constants/positionColors';
-import { TEAM_DISPLAY_NAMES } from '../../constants/teams';
+import { getPlayerId, getPlayerName, getTeamDisplay } from '../../utils/playerUtils';
 import { ARCHETYPES } from '../../services/mockDraftAiService';
 
 // ─── Grade display helpers ────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ export default function MockDraftResults({ results, settings, draftState, onPlay
   const pickGradeMap = useMemo(() => {
     const map = {};
     draftGrade.pickAnalysis?.forEach(pg => {
-      const id = pg.player?.sleeper_id || pg.player?.id;
+      const id = getPlayerId(pg.player);
       if (id) map[id] = pg;
     });
     return map;
@@ -130,18 +130,18 @@ export default function MockDraftResults({ results, settings, draftState, onPlay
               </div>
               <div className="space-y-1">
                 {players.map(p => {
-                  const id = p.sleeper_id || p.id;
+                  const id = getPlayerId(p);
                   const pg = pickGradeMap[id];
                   return (
                     <div key={id} className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-slate-700/30 transition-colors">
                       <PlayerAvatar player={p} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-white font-medium truncate">{p.web_name || p.name}</span>
+                          <span className="text-sm text-white font-medium truncate">{getPlayerName(p)}</span>
                           {pg && <PickGradeBadge grade={pg} />}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {TEAM_DISPLAY_NAMES[p.team_abbr] || p.team_abbr || p.team}
+                          {getTeamDisplay(p)}
                           {pg?.overall && ` · Pick #${pg.overall}`}
                         </div>
                       </div>

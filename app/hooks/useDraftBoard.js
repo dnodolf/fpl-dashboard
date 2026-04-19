@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { computeDraftRankings, getPickSuggestions, normalizePosition } from '../services/draftRankingService';
+import { getPlayerId } from '../utils/playerUtils';
 
 const STORAGE_KEYS = {
   SESSION: 'fpl_draft_session',
@@ -55,7 +56,7 @@ export function useDraftBoard(players, scoringMode, leagueSize = 10) {
   // Drafted players stay in the pool so tiers never shift as picks are made.
   const eligiblePlayers = useMemo(() => {
     if (!players?.length) return [];
-    return players.filter(p => !doNotDraft.includes(p.sleeper_id || p.id));
+    return players.filter(p => !doNotDraft.includes(getPlayerId(p)));
   }, [players, doNotDraft]);
 
   // Rankings computed once from all eligible players — tiers are stable throughout the draft.
@@ -66,7 +67,7 @@ export function useDraftBoard(players, scoringMode, leagueSize = 10) {
   // Available players for suggestions only (not drafted, not DND)
   const availablePlayers = useMemo(() => {
     return (rankings.rankedPlayers || []).filter(p => {
-      const id = p.sleeper_id || p.id;
+      const id = getPlayerId(p);
       return !draftedPlayers[id];
     });
   }, [rankings.rankedPlayers, draftedPlayers]);
@@ -76,7 +77,7 @@ export function useDraftBoard(players, scoringMode, leagueSize = 10) {
     return Object.entries(draftedPlayers)
       .filter(([, info]) => info.draftedBy === 'me')
       .map(([id, info]) => {
-        const player = players?.find(p => (p.sleeper_id || p.id) === id);
+        const player = players?.find(p => getPlayerId(p) === id);
         return player ? { ...player, pickNumber: info.pickNumber } : null;
       })
       .filter(Boolean)
@@ -92,7 +93,7 @@ export function useDraftBoard(players, scoringMode, leagueSize = 10) {
   // Tiers never change — drafted players stay in place, just marked.
   const displayPlayers = useMemo(() => {
     let filtered = (rankings.rankedPlayers || []).map(p => {
-      const id = p.sleeper_id || p.id;
+      const id = getPlayerId(p);
       const draftInfo = draftedPlayers[id];
       return {
         ...p,
@@ -121,9 +122,9 @@ export function useDraftBoard(players, scoringMode, leagueSize = 10) {
   // Watchlist players (all — including drafted, so you can see who you got)
   const watchlistPlayers = useMemo(() => {
     return (rankings.rankedPlayers || [])
-      .filter(p => watchlist.includes(p.sleeper_id || p.id))
+      .filter(p => watchlist.includes(getPlayerId(p)))
       .map(p => {
-        const id = p.sleeper_id || p.id;
+        const id = getPlayerId(p);
         const draftInfo = draftedPlayers[id];
         return { ...p, isDrafted: !!draftInfo, draftedBy: draftInfo?.draftedBy || null };
       });
@@ -140,7 +141,7 @@ export function useDraftBoard(players, scoringMode, leagueSize = 10) {
         if (myCount >= 17) return prev;
         return {
           ...prev,
-          [player.sleeper_id || player.id]: {
+          [getPlayerId(player)]: {
             draftedBy,
             pickNumber: Object.keys(prev).length + 1,
             name: player.name || player.full_name,
@@ -149,7 +150,7 @@ export function useDraftBoard(players, scoringMode, leagueSize = 10) {
         };
       });
     } else {
-      const id = player.sleeper_id || player.id;
+      const id = getPlayerId(player);
       setDraftedPlayers(prev => ({
         ...prev,
         [id]: {
