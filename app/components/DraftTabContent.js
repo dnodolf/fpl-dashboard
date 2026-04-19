@@ -8,11 +8,15 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useDraftBoard } from '../hooks/useDraftBoard';
+import { useMockDraft } from '../hooks/useMockDraft';
 import { getTierLabel, getTierColor, ROSTER_SLOTS } from '../services/draftRankingService';
 import { getPositionBadgeStyle } from '../constants/positionColors';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import PlayerAvatar from './common/PlayerAvatar';
 import DraftAnalysisPanel from './draft/DraftAnalysisPanel';
+import MockDraftSetup from './draft/MockDraftSetup';
+import MockDraftBoard from './draft/MockDraftBoard';
+import MockDraftResults from './draft/MockDraftResults';
 
 const POSITIONS = ['ALL', 'GKP', 'DEF', 'MID', 'FWD'];
 
@@ -503,9 +507,15 @@ const RosterSidebar = ({ myRoster, onUndraft, onPlayerClick }) => {
 
 // ─── Main DraftTabContent ───────────────────────────────────────────────────
 export default function DraftTabContent({ players, currentGameweek, scoringMode, onPlayerClick, userId, leagueId }) {
-  const [activeView, setActiveView] = useState('board'); // 'board' | 'analysis'
+  // Top-level tab: 'cheatsheet' | 'mock' | 'analysis'
+  const [activeTab, setActiveTab] = useState('cheatsheet');
+
+  // Cheat-sheet view sub-state
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [tierView, setTierView] = useState('overall'); // 'overall' | 'byPosition'
+
+  // Mock draft hook
+  const mock = useMockDraft(players, scoringMode);
 
   const [leagueTeams, setLeagueTeams] = useState([]);
 
@@ -608,24 +618,89 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
     return result;
   }, [rankings.positionTiers, searchQuery, draftedPlayers]);
 
-  if (activeView === 'analysis') {
+  // ── Tab bar (shared across all views) ──────────────────────────────────────
+  const TABS = [
+    { key: 'cheatsheet', label: 'Cheat Sheet' },
+    { key: 'mock',       label: 'Mock Draft' },
+    { key: 'analysis',   label: 'Draft Analysis' },
+  ];
+
+  const tabBar = (
+    <div className="flex items-center gap-1 border-b border-slate-700 pb-2">
+      {TABS.map(t => (
+        <button
+          key={t.key}
+          onClick={() => setActiveTab(t.key)}
+          className={`px-4 py-1.5 text-sm font-medium rounded-t transition-colors ${
+            activeTab === t.key
+              ? 'bg-violet-600 text-white'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  // ── Mock Draft tab ─────────────────────────────────────────────────────────
+  if (activeTab === 'mock') {
+    const { phase, settings, draftState, results, rankedPlayers, availablePlayers,
+            allRosters, myRoster, currentPickInfo, isMyTurn, takenIds,
+            myPickSlotsPreview, draftHistory,
+            getAvailabilityAtNextPick,
+            updateSettings, startMockDraft, makeMyPick, autoPickBest, undoLastPick, resetMock } = mock;
+
     return (
       <div className="space-y-4">
-        {/* View Toggle */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveView('board')}
-            className="px-3 py-1.5 text-sm font-medium rounded transition-colors text-slate-400 hover:text-white hover:bg-slate-700"
-          >
-            Draft Board
-          </button>
-          <button
-            onClick={() => setActiveView('analysis')}
-            className="px-3 py-1.5 text-sm font-medium rounded transition-colors bg-violet-600 text-white"
-          >
-            Draft Analysis
-          </button>
-        </div>
+        {tabBar}
+        {phase === 'idle' && (
+          <MockDraftSetup
+            settings={settings}
+            updateSettings={updateSettings}
+            onStart={startMockDraft}
+            draftHistory={draftHistory}
+            myPickSlots={myPickSlotsPreview}
+            isLoading={!players?.length}
+          />
+        )}
+        {phase === 'drafting' && (
+          <MockDraftBoard
+            draftState={draftState}
+            phase={phase}
+            settings={settings}
+            availablePlayers={availablePlayers}
+            allRosters={allRosters}
+            myRoster={myRoster}
+            currentPickInfo={currentPickInfo}
+            isMyTurn={isMyTurn}
+            takenIds={takenIds}
+            rankedPlayers={rankedPlayers}
+            getAvailabilityAtNextPick={getAvailabilityAtNextPick}
+            onMakeMyPick={makeMyPick}
+            onAutoPick={autoPickBest}
+            onUndo={undoLastPick}
+            onReset={resetMock}
+          />
+        )}
+        {phase === 'complete' && (
+          <MockDraftResults
+            results={results}
+            settings={settings}
+            draftState={draftState}
+            onPlayAgain={resetMock}
+            onReset={resetMock}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ── Analysis tab ───────────────────────────────────────────────────────────
+  if (activeTab === 'analysis') {
+    return (
+      <div className="space-y-4">
+        {tabBar}
         <DraftAnalysisPanel
           leagueId={leagueId}
           players={players}
@@ -635,32 +710,19 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
     );
   }
 
+  // ── Cheat Sheet tab (default) ──────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* Top Bar: View Toggle + Draft Progress + Controls */}
+      {tabBar}
+      {/* Top Bar: Draft Progress + Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* View Toggle */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveView('board')}
-            className="px-3 py-1.5 text-sm font-medium rounded transition-colors bg-violet-600 text-white"
-          >
-            Draft Board
-          </button>
-          <button
-            onClick={() => setActiveView('analysis')}
-            className="px-3 py-1.5 text-sm font-medium rounded transition-colors text-slate-400 hover:text-white hover:bg-slate-700"
-          >
-            Draft Analysis
-          </button>
-        </div>
 
         {/* Draft Progress */}
         {(() => {
           const leagueSize = Math.round(totalPicks / 17) || 10;
           const currentRound = Math.ceil((pickNumber + 1) / leagueSize);
           return (
-            <div className="flex items-center gap-3 ml-auto">
+            <div className="flex items-center gap-3">
               <span className="text-3xl font-bold text-white leading-none">
                 Pick {pickNumber + 1}
                 <span className="text-lg font-normal text-slate-500"> / {totalPicks}</span>
@@ -672,30 +734,32 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
         })()}
 
         {/* Reset */}
-        {showResetConfirm ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-red-400">Reset all draft data?</span>
+        <div className="ml-auto">
+          {showResetConfirm ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-red-400">Reset all draft data?</span>
+              <button
+                onClick={handleReset}
+                className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="px-2 py-1 bg-slate-600 hover:bg-slate-500 text-white text-xs rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={handleReset}
-              className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded"
+              onClick={() => setShowResetConfirm(true)}
+              className="px-3 py-1.5 text-xs font-medium bg-red-600/80 hover:bg-red-500 text-white rounded transition-colors"
             >
-              Yes
+              Reset
             </button>
-            <button
-              onClick={() => setShowResetConfirm(false)}
-              className="px-2 py-1 bg-slate-600 hover:bg-slate-500 text-white text-xs rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowResetConfirm(true)}
-            className="px-3 py-1.5 text-xs font-medium bg-red-600/80 hover:bg-red-500 text-white rounded transition-colors"
-          >
-            Reset
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Pick Suggestions */}

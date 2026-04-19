@@ -515,4 +515,4 @@ export function getTierColor(tierNumber) {
   return colors[tierNumber] || colors[11];
 }
 
-export { SLEEPER_FC_ROSTER, ROSTER_SLOTS, FLEX_WEIGHT, getSeasonProjection, normalizePosition, computeFlexMultipliers };
+export { SLEEPER_FC_ROSTER, ROSTER_SLOTS, FLEX_WEIGHT, POSITION_MINIMUMS, POSITION_MAXIMUMS, getSeasonProjection, normalizePosition };
