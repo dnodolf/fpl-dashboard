@@ -158,8 +158,11 @@ export function useMockDraft(players, scoringMode = 'v3') {
   const startMockDraft = useCallback(() => {
     if (!rankedPlayers.length) return;
 
-    const { leagueSize, myDraftPosition, difficulty } = settings;
-    const myTeamIndex = myDraftPosition - 1; // convert to 0-indexed
+    const { leagueSize, difficulty } = settings;
+    const resolvedPosition = settings.myDraftPosition === 'random'
+      ? Math.floor(Math.random() * leagueSize) + 1
+      : settings.myDraftPosition;
+    const myTeamIndex = resolvedPosition - 1; // convert to 0-indexed
 
     const pickOrder = generatePickOrder(leagueSize, 17);
     const archetypes = assignArchetypes(leagueSize, myTeamIndex);
@@ -422,6 +425,7 @@ export function useMockDraft(players, scoringMode = 'v3') {
   // ── My pick slots preview (for setup screen) ──────────────────────────────
   const myPickSlotsPreview = useMemo(() => {
     const { leagueSize, myDraftPosition } = settings;
+    if (myDraftPosition === 'random') return []; // no preview for random
     const myTeamIndex = myDraftPosition - 1;
     const order = generatePickOrder(leagueSize, 17);
     return getMyPickSlots(order, myTeamIndex);

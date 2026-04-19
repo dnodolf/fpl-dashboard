@@ -101,7 +101,7 @@ export default function MockDraftSetup({ settings, updateSettings, onStart, draf
         {/* My Draft Position */}
         <div className="space-y-2">
           <label className="text-xs font-medium text-slate-400">My Draft Position</label>
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap items-center">
             {Array.from({ length: leagueSize }, (_, i) => i + 1).map(pos => (
               <button
                 key={pos}
@@ -115,9 +115,23 @@ export default function MockDraftSetup({ settings, updateSettings, onStart, draf
                 {pos}
               </button>
             ))}
+            <button
+              onClick={() => updateSettings({ myDraftPosition: 'random' })}
+              className={`px-3 h-9 rounded text-sm font-bold transition-colors ${
+                myDraftPosition === 'random'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+              title="Pick a random draft position when the draft starts"
+            >
+              🎲 Random
+            </button>
           </div>
           <p className="text-xs text-slate-500">
-            Position {myDraftPosition} of {leagueSize} — drafting {myDraftPosition <= leagueSize / 2 ? 'early' : 'late'}
+            {myDraftPosition === 'random'
+              ? 'A random position will be assigned when the draft starts'
+              : `Position ${myDraftPosition} of ${leagueSize} — drafting ${myDraftPosition <= leagueSize / 2 ? 'early' : 'late'}`
+            }
           </p>
         </div>
 
@@ -190,25 +204,31 @@ export default function MockDraftSetup({ settings, updateSettings, onStart, draf
       </div>
 
       {/* My Pick Slots Preview */}
-      {pickSlotRows.length > 0 && (
-        <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
-          <h3 className="text-sm font-bold text-white mb-3">Your Pick Slots (17 rounds)</h3>
-          <div className="flex flex-wrap gap-1.5">
-            {pickSlotRows.map(({ round, overall }) => (
-              <div
-                key={overall}
-                className="flex flex-col items-center px-2.5 py-1.5 bg-violet-600/20 border border-violet-500/40 rounded text-center"
-              >
-                <span className="text-[10px] text-violet-300 font-medium">Rd {round}</span>
-                <span className="text-xs text-white font-bold">#{overall}</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-slate-500 mt-2">
-            Snake draft — your pick order reverses each round.
+      <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
+        <h3 className="text-sm font-bold text-white mb-3">Your Pick Slots (17 rounds)</h3>
+        {myDraftPosition === 'random' ? (
+          <p className="text-sm text-amber-400/80 italic">
+            🎲 Position will be randomised at draft start — pick slots shown once assigned.
           </p>
-        </div>
-      )}
+        ) : pickSlotRows.length > 0 ? (
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              {pickSlotRows.map(({ round, overall }) => (
+                <div
+                  key={overall}
+                  className="flex flex-col items-center px-2.5 py-1.5 bg-violet-600/20 border border-violet-500/40 rounded text-center"
+                >
+                  <span className="text-[10px] text-violet-300 font-medium">Rd {round}</span>
+                  <span className="text-xs text-white font-bold">#{overall}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Snake draft — your pick order reverses each round.
+            </p>
+          </>
+        ) : null}
+      </div>
 
       {/* Draft History */}
       {draftHistory?.length > 0 && (
