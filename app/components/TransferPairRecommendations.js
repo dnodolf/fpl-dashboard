@@ -58,7 +58,7 @@ export default function TransferPairRecommendations({
 
     const pairs = [];
     const positions = selectedPosition === 'ALL'
-      ? ['GKP', 'DEF', 'MID', 'FWD']
+      ? ['FWD', 'MID', 'DEF', 'GKP']
       : [selectedPosition];
 
     positions.forEach(position => {

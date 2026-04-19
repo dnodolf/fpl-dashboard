@@ -19,7 +19,7 @@ import MockDraftBoard from './draft/MockDraftBoard';
 import MockDraftResults from './draft/MockDraftResults';
 import DraftAssistantPlaceholder from './draft/DraftAssistantPlaceholder';
 
-const POSITIONS = ['ALL', 'GKP', 'DEF', 'MID', 'FWD'];
+const POSITIONS = ['ALL', 'FWD', 'MID', 'DEF', 'GKP'];
 
 const POS_PANEL_STYLE = {
   GKP: { badge: 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300', header: 'bg-yellow-900/20 border-yellow-700/30', label: 'Goalkeepers' },

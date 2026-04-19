@@ -41,7 +41,7 @@ function useScoutData(scoringMode, currentGameweek) {
 }
 
 // ─── Position group helpers ───────────────────────────────────────
-const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'];
+const POS_ORDER = ['FWD', 'MID', 'DEF', 'GKP'];
 
 function groupByPosition(players) {
   const groups = { GKP: [], DEF: [], MID: [], FWD: [] };

@@ -356,7 +356,7 @@ export default function FPLDashboard() {
                       Positions ({filters.position.length > 0 ? filters.position.length : 'All'})
                     </label>
                     <div className="flex gap-2">
-                      {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                      {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
                         const colors = getPositionColor(pos);
                         const isSelected = filters.position.includes(pos);
                         return (

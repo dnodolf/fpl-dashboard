@@ -61,7 +61,7 @@ const PositionFlowChart = ({ roundFlow }) => {
           <div key={round.round} className="flex items-center gap-2">
             <span className="text-[10px] text-slate-500 font-mono w-8 text-right flex-shrink-0">R{round.round}</span>
             <div className="flex-1 flex h-5 rounded overflow-hidden bg-slate-700/30">
-              {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+              {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
                 const count = round[pos] || 0;
                 if (count === 0) return null;
                 const width = (count / maxPerRound) * 100;
@@ -82,7 +82,7 @@ const PositionFlowChart = ({ roundFlow }) => {
         ))}
       </div>
       <div className="flex items-center gap-4 mt-3 justify-center">
-        {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+        {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
           const colors = { GKP: 'bg-yellow-500', DEF: 'bg-cyan-500', MID: 'bg-pink-500', FWD: 'bg-purple-500' };
           return (
             <div key={pos} className="flex items-center gap-1.5">
@@ -193,7 +193,7 @@ const ManagerGrades = ({ managerGrades }) => {
                   <span className="text-orange-400 truncate ml-2">{grade.worstPick?.name || '—'}</span>
                 </div>
                 <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-slate-700/50">
-                  {['GKP', 'DEF', 'MID', 'FWD'].map(pos => (
+                  {['FWD', 'MID', 'DEF', 'GKP'].map(pos => (
                     <span key={pos} className={`px-1 py-0.5 rounded text-[10px] border ${getPositionBadgeStyle(pos)} opacity-60`}>
                       {grade.positionCounts?.[pos] || 0}
                     </span>
