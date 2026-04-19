@@ -14,7 +14,7 @@ import PlayerAvatar from './common/PlayerAvatar';
 import { getNextNGameweeksTotal, getAvgMinutesNextN } from '../utils/predictionUtils';
 
 // Position order for display
-const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
+const POSITIONS = ['FWD', 'MID', 'DEF', 'GKP'];
 
 // Get ownership status for a player
 const getOwnershipStatus = (player, userId) => {

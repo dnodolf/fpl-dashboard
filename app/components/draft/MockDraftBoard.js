@@ -21,7 +21,7 @@ import { TEAM_DISPLAY_NAMES } from '../../constants/teams';
 import { ARCHETYPES } from '../../services/mockDraftAiService';
 import { getTierLabel, getTierColor, getPickSuggestions } from '../../services/draftRankingService';
 
-const POSITIONS = ['ALL', 'GKP', 'DEF', 'MID', 'FWD'];
+const POSITIONS = ['ALL', 'FWD', 'MID', 'DEF', 'GKP'];
 
 // ─── Availability badge ───────────────────────────────────────────────────────
 // Only shown when the value is in the actionable 5–95% range.

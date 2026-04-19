@@ -119,7 +119,7 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
                       {calibration.active ? (
                         <>
                           <p className="mt-0.5 text-emerald-400 font-medium">Active — {calibration.gwsAnalyzed} GWs · {calibration.sampleCount} samples</p>
-                          <p className="text-slate-400 mt-0.5">GKP {calibration.positionRatios?.GKP} · DEF {calibration.positionRatios?.DEF} · MID {calibration.positionRatios?.MID} · FWD {calibration.positionRatios?.FWD}</p>
+                          <p className="text-slate-400 mt-0.5">FWD {calibration.positionRatios?.FWD} · MID {calibration.positionRatios?.MID} · DEF {calibration.positionRatios?.DEF} · GKP {calibration.positionRatios?.GKP}</p>
                         </>
                       ) : (
                         <p className="mt-0.5 text-amber-400">Uncalibrated — {calibration.fallbackReason || 'using hardcoded ratios'}</p>
