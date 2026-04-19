@@ -29,6 +29,7 @@ const DIFFICULTY_OPTIONS = [
 
 const SCORING_OPTIONS = [
   { value: 'v3', label: 'V3 Sleeper' },
+  { value: 'v4', label: 'V4 Sleeper' },
   { value: 'fpl', label: 'FFH FPL' },
 ];
 
