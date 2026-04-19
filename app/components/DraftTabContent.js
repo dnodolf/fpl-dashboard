@@ -203,20 +203,6 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
 
       {/* Filters + view toggle */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Position filter buttons — only in overall view */}
-        {tierView === 'overall' && POSITIONS.map(pos => (
-          <button
-            key={pos}
-            onClick={() => setPositionFilter(pos)}
-            className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-              positionFilter === pos
-                ? 'bg-violet-600 text-white'
-                : 'bg-slate-700/50 text-slate-400 hover:text-white'
-            }`}
-          >
-            {pos}
-          </button>
-        ))}
         <input
           type="text"
           value={searchQuery}
