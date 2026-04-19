@@ -9,24 +9,7 @@ const STORAGE_KEYS = {
   DND: 'fpl_draft_dnd',
 };
 
-function loadFromStorage(key, defaultValue) {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : defaultValue;
-  } catch {
-    return defaultValue;
-  }
-}
-
-function saveToStorage(key, value) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // localStorage full or unavailable
-  }
-}
+import { loadFromStorage, saveToStorage } from '../utils/storage';
 
 /**
  * Custom hook managing draft session state.

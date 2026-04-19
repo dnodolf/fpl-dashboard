@@ -60,16 +60,6 @@ export default function FPLDashboard() {
 
   const { players, loading, error, lastUpdated, source, quality, ownershipData, ownershipCount, enhanced, refetch, integrated, integration, calibration, modelAccuracy } = usePlayerData(configLeagueId);
 
-  // Processed players with scoring mode applied
-  const [processedPlayers, setProcessedPlayers] = useState([]);
-
-  // Process players when scoring mode or players change
-  useEffect(() => {
-    if (players && Array.isArray(players) && players.length > 0) {
-      setProcessedPlayers(players);
-    }
-  }, [players, scoringMode]);
-
   // Update data function
   const updateData = (type = 'manual', forceRefresh = true, useCache = false) => {
     if (forceRefresh) {
@@ -167,7 +157,7 @@ export default function FPLDashboard() {
 
   // Filter players based on current filters
   const filteredPlayers = useMemo(() => {
-    return processedPlayers.filter(player => {
+    return players.filter(player => {
       if (!isEPLPlayer(player)) return false;
 
       // Position filter - multi-select
@@ -227,7 +217,7 @@ export default function FPLDashboard() {
 
       return true;
     });
-  }, [processedPlayers, filters.position, filters.team, filters.owner, filters.minPoints, filters.search, userId]);
+  }, [players, filters.position, filters.team, filters.owner, filters.minPoints, filters.search, userId]);
 
   // Sort players based on sort config
   const sortedPlayers = useMemo(() => {
@@ -246,7 +236,7 @@ export default function FPLDashboard() {
 
   // Get unique teams and owners for filter dropdowns
   const teams = EPL_TEAMS.sort();
-  const owners = [...new Set(processedPlayers.filter(isEPLPlayer).map(p => p.owned_by).filter(Boolean))].sort();
+  const owners = [...new Set(players.filter(isEPLPlayer).map(p => p.owned_by).filter(Boolean))].sort();
 
   // Render sort icon
   const renderSortIcon = (columnKey) => {
@@ -315,7 +305,7 @@ export default function FPLDashboard() {
 
         <DashboardHeader
           lastUpdated={lastUpdated}
-          players={processedPlayers}
+          players={players}
           updateData={updateData}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -337,7 +327,7 @@ export default function FPLDashboard() {
           {/* Content based on active tab */}
           {activeTab === 'home' && (
             <HomeTabContent
-              players={processedPlayers}
+              players={players}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
@@ -438,8 +428,8 @@ export default function FPLDashboard() {
                 <div className="text-sm text-slate-400">
                   Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
                   <span className="ml-2 text-xs">
-                    (Free Agents: {processedPlayers.filter(p => !p.owned_by || p.owned_by === OWNERSHIP_STATUS.FREE_AGENT).length},
-                     Owned: {processedPlayers.filter(p => p.owned_by && p.owned_by !== OWNERSHIP_STATUS.FREE_AGENT).length})
+                    (Free Agents: {players.filter(p => !p.owned_by || p.owned_by === OWNERSHIP_STATUS.FREE_AGENT).length},
+                     Owned: {players.filter(p => p.owned_by && p.owned_by !== OWNERSHIP_STATUS.FREE_AGENT).length})
                   </span>
                 </div>
                 <div className="text-sm text-slate-500">
@@ -595,7 +585,7 @@ export default function FPLDashboard() {
 
           {activeTab === 'scout' && (
             <ScoutTabContent
-              players={processedPlayers}
+              players={players}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
@@ -605,7 +595,7 @@ export default function FPLDashboard() {
 
           {activeTab === 'optimizer' && (
             <OptimizerTabContent
-              players={processedPlayers}
+              players={players}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
@@ -615,7 +605,7 @@ export default function FPLDashboard() {
 
           {activeTab === 'transfers' && (
             <TransferTabContent
-              players={processedPlayers}
+              players={players}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               gameweekRange={transferGameweekRange}
@@ -627,7 +617,7 @@ export default function FPLDashboard() {
 
           {activeTab === 'trades' && (
             <TradeAnalyzerTabContent
-              players={processedPlayers}
+              players={players}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               userId={userId}
@@ -636,7 +626,7 @@ export default function FPLDashboard() {
 
           {activeTab === 'comparison' && (
             <ComparisonTabContent
-              players={processedPlayers}
+              players={players}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
@@ -648,7 +638,7 @@ export default function FPLDashboard() {
 
           {activeTab === 'cheatsheet' && (
             <CheatSheetTabContent
-              players={processedPlayers}
+              players={players}
               scoringMode={scoringMode}
               currentGameweek={currentGameweek}
               onPlayerClick={handlePlayerClick}
@@ -658,7 +648,7 @@ export default function FPLDashboard() {
 
           {activeTab === 'draft' && (
             <DraftTabContent
-              players={processedPlayers}
+              players={players}
               currentGameweek={currentGameweek}
               scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}

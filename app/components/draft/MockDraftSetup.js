@@ -28,7 +28,7 @@ const DIFFICULTY_OPTIONS = [
 ];
 
 const SCORING_OPTIONS = [
-  { value: 'fpl', label: 'FFH FPL' },
+  { value: 'ffh', label: 'FFH FPL' },
   { value: 'v3', label: 'V3 Sleeper' },
   { value: 'v4', label: 'V4 Sleeper' },
 ];
@@ -58,9 +58,6 @@ export default function MockDraftSetup({ settings, updateSettings, onStart, draf
     if (!myPickSlots?.length) return [];
     return myPickSlots.map((overall, idx) => {
       const round = Math.ceil(overall / leagueSize);
-      const pickInRound = myDraftPosition % 2 === 1
-        ? myDraftPosition
-        : leagueSize - myDraftPosition + 1;
       return { round, overall, idx };
     });
   }, [myPickSlots, leagueSize, myDraftPosition]);

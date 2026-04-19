@@ -26,18 +26,7 @@ const STORAGE_KEY_ACTIVE  = 'fpl_mock_draft_active';
 const STORAGE_KEY_HISTORY = 'fpl_mock_draft_history';
 const MAX_HISTORY = 3;
 
-function loadFromStorage(key, defaultValue) {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const s = localStorage.getItem(key);
-    return s ? JSON.parse(s) : defaultValue;
-  } catch { return defaultValue; }
-}
-
-function saveToStorage(key, value) {
-  if (typeof window === 'undefined') return;
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
+import { loadFromStorage, saveToStorage } from '../utils/storage';
 
 export const DEFAULT_SETTINGS = {
   leagueSize: 12,
@@ -196,6 +185,10 @@ export function useMockDraft(players, scoringMode = 'v3') {
   /**
    * Advance all consecutive AI picks until it's the user's turn (or draft ends).
    * Internal function called after each user pick or at draft start.
+   *
+   * Note: dep array is intentionally [] — all state is received as arguments
+   * (currentState, ranked, currentSettings) to avoid stale closure captures.
+   * Do not add state reads inside this callback without passing them as args.
    */
   const _advanceAiPicks = useCallback((currentState, ranked, currentSettings) => {
     const { pickOrder, archetypes, myTeamIndex, currentPickIndex, picks } = currentState;
@@ -407,6 +400,7 @@ export function useMockDraft(players, scoringMode = 'v3') {
     };
     const newHistory = [summary, ...history].slice(0, MAX_HISTORY);
     saveToStorage(STORAGE_KEY_HISTORY, newHistory);
+    setDraftHistory(newHistory);
   }, [settings]);
 
   /**
@@ -420,7 +414,10 @@ export function useMockDraft(players, scoringMode = 'v3') {
   }, []);
 
   // ── Draft history ──────────────────────────────────────────────────────────
-  const draftHistory = useMemo(() => loadFromStorage(STORAGE_KEY_HISTORY, []), [phase]);
+  // useState (not useMemo) — reading localStorage is a side effect and must not
+  // live in a memo. Initial value is read once; _completeDraft calls setDraftHistory
+  // explicitly after writing so the UI stays in sync.
+  const [draftHistory, setDraftHistory] = useState(() => loadFromStorage(STORAGE_KEY_HISTORY, []));
 
   // ── My pick slots preview (for setup screen) ──────────────────────────────
   const myPickSlotsPreview = useMemo(() => {
