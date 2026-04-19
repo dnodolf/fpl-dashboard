@@ -845,7 +845,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
 
       {/* ── By Position view ──────────────────────────────────────────────────── */}
       {tierView === 'byPosition' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
             const style = POS_PANEL_STYLE[pos];
             const groups = positionTierGroups[pos] || [];
