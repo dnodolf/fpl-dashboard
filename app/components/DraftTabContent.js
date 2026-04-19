@@ -67,7 +67,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
     if (!posTiers) return {};
 
     const result = {};
-    for (const pos of ['GKP', 'DEF', 'MID', 'FWD']) {
+    for (const pos of ['FWD', 'MID', 'DEF', 'GKP']) {
       const data = posTiers[pos];
       if (!data?.tiers) continue;
 
@@ -297,7 +297,7 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
       {/* ── By Position view — 4 columns ──────────────────────────────────── */}
       {tierView === 'byPosition' && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+          {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
             const style = POS_PANEL_STYLE[pos];
             const groups = positionTierGroups[pos] || [];
             const totalPlayers = groups.reduce((n, g) => n + g.players.length, 0);
