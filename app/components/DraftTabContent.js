@@ -5,11 +5,11 @@
 
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDraftBoard } from '../hooks/useDraftBoard';
 import { useMockDraft } from '../hooks/useMockDraft';
-import { getTierLabel, getTierColor, ROSTER_SLOTS } from '../services/draftRankingService';
+import { getTierLabel, getTierColor } from '../services/draftRankingService';
 import { getPositionBadgeStyle } from '../constants/positionColors';
 import { TEAM_DISPLAY_NAMES } from '../constants/teams';
 import PlayerAvatar from './common/PlayerAvatar';
@@ -723,13 +723,23 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
   }
 
   // ── Cheat Sheet tab (default) ──────────────────────────────────────────────
+
+  // Position header styles for the By Position grid panels
+  const POS_PANEL_STYLE = {
+    GKP: { badge: 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300', header: 'bg-yellow-900/20 border-yellow-700/30', label: 'Goalkeepers' },
+    DEF: { badge: 'bg-green-600/20 border-green-500/40 text-green-300',   header: 'bg-green-900/20 border-green-700/30',   label: 'Defenders'   },
+    MID: { badge: 'bg-blue-600/20 border-blue-500/40 text-blue-300',      header: 'bg-blue-900/20 border-blue-700/30',      label: 'Midfielders' },
+    FWD: { badge: 'bg-red-600/20 border-red-500/40 text-red-300',         header: 'bg-red-900/20 border-red-700/30',         label: 'Forwards'    },
+  };
+
   return (
     <div className="space-y-4">
       {tabBar}
 
-      {/* Filters */}
+      {/* Filters + view toggle */}
       <div className="flex flex-wrap items-center gap-2">
-        {POSITIONS.map(pos => (
+        {/* Position filter buttons — only meaningful in overall view */}
+        {tierView === 'overall' && POSITIONS.map(pos => (
           <button
             key={pos}
             onClick={() => setPositionFilter(pos)}
@@ -749,71 +759,166 @@ export default function DraftTabContent({ players, currentGameweek, scoringMode,
           placeholder="Search players…"
           className="flex-1 min-w-[160px] max-w-[260px] px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
         />
-        <span className="text-xs text-slate-500 ml-auto">{displayPlayers.length} players</span>
-      </div>
-
-      {/* Column headers */}
-      <div className="flex items-center gap-2 px-3 text-[10px] font-medium text-slate-500 uppercase tracking-wide border-b border-slate-800 pb-1">
-        <span className="min-w-[28px]">RK</span>
-        <span className="w-7" />
-        <span className="flex-1">Player</span>
-        <span className="hidden md:block w-20 text-right">Proj</span>
-        <span className="hidden md:block w-16 text-right">VORP</span>
-      </div>
-
-      {/* Tier list */}
-      {tierGroups.length > 0 ? tierGroups.map((group, i) => (
-        <div key={group.tierNumber}>
-          {/* Tier label */}
-          <div className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 mt-2 ${getTierColor(group.tierNumber).text}`}>
-            Tier {group.tierNumber} — {getTierLabel(group.tierNumber)}
-          </div>
-          {/* Players */}
-          {group.players.map(player => (
-            <button
-              key={player.sleeper_id || player.id}
-              onClick={() => onPlayerClick?.(player)}
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-700/40 transition-colors text-left group"
-            >
-              <span className="text-slate-500 text-xs font-mono min-w-[28px]">{player.draftOverallRank}</span>
-              <PlayerAvatar player={player} size="sm" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm text-white font-medium truncate group-hover:text-violet-300 transition-colors">
-                    {player.web_name || player.name}
-                  </span>
-                  <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(player.position)}`}>
-                    {player.draftPosition}
-                  </span>
-                </div>
-                <span className="text-xs text-slate-500">
-                  {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team}
-                </span>
-              </div>
-              <div className="hidden md:flex items-center gap-4 text-xs text-slate-400 flex-shrink-0">
-                <div className="w-20 text-right">
-                  <div className="text-slate-300 font-medium">{player.draftProjection?.toFixed(1)}</div>
-                  <div className="text-[10px]">Proj</div>
-                </div>
-                <div className="w-16 text-right">
-                  <div className="text-slate-300 font-medium">{player.draftVorp?.toFixed(1)}</div>
-                  <div className="text-[10px]">VORP</div>
-                </div>
-              </div>
-            </button>
-          ))}
-          {/* Tier break */}
-          {i < tierGroups.length - 1 && (
-            <div className="flex items-center gap-2 py-1 px-3 mt-1">
-              <div className="flex-1 border-t border-orange-500/20" />
-              <span className="text-[10px] text-orange-400/50">tier break</span>
-              <div className="flex-1 border-t border-orange-500/20" />
-            </div>
-          )}
+        {/* Overall / By Position toggle */}
+        <div className="flex items-center gap-0.5 ml-auto bg-slate-800 rounded border border-slate-700 p-0.5 flex-shrink-0">
+          <button
+            onClick={() => setTierView('overall')}
+            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+              tierView === 'overall' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Overall
+          </button>
+          <button
+            onClick={() => setTierView('byPosition')}
+            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+              tierView === 'byPosition' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            By Position
+          </button>
         </div>
-      )) : (
-        <div className="text-center py-12 text-slate-500">
-          <p>No players found</p>
+      </div>
+
+      {/* ── Overall view ────────────────────────────────────────────────────── */}
+      {tierView === 'overall' && (
+        <>
+          <div className="flex items-center gap-2 px-3 text-[10px] font-medium text-slate-500 uppercase tracking-wide border-b border-slate-800 pb-1">
+            <span className="min-w-[24px]">RK</span>
+            <span className="w-7" />
+            <span className="flex-1">Player</span>
+            <span className="hidden sm:block w-12 text-right">Proj</span>
+            <span className="hidden sm:block w-12 text-right">VORP</span>
+          </div>
+
+          {tierGroups.length > 0 ? tierGroups.map((group, i) => (
+            <div key={group.tierNumber}>
+              <div className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 mt-2 ${getTierColor(group.tierNumber).text}`}>
+                Tier {group.tierNumber} — {getTierLabel(group.tierNumber)}
+              </div>
+              {group.players.map(player => (
+                <button
+                  key={player.sleeper_id || player.id}
+                  onClick={() => onPlayerClick?.(player)}
+                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-700/40 transition-colors text-left group"
+                >
+                  <span className="text-slate-500 text-xs font-mono min-w-[24px]">{player.draftOverallRank}</span>
+                  <PlayerAvatar player={player} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-white font-medium truncate group-hover:text-violet-300 transition-colors">
+                        {player.web_name || player.name}
+                      </span>
+                      <span className={`px-1 py-0.5 rounded text-[10px] font-bold border ${getPositionBadgeStyle(player.position)}`}>
+                        {player.draftPosition}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team}
+                    </span>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400 flex-shrink-0">
+                    <div className="w-12 text-right">
+                      <div className="text-slate-300 font-medium">{player.draftProjection?.toFixed(1)}</div>
+                      <div className="text-[10px]">Proj</div>
+                    </div>
+                    <div className="w-12 text-right">
+                      <div className="text-slate-300 font-medium">{player.draftVorp?.toFixed(1)}</div>
+                      <div className="text-[10px]">VORP</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+              {i < tierGroups.length - 1 && (
+                <div className="flex items-center gap-2 py-1 px-3 mt-1">
+                  <div className="flex-1 border-t border-orange-500/20" />
+                  <span className="text-[10px] text-orange-400/50">tier break</span>
+                  <div className="flex-1 border-t border-orange-500/20" />
+                </div>
+              )}
+            </div>
+          )) : (
+            <div className="text-center py-12 text-slate-500">No players found</div>
+          )}
+        </>
+      )}
+
+      {/* ── By Position view ──────────────────────────────────────────────────── */}
+      {tierView === 'byPosition' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+            const style = POS_PANEL_STYLE[pos];
+            const groups = positionTierGroups[pos] || [];
+            const totalPlayers = groups.reduce((n, g) => n + g.players.length, 0);
+            let posRank = 0;
+            return (
+              <div key={pos} className="flex flex-col border border-slate-700/60 rounded-lg overflow-hidden">
+                {/* Position header */}
+                <div className={`flex items-center gap-2 px-3 py-2 border-b border-slate-700/50 ${style.header}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold border ${style.badge}`}>{pos}</span>
+                  <span className="text-sm font-semibold text-white">{style.label}</span>
+                  <span className="text-xs text-slate-500 ml-auto">{totalPlayers} players</span>
+                </div>
+                {/* Column headers */}
+                <div className="flex items-center gap-2 px-3 py-1 text-[10px] font-medium text-slate-500 uppercase tracking-wide border-b border-slate-800 bg-slate-900/40">
+                  <span className="min-w-[20px]">RK</span>
+                  <span className="w-6" />
+                  <span className="flex-1">Player</span>
+                  <span className="hidden sm:block w-10 text-right">Proj</span>
+                  <span className="hidden sm:block w-10 text-right">VORP</span>
+                </div>
+                {/* Tier groups */}
+                {groups.length > 0 ? groups.map((group, i) => (
+                  <div key={group.tierNumber}>
+                    <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-slate-800/60 ${getTierColor(group.tierNumber).text}`}>
+                      T{group.tierNumber} — {getTierLabel(group.tierNumber)}
+                    </div>
+                    {group.players.map(player => {
+                      posRank++;
+                      const rank = posRank;
+                      return (
+                        <button
+                          key={player.sleeper_id || player.id}
+                          onClick={() => onPlayerClick?.(player)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700/40 transition-colors text-left group"
+                        >
+                          <span className="text-slate-500 text-xs font-mono min-w-[20px]">{rank}</span>
+                          <PlayerAvatar player={player} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white font-medium truncate group-hover:text-violet-300 transition-colors">
+                              {player.web_name || player.name}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || player.team}
+                            </div>
+                          </div>
+                          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0">
+                            <div className="w-10 text-right">
+                              <div className="text-slate-300 font-medium">{player.draftProjection?.toFixed(1)}</div>
+                              <div className="text-[9px]">Proj</div>
+                            </div>
+                            <div className="w-10 text-right">
+                              <div className="text-slate-300 font-medium">{player.draftVorp?.toFixed(1)}</div>
+                              <div className="text-[9px]">VORP</div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {i < groups.length - 1 && (
+                      <div className="flex items-center gap-1 px-3 py-0.5">
+                        <div className="flex-1 border-t border-orange-500/20" />
+                        <span className="text-[9px] text-orange-400/40">tier break</span>
+                        <div className="flex-1 border-t border-orange-500/20" />
+                      </div>
+                    )}
+                  </div>
+                )) : (
+                  <div className="py-8 text-center text-xs text-slate-600">No players</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
