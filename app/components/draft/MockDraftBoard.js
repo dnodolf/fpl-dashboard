@@ -29,7 +29,7 @@ const POSITIONS = ['ALL', 'GKP', 'DEF', 'MID', 'FWD'];
 function AvailBadge({ prob }) {
   if (prob === null || prob === undefined) return null;
   const pct = Math.round(prob * 100);
-  if (pct < 5 || pct > 95) return null; // not actionable — hide
+  if (pct <= 0 || pct >= 100) return null; // trivially obvious — hide
   const style =
     pct >= 75 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
     pct >= 35 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
