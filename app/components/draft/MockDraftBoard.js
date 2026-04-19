@@ -373,12 +373,13 @@ export default function MockDraftBoard({
               <div className="text-xs text-slate-500">{archName}</div>
             )}
           </div>
-          <div className="text-right">
+          <div className="flex items-baseline gap-2">
             <div className="text-2xl font-bold text-white leading-none">
               Pick {currentPickIndex + 1}
               <span className="text-sm font-normal text-slate-500"> / {totalPicks}</span>
             </div>
-            <div className="text-sm text-slate-400">Round {round}</div>
+            <span className="text-slate-600">·</span>
+            <div className="text-xl font-semibold text-slate-300 leading-none">Round {round}</div>
           </div>
         </div>
 
