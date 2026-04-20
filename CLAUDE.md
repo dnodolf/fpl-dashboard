@@ -269,6 +269,14 @@ Sleeper draft API endpoints used (all public, no auth):
 
 ## Recent Technical Updates
 
+### v6.1 - GW Sync & Draft Fixes (April 2026)
+- **Stale-while-revalidate**: `usePlayerData.js` shows cached data instantly on load, always fires a background refresh — Sleeper roster changes appear within ~15s of page load instead of waiting for cache TTL
+- **Client cache TTL**: Reduced from 30 min → 10 min (SWR makes it safe to refresh more often)
+- **Server cache TTL**: Reduced from 15 min → 3 min in `integrated-players/route.js`
+- **FFH/Sleeper split-GW fix**: Data-driven detection finds GWs that appear in both FFH `predictions` and `results` arrays; remaps prediction entries to the correct Sleeper week
+- **Absorbed-game heuristic**: When FFH bundles a future midweek game into the current GW's results (leaving `predictions[currentGW]=0`), proxy the prediction using the avg of the next 2–3 future GWs — only fires for healthy players (chance ≥ 75%) with ≥2 positive future GWs
+- **Draft Analysis grade recalibration**: Manager grade thresholds corrected from unreachable values (A+≥20, A≥15, B+≥10, B≥5) to realistic ones matching actual VORP output (A+≥10, A≥7.5, B+≥5, B≥2.5, C≥0, D≥-2.5, F<-2.5)
+
 ### v6.0 - Mock Draft Simulator (April 2026)
 - **Mock Draft tab**: Full snake draft simulator — 12 teams, 17 rounds, 7 AI archetypes
 - **AI pick engine**: `pickScore = draftVorp × positionWeight × needMultiplier × (1 + Gaussian(0, σ))` with multiplicative noise

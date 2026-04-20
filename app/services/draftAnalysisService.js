@@ -172,14 +172,16 @@ export function analyzeDraft(picks, players, users, scoringMode, leagueSize = 10
     const bestPick = sortedByVorp[0];
     const worstPick = sortedByVorp[sortedByVorp.length - 1];
 
-    // Overall grade based on avg VORP
+    // Overall grade based on avg VORP across all 17 picks.
+    // Calibrated to realistic values: elite picks ~20-50 VORP, mid-draft ~5-15,
+    // bench depth ~0 or negative → typical good draft avgVorp is 3-10.
     let overallGrade;
-    if (avgVorp >= 20) overallGrade = 'A+';
-    else if (avgVorp >= 15) overallGrade = 'A';
-    else if (avgVorp >= 10) overallGrade = 'B+';
-    else if (avgVorp >= 5) overallGrade = 'B';
+    if (avgVorp >= 10) overallGrade = 'A+';
+    else if (avgVorp >= 7.5) overallGrade = 'A';
+    else if (avgVorp >= 5) overallGrade = 'B+';
+    else if (avgVorp >= 2.5) overallGrade = 'B';
     else if (avgVorp >= 0) overallGrade = 'C';
-    else if (avgVorp >= -5) overallGrade = 'D';
+    else if (avgVorp >= -2.5) overallGrade = 'D';
     else overallGrade = 'F';
 
     managerGrades[managerId] = {
