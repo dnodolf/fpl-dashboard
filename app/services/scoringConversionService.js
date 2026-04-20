@@ -40,15 +40,15 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const gameweekPredictions = extractAllGameweekPredictions(ffhData);
     const allGameweekPredictions = gameweekPredictions.all || [];
 
-    // Detect FFH/Sleeper GW offset: if FFH still has the previous GW in their
-    // predictions array (unplayed games) but has no entry for currentGW, FFH is
-    // one week behind Sleeper. Remap prev GW → currentGW so predictions align.
-    // This handles the case where Sleeper splits a round FFH treats as one GW
-    // (e.g. Sleeper week 34 = FFH GW33 midweek + FFH GW34 weekend).
+    // Detect FFH/Sleeper GW split: if FFH still has the previous GW in their
+    // predictions array (unplayed midweek games), merge those points into
+    // currentGW. Handles both cases:
+    //   - Team has ONLY midweek game (no currentGW entry) → remap prevGW → currentGW
+    //   - Team has BOTH midweek + weekend games → sum prevGW pts into currentGW
+    // E.g. Sleeper week 34 = FFH GW33 midweek + FFH GW34 weekend.
     const prevGwNum = currentGwNum ? currentGwNum - 1 : null;
-    const ffhStillOnPrevGw = !!(prevGwNum &&
-      (ffhData.predictions || []).some(p => p.gw === prevGwNum) &&
-      !(ffhData.predictions || []).some(p => p.gw === currentGwNum));
+    const ffhPrevGwStillPredicted = !!(prevGwNum &&
+      (ffhData.predictions || []).some(p => p.gw === prevGwNum));
 
     // Dev diagnostic: log results count for first few players to verify FFH returns historical data
     if (process.env.NODE_ENV === 'development' && Math.random() < 0.005) {
@@ -72,10 +72,11 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const ffhGwPredictions = {};
 
     allGameweekPredictions.forEach(gwPred => {
-      const gwKey = (ffhStillOnPrevGw && gwPred.gw === prevGwNum && gwPred.source === 'predictions')
-        ? currentGwNum
-        : gwPred.gw;
-      ffhGwPredictions[gwKey] = gwPred.predicted_pts;
+      const mergeIntoCurrent = ffhPrevGwStillPredicted &&
+        gwPred.gw === prevGwNum &&
+        gwPred.source === 'predictions';
+      const gwKey = mergeIntoCurrent ? currentGwNum : gwPred.gw;
+      ffhGwPredictions[gwKey] = (ffhGwPredictions[gwKey] || 0) + gwPred.predicted_pts;
     });
 
     // Get current gameweek prediction and minutes - PURE FFH DATA
@@ -134,10 +135,24 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       // but ensure the current GW is included even if FFH moved it to results.
       // This is critical for Start/Sit and other tabs that read predictions for the live GW.
       predictions: (() => {
-        // Apply GW offset remap before injection logic
-        const raw = (ffhData.predictions || []).map(p =>
-          (ffhStillOnPrevGw && p.gw === prevGwNum) ? { ...p, gw: currentGwNum } : p
-        );
+        // Merge prevGW midweek entries into currentGW before injection logic.
+        // If player has BOTH midweek (prevGW) + weekend (currentGW): sum pts, drop prevGW entry.
+        // If player has ONLY midweek (prevGW, no currentGW): remap to currentGW.
+        let raw = ffhData.predictions || [];
+        if (ffhPrevGwStillPredicted) {
+          const prevEntry = raw.find(p => p.gw === prevGwNum);
+          const currEntry = raw.find(p => p.gw === currentGwNum);
+          if (prevEntry && currEntry) {
+            raw = raw
+              .filter(p => p.gw !== prevGwNum)
+              .map(p => p.gw === currentGwNum
+                ? { ...p, predicted_pts: p.predicted_pts + prevEntry.predicted_pts }
+                : p
+              );
+          } else if (prevEntry) {
+            raw = raw.map(p => p.gw === prevGwNum ? { ...p, gw: currentGwNum } : p);
+          }
+        }
         const hasCurrentGW = raw.some(p => p.gw === currentGwNum);
         if (hasCurrentGW || !currentGwNum) return raw;
         // Current GW missing (FFH moved it to results) — inject it back.
