@@ -3,7 +3,7 @@
  * Manages player data fetching with caching
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import CacheManager from '../utils/cacheManager';
 
 export function usePlayerData(leagueId = '') {
@@ -23,25 +23,14 @@ export function usePlayerData(leagueId = '') {
     modelAccuracy: null
   });
 
-  const fetchData = async (type = 'auto', forceRefresh = false, useCache = true) => {
+  // Guard against concurrent in-flight requests
+  const fetchingRef = useRef(false);
+
+  const fetchFromServer = async (forceRefresh = false) => {
+    if (fetchingRef.current && !forceRefresh) return;
+    fetchingRef.current = true;
+
     try {
-      setData(prev => ({ ...prev, loading: true, error: null }));
-
-      if (!forceRefresh && useCache) {
-        const cachedData = CacheManager.get();
-        if (cachedData) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('⚡ Loading from cache');
-          }
-          setData(prev => ({
-            ...prev,
-            loading: false,
-            ...cachedData
-          }));
-          return;
-        }
-      }
-
       if (process.env.NODE_ENV === 'development') {
         console.log('🔄 Fetching fresh data from API');
       }
@@ -57,13 +46,10 @@ export function usePlayerData(leagueId = '') {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
       const result = await response.json();
 
-      // Direct check for players array
       if (result.players && Array.isArray(result.players)) {
         if (process.env.NODE_ENV === 'development') {
           console.log('✅ Setting player data:', result.players.length, 'players');
@@ -93,11 +79,41 @@ export function usePlayerData(leagueId = '') {
       }
     } catch (error) {
       console.error('Error fetching player data:', error);
+      // Only surface error if nothing is already displayed
       setData(prev => ({
         ...prev,
         loading: false,
-        error: error.message
+        error: prev.players.length === 0 ? error.message : null
       }));
+    } finally {
+      fetchingRef.current = false;
+    }
+  };
+
+  // Stale-while-revalidate: show cached data instantly, always background-refresh.
+  // This means a Sleeper roster change shows up automatically within seconds of
+  // page load rather than waiting for the full cache TTL to expire.
+  const fetchData = async (type = 'auto', forceRefresh = false, useCache = true) => {
+    if (forceRefresh) {
+      setData(prev => ({ ...prev, loading: true, error: null }));
+      await fetchFromServer(true);
+      return;
+    }
+
+    const cachedData = useCache ? CacheManager.get() : null;
+
+    if (cachedData) {
+      // Show stale data immediately (no spinner)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⚡ Showing cached data, background refresh starting');
+      }
+      setData(prev => ({ ...prev, loading: false, ...cachedData }));
+      // Background refresh — updates UI silently when fresh data arrives
+      fetchFromServer(false);
+    } else {
+      // No cache: show spinner and wait
+      setData(prev => ({ ...prev, loading: true, error: null }));
+      await fetchFromServer(false);
     }
   };
 

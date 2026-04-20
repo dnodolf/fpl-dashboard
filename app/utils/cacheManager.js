@@ -4,7 +4,7 @@
  */
 
 const CACHE_KEY_BASE = 'fpl_dashboard_cache';
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (SWR always background-refreshes)
 
 // Dynamic cache key scoped to current user config
 function getCacheKey() {
