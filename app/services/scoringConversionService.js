@@ -40,15 +40,25 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const gameweekPredictions = extractAllGameweekPredictions(ffhData);
     const allGameweekPredictions = gameweekPredictions.all || [];
 
-    // Detect FFH/Sleeper GW split: if FFH still has the previous GW in their
-    // predictions array (unplayed midweek games), merge those points into
-    // currentGW. Handles both cases:
-    //   - Team has ONLY midweek game (no currentGW entry) → remap prevGW → currentGW
-    //   - Team has BOTH midweek + weekend games → sum prevGW pts into currentGW
-    // E.g. Sleeper week 34 = FFH GW33 midweek + FFH GW34 weekend.
-    const prevGwNum = currentGwNum ? currentGwNum - 1 : null;
-    const ffhPrevGwStillPredicted = !!(prevGwNum &&
-      (ffhData.predictions || []).some(p => p.gw === prevGwNum));
+    // Detect FFH/Sleeper GW split: find any GW where FFH has BOTH results
+    // (games already played) AND predictions (unplayed games). That GW straddles
+    // the Sleeper week boundary — FFH bundles the whole calendar week into one GW
+    // while Sleeper may have already advanced to the next week.
+    // E.g. FFH gw=33 may contain Apr 18-20 results + Apr 22 predictions.
+    //      Sleeper treats Apr 22 games as their week 34.
+    // When detected: remap all prediction entries for that GW to gw+1.
+    const splitGwNum = (() => {
+      const predGws = new Set((ffhData.predictions || []).map(p => p.gw));
+      const resultGws = new Set(
+        (ffhData.results || [])
+          .filter(r => !r.season || r.season === 2025 || r.season === 2026)
+          .map(r => r.gw)
+      );
+      for (const gw of predGws) {
+        if (resultGws.has(gw)) return gw;
+      }
+      return null;
+    })();
 
     // Dev diagnostic: log results count for first few players to verify FFH returns historical data
     if (process.env.NODE_ENV === 'development' && Math.random() < 0.005) {
@@ -72,10 +82,12 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const ffhGwPredictions = {};
 
     allGameweekPredictions.forEach(gwPred => {
-      const mergeIntoCurrent = ffhPrevGwStillPredicted &&
-        gwPred.gw === prevGwNum &&
+      // Remap split-GW predictions: FFH prediction entries for splitGwNum belong
+      // to the next Sleeper week (splitGwNum + 1) since that GW's results are done.
+      const remapToNext = splitGwNum !== null &&
+        gwPred.gw === splitGwNum &&
         gwPred.source === 'predictions';
-      const gwKey = mergeIntoCurrent ? currentGwNum : gwPred.gw;
+      const gwKey = remapToNext ? splitGwNum + 1 : gwPred.gw;
       ffhGwPredictions[gwKey] = (ffhGwPredictions[gwKey] || 0) + gwPred.predicted_pts;
     });
 
@@ -135,22 +147,23 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       // but ensure the current GW is included even if FFH moved it to results.
       // This is critical for Start/Sit and other tabs that read predictions for the live GW.
       predictions: (() => {
-        // Merge prevGW midweek entries into currentGW before injection logic.
-        // If player has BOTH midweek (prevGW) + weekend (currentGW): sum pts, drop prevGW entry.
-        // If player has ONLY midweek (prevGW, no currentGW): remap to currentGW.
+        // Remap split-GW predictions: any FFH prediction entry for splitGwNum
+        // belongs to Sleeper's next week (splitGwNum + 1).
+        // If player has BOTH splitGW + (splitGW+1) entries: sum pts into splitGW+1.
+        // If player has ONLY splitGW entry: remap it to splitGW+1.
         let raw = ffhData.predictions || [];
-        if (ffhPrevGwStillPredicted) {
-          const prevEntry = raw.find(p => p.gw === prevGwNum);
-          const currEntry = raw.find(p => p.gw === currentGwNum);
-          if (prevEntry && currEntry) {
+        if (splitGwNum !== null) {
+          const splitEntry = raw.find(p => p.gw === splitGwNum);
+          const nextEntry = raw.find(p => p.gw === splitGwNum + 1);
+          if (splitEntry && nextEntry) {
             raw = raw
-              .filter(p => p.gw !== prevGwNum)
-              .map(p => p.gw === currentGwNum
-                ? { ...p, predicted_pts: p.predicted_pts + prevEntry.predicted_pts }
+              .filter(p => p.gw !== splitGwNum)
+              .map(p => p.gw === splitGwNum + 1
+                ? { ...p, predicted_pts: p.predicted_pts + splitEntry.predicted_pts }
                 : p
               );
-          } else if (prevEntry) {
-            raw = raw.map(p => p.gw === prevGwNum ? { ...p, gw: currentGwNum } : p);
+          } else if (splitEntry) {
+            raw = raw.map(p => p.gw === splitGwNum ? { ...p, gw: splitGwNum + 1 } : p);
           }
         }
         const hasCurrentGW = raw.some(p => p.gw === currentGwNum);
