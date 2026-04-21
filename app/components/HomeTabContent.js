@@ -979,16 +979,18 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
           </button>
 
           {luckExpanded && (() => {
+            const hasAllPlay = allPlayData?.weeksPlayed > 0;
+
             // Derive all-play stats for the current user
-            const userAllPlay = allPlayData?.allPlay?.find(a => a.displayName === userId);
+            const userAllPlay = hasAllPlay ? allPlayData?.allPlay?.find(a => a.displayName === userId) : null;
             const userApTotal = userAllPlay ? (userAllPlay.wins + userAllPlay.losses + userAllPlay.ties) : 0;
             const userApPct = userApTotal > 0 ? Math.round((userAllPlay.wins / userApTotal) * 1000) / 10 : 0;
 
             // User's weekly results from all-play data
-            const userWeeks = allPlayData?.weeks
+            const userWeeks = hasAllPlay ? (allPlayData?.weeks
               ?.map(w => ({ week: w.week, ...w.rosters.find(r => r.displayName === userId) }))
               .filter(w => w.roster_id != null)
-              .sort((a, b) => a.week - b.week) || [];
+              .sort((a, b) => a.week - b.week) || []) : [];
 
             // All-play W-L for every team (keyed by displayName for quick lookup)
             const apByName = {};
@@ -1121,7 +1123,7 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">Manager</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">All-Play</th>
+                        {hasAllPlay && <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">All-Play</th>}
                         <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">PPG</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Luck</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase w-28"></th>
@@ -1165,12 +1167,14 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
                             <td className="px-3 py-2 text-center text-slate-300">
                               {team.wins}-{team.losses}
                             </td>
-                            <td className="px-3 py-2 text-center text-slate-300">
-                              {ap
-                                ? <span>{ap.wins}-{ap.losses} <span className="text-xs text-slate-500">({apPct}%)</span></span>
-                                : <span className="text-slate-600">—</span>
-                              }
-                            </td>
+                            {hasAllPlay && (
+                              <td className="px-3 py-2 text-center text-slate-300">
+                                {ap
+                                  ? <span>{ap.wins}-{ap.losses} <span className="text-xs text-slate-500">({apPct}%)</span></span>
+                                  : <span className="text-slate-600">—</span>
+                                }
+                              </td>
+                            )}
                             <td className="px-3 py-2 text-center text-slate-300">{team.ppg}</td>
                             <td className={`px-3 py-2 text-center font-bold ${textColor}`}>
                               {team.luckScore > 0 ? '+' : ''}{team.luckScore}
