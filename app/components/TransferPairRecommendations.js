@@ -22,7 +22,7 @@ export default function TransferPairRecommendations({
   onPlayerClick
 }) {
   const [selectedPosition, setSelectedPosition] = useState('ALL');
-  const [minGain, setMinGain] = useState(5); // Minimum points gain to show
+  const [minGain, setMinGain] = useState(0); // Minimum points gain to show
   const [sortColumn, setSortColumn] = useState('confidence'); // Column to sort by
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
   
