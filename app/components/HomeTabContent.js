@@ -247,6 +247,19 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
     }
   }, [currentGameweek?.status, currentGameweek?.number]);
   const [luckExpanded, setLuckExpanded] = useState(false);
+  const [allPlayData, setAllPlayData] = useState(null);
+  const [loadingAllPlay, setLoadingAllPlay] = useState(false);
+
+  // Lazy-fetch all-play data the first time the luck section is opened
+  useEffect(() => {
+    if (!luckExpanded || allPlayData || loadingAllPlay) return;
+    setLoadingAllPlay(true);
+    fetch('/api/all-play')
+      .then(r => r.json())
+      .then(data => { if (data.success) setAllPlayData(data); })
+      .catch(() => {})
+      .finally(() => setLoadingAllPlay(false));
+  }, [luckExpanded, allPlayData, loadingAllPlay]);
 
   // Fetch optimizer data to check if lineup is optimized
   useEffect(() => {
@@ -965,113 +978,224 @@ const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, 
             <span className="text-slate-500 text-xs">{luckExpanded ? '▼' : '▶'}</span>
           </button>
 
-          {luckExpanded && (
-            <div className="px-6 pb-6">
-              <p className="text-xs text-slate-500 mb-4">
-                Expected wins based on points scored vs points against
-              </p>
+          {luckExpanded && (() => {
+            // Derive all-play stats for the current user
+            const userAllPlay = allPlayData?.allPlay?.find(a => a.displayName === userId);
+            const userApTotal = userAllPlay ? (userAllPlay.wins + userAllPlay.losses + userAllPlay.ties) : 0;
+            const userApPct = userApTotal > 0 ? Math.round((userAllPlay.wins / userApTotal) * 1000) / 10 : 0;
 
-              {/* User's Luck Meter */}
-              {luckData.userLuck && (
-                <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-sm font-medium text-violet-400">Your Luck</span>
-                    <span className="text-xs text-slate-500">
-                      {luckData.userLuck.wins}W from {luckData.userLuck.totalGames} games
-                      (expected {luckData.userLuck.expectedWins}W)
-                    </span>
+            // User's weekly results from all-play data
+            const userWeeks = allPlayData?.weeks
+              ?.map(w => ({ week: w.week, ...w.rosters.find(r => r.displayName === userId) }))
+              .filter(w => w.roster_id != null)
+              .sort((a, b) => a.week - b.week) || [];
+
+            // All-play W-L for every team (keyed by displayName for quick lookup)
+            const apByName = {};
+            (allPlayData?.allPlay || []).forEach(a => { apByName[a.displayName] = a; });
+
+            return (
+              <div className="px-6 pb-6">
+                <p className="text-xs text-slate-500 mb-4">
+                  Pythagorean luck = actual wins minus expected wins (PF/PA ratio).
+                  All-play = how many managers you&apos;d have beaten each week.
+                </p>
+
+                {/* User's Luck Card */}
+                {luckData.userLuck && (
+                  <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-sm font-medium text-violet-400">Your Luck</span>
+                      <span className="text-xs text-slate-500">
+                        {luckData.userLuck.wins}W from {luckData.userLuck.totalGames} games
+                        (expected {luckData.userLuck.expectedWins}W)
+                      </span>
+                    </div>
+                    <LuckMeter
+                      luckScore={luckData.userLuck.luckScore}
+                      minLuck={luckData.minLuck}
+                      maxLuck={luckData.maxLuck}
+                    />
+
+                    {/* All-play summary row */}
+                    {userAllPlay && (
+                      <div className="mt-4 pt-4 border-t border-slate-700 grid grid-cols-3 gap-3 text-center">
+                        <div>
+                          <span className="text-xs text-slate-500 block mb-0.5">All-Play Record</span>
+                          <span className="text-base font-bold text-white">
+                            {userAllPlay.wins}-{userAllPlay.losses}
+                          </span>
+                          <span className="text-xs text-slate-400 ml-1">({userApPct}%)</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-slate-500 block mb-0.5">Actual Record</span>
+                          <span className="text-base font-bold text-white">
+                            {luckData.userLuck.wins}-{luckData.userLuck.losses}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-slate-500 block mb-0.5">Tough-Luck Weeks</span>
+                          <span className="text-base font-bold text-red-400">
+                            {userWeeks.filter(w => !w.won && !w.tied && w.all_play_wins >= Math.ceil(w.league_size / 2)).length}
+                          </span>
+                          <span className="text-xs text-slate-500 ml-1">losses</span>
+                        </div>
+                      </div>
+                    )}
+                    {loadingAllPlay && (
+                      <div className="mt-4 pt-4 border-t border-slate-700 text-center text-xs text-slate-500">
+                        Loading all-play data...
+                      </div>
+                    )}
+                    {!loadingAllPlay && allPlayData && allPlayData.weeksPlayed === 0 && (
+                      <div className="mt-4 pt-4 border-t border-slate-700 text-center text-xs text-slate-500">
+                        All-play data is not available for this league type.
+                      </div>
+                    )}
                   </div>
-                  <LuckMeter
-                    luckScore={luckData.userLuck.luckScore}
-                    minLuck={luckData.minLuck}
-                    maxLuck={luckData.maxLuck}
-                  />
+                )}
+
+                {/* Weekly breakdown for the user */}
+                {userWeeks.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase mb-2">Your Weekly Breakdown</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-900">
+                          <tr>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Wk</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-400 uppercase">Your Pts</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-400 uppercase">Opp Pts</th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Result</th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">All-Play</th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/50">
+                          {userWeeks.map(w => {
+                            const toughLuck = !w.won && !w.tied && w.all_play_wins >= Math.ceil(w.league_size / 2);
+                            const luckyWin = (w.won || w.tied) && w.all_play_wins < Math.floor(w.league_size / 2);
+                            const rowBg = toughLuck
+                              ? 'bg-red-950/30'
+                              : luckyWin
+                                ? 'bg-yellow-950/20'
+                                : w.won || w.tied
+                                  ? 'bg-green-950/20'
+                                  : '';
+                            return (
+                              <tr key={w.week} className={rowBg}>
+                                <td className="px-3 py-2 text-center text-slate-400 font-mono text-xs">GW{w.week}</td>
+                                <td className="px-3 py-2 text-right font-medium text-white">{w.points.toFixed(1)}</td>
+                                <td className="px-3 py-2 text-right text-slate-400">{w.opponent_points.toFixed(1)}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <span className={`font-bold text-xs ${w.won ? 'text-green-400' : w.tied ? 'text-yellow-400' : 'text-red-400'}`}>
+                                    {w.won ? 'W' : w.tied ? 'T' : 'L'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center text-slate-300 text-xs">
+                                  {w.all_play_wins}/{w.league_size - 1}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  {toughLuck && (
+                                    <span className="text-[10px] bg-red-900/60 text-red-300 px-1.5 py-0.5 rounded font-medium">Tough Luck</span>
+                                  )}
+                                  {luckyWin && (
+                                    <span className="text-[10px] bg-yellow-900/40 text-yellow-300 px-1.5 py-0.5 rounded font-medium">Lucky W</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* League Luck Table */}
+                <h3 className="text-xs font-semibold text-slate-400 uppercase mb-2">League Luck Rankings</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-900">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">Manager</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">All-Play</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">PPG</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Luck</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase w-28"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700">
+                      {luckData.teams.map((team, index) => {
+                        const isUser = team.displayName === userId;
+                        const luckRange = (luckData.maxLuck - luckData.minLuck) || 1;
+                        const barPosition = ((team.luckScore - luckData.minLuck) / luckRange) * 100;
+                        const luckColor = team.luckScore <= -2 ? 'bg-red-500'
+                          : team.luckScore < 0 ? 'bg-orange-500'
+                          : team.luckScore < 2 ? 'bg-yellow-500'
+                          : 'bg-green-500';
+                        const textColor = team.luckScore <= -2 ? 'text-red-400'
+                          : team.luckScore < 0 ? 'text-orange-400'
+                          : team.luckScore < 2 ? 'text-yellow-400'
+                          : 'text-green-400';
+                        const ap = apByName[team.displayName];
+                        const apTotal = ap ? (ap.wins + ap.losses + ap.ties) : 0;
+                        const apPct = apTotal > 0 ? Math.round((ap.wins / apTotal) * 1000) / 10 : null;
+
+                        return (
+                          <tr
+                            key={team.roster_id}
+                            className={isUser
+                              ? 'bg-violet-900/30 border-l-4 border-violet-500'
+                              : 'hover:bg-slate-700/50'}
+                          >
+                            <td className="px-3 py-2 text-slate-500">{index + 1}</td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium ${isUser ? 'text-violet-400' : 'text-white'}`}>
+                                  {team.displayName}
+                                </span>
+                                {isUser && (
+                                  <span className="text-[10px] bg-violet-600 text-white px-1.5 py-0.5 rounded">You</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-center text-slate-300">
+                              {team.wins}-{team.losses}
+                            </td>
+                            <td className="px-3 py-2 text-center text-slate-300">
+                              {ap
+                                ? <span>{ap.wins}-{ap.losses} <span className="text-xs text-slate-500">({apPct}%)</span></span>
+                                : <span className="text-slate-600">—</span>
+                              }
+                            </td>
+                            <td className="px-3 py-2 text-center text-slate-300">{team.ppg}</td>
+                            <td className={`px-3 py-2 text-center font-bold ${textColor}`}>
+                              {team.luckScore > 0 ? '+' : ''}{team.luckScore}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="relative h-2 bg-slate-700 rounded-full w-full">
+                                <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-500" />
+                                <div
+                                  className={`absolute top-0 h-full rounded-full ${luckColor}`}
+                                  style={{
+                                    left: barPosition < 50 ? `${barPosition}%` : '50%',
+                                    width: `${Math.abs(barPosition - 50)}%`,
+                                  }}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-
-              {/* League Luck Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-900">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">Manager</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF Rank</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">PPG</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Exp W</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase">Luck</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase w-28"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700">
-                    {luckData.teams.map((team, index) => {
-                      const isUser = team.displayName === userId;
-                      const luckRange = (luckData.maxLuck - luckData.minLuck) || 1;
-                      const barPosition = ((team.luckScore - luckData.minLuck) / luckRange) * 100;
-                      const luckColor = team.luckScore <= -2 ? 'bg-red-500'
-                        : team.luckScore < 0 ? 'bg-orange-500'
-                        : team.luckScore < 2 ? 'bg-yellow-500'
-                        : 'bg-green-500';
-                      const textColor = team.luckScore <= -2 ? 'text-red-400'
-                        : team.luckScore < 0 ? 'text-orange-400'
-                        : team.luckScore < 2 ? 'text-yellow-400'
-                        : 'text-green-400';
-
-                      return (
-                        <tr
-                          key={team.roster_id}
-                          className={isUser
-                            ? 'bg-violet-900/30 border-l-4 border-violet-500'
-                            : 'hover:bg-slate-700/50'}
-                        >
-                          <td className="px-3 py-2 text-slate-500">{index + 1}</td>
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <span className={`font-medium ${isUser ? 'text-violet-400' : 'text-white'}`}>
-                                {team.displayName}
-                              </span>
-                              {isUser && (
-                                <span className="text-[10px] bg-violet-600 text-white px-1.5 py-0.5 rounded">You</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-center text-slate-300">
-                            {team.wins}-{team.losses}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <span className="text-slate-300">#{team.pointsRank}</span>
-                            {team.rankGap !== 0 && (
-                              <span className={`ml-1 text-xs ${team.rankGap > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                ({team.rankGap > 0 ? '+' : ''}{team.rankGap})
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-center text-slate-300">{team.ppg}</td>
-                          <td className="px-3 py-2 text-center text-slate-300">{team.expectedWins}</td>
-                          <td className={`px-3 py-2 text-center font-bold ${textColor}`}>
-                            {team.luckScore > 0 ? '+' : ''}{team.luckScore}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="relative h-2 bg-slate-700 rounded-full w-full">
-                              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-500" />
-                              <div
-                                className={`absolute top-0 h-full rounded-full ${luckColor}`}
-                                style={{
-                                  left: barPosition < 50 ? `${barPosition}%` : '50%',
-                                  width: `${Math.abs(barPosition - 50)}%`,
-                                }}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>

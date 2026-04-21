@@ -276,6 +276,7 @@ Sleeper draft API endpoints used (all public, no auth):
 - **FFH/Sleeper split-GW fix**: Data-driven detection finds GWs that appear in both FFH `predictions` and `results` arrays; remaps prediction entries to the correct Sleeper week
 - **Absorbed-game heuristic**: When FFH bundles a future midweek game into the current GW's results (leaving `predictions[currentGW]=0`), proxy the prediction using the avg of the next 2–3 future GWs — only fires for healthy players (chance ≥ 75%) with ≥2 positive future GWs
 - **Draft Analysis grade recalibration**: Manager grade thresholds corrected from unreachable values (A+≥20, A≥15, B+≥10, B≥5) to realistic ones matching actual VORP output (A+≥10, A≥7.5, B+≥5, B≥2.5, C≥0, D≥-2.5, F<-2.5)
+- **All-play Schedule Luck**: Added `/api/all-play` route + expanded luck section in Home tab showing per-week all-play W/L, Tough Luck/Lucky Win badges, and all-play column in league table. **Note**: Sleeper EPL (`clubsoccer:epl`) leagues don't expose per-week matchup scores via the `/league/{id}/matchups/{week}` endpoint (returns 404); the UI gracefully shows "not available" when the endpoint isn't supported by the league type.
 
 ### v6.0 - Mock Draft Simulator (April 2026)
 - **Mock Draft tab**: Full snake draft simulator — 12 teams, 17 rounds, 7 AI archetypes
