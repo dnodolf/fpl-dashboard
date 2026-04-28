@@ -40,6 +40,26 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const gameweekPredictions = extractAllGameweekPredictions(ffhData);
     const allGameweekPredictions = gameweekPredictions.all || [];
 
+    // Detect FFH/Sleeper GW split: find any GW where FFH has BOTH results
+    // (games already played) AND predictions (unplayed games). That GW straddles
+    // the Sleeper week boundary — FFH bundles the whole calendar week into one GW
+    // while Sleeper may have already advanced to the next week.
+    // E.g. FFH gw=33 may contain Apr 18-20 results + Apr 22 predictions.
+    //      Sleeper treats Apr 22 games as their week 34.
+    // When detected: remap all prediction entries for that GW to gw+1.
+    const splitGwNum = (() => {
+      const predGws = new Set((ffhData.predictions || []).map(p => p.gw));
+      const resultGws = new Set(
+        (ffhData.results || [])
+          .filter(r => !r.season || r.season === 2025 || r.season === 2026)
+          .map(r => r.gw)
+      );
+      for (const gw of predGws) {
+        if (resultGws.has(gw)) return gw;
+      }
+      return null;
+    })();
+
     // Dev diagnostic: log results count for first few players to verify FFH returns historical data
     if (process.env.NODE_ENV === 'development' && Math.random() < 0.005) {
       const resultsCount = allGameweekPredictions.filter(p => p.source === 'results').length;
@@ -62,7 +82,13 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
     const ffhGwPredictions = {};
 
     allGameweekPredictions.forEach(gwPred => {
-      ffhGwPredictions[gwPred.gw] = gwPred.predicted_pts;
+      // Remap split-GW predictions: FFH prediction entries for splitGwNum belong
+      // to the next Sleeper week (splitGwNum + 1) since that GW's results are done.
+      const remapToNext = splitGwNum !== null &&
+        gwPred.gw === splitGwNum &&
+        gwPred.source === 'predictions';
+      const gwKey = remapToNext ? splitGwNum + 1 : gwPred.gw;
+      ffhGwPredictions[gwKey] = (ffhGwPredictions[gwKey] || 0) + gwPred.predicted_pts;
     });
 
     // Get current gameweek prediction and minutes - PURE FFH DATA
@@ -95,20 +121,83 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       currentGwMins = 0;
     }
 
+    // Build predictions array outside the return so the absorbed-game heuristic can mutate it.
+    // Remap split-GW predictions: any FFH prediction entry for splitGwNum belongs to Sleeper's
+    // next week (splitGwNum + 1). If player has BOTH entries: sum pts. If ONLY split entry: remap.
+    let finalPredictions = (() => {
+      let raw = ffhData.predictions || [];
+      if (splitGwNum !== null) {
+        const splitEntry = raw.find(p => p.gw === splitGwNum);
+        const nextEntry = raw.find(p => p.gw === splitGwNum + 1);
+        if (splitEntry && nextEntry) {
+          raw = raw
+            .filter(p => p.gw !== splitGwNum)
+            .map(p => p.gw === splitGwNum + 1
+              ? { ...p, predicted_pts: p.predicted_pts + splitEntry.predicted_pts }
+              : p
+            );
+        } else if (splitEntry) {
+          raw = raw.map(p => p.gw === splitGwNum ? { ...p, gw: splitGwNum + 1 } : p);
+        }
+      }
+      const hasCurrentGW = raw.some(p => p.gw === currentGwNum);
+      if (hasCurrentGW || !currentGwNum) return raw;
+      // Current GW missing (FFH moved it to results) — inject it back.
+      const currentGwEntry = allGameweekPredictions.find(p => p.gw === currentGwNum);
+      const pts = currentGwEntry?.predicted_pts || currentGwPrediction || 0;
+      let mins = currentGwEntry?.predicted_mins || currentGwMins || 0;
+      if (!mins && raw.length > 0) {
+        const nextFutureGW = raw.find(p => p.xmins > 0);
+        mins = nextFutureGW?.xmins || 0;
+      }
+      if (pts <= 0 && mins <= 0) return raw;
+      const resultEntry = (ffhData.results || []).find(r => r.gw === currentGwNum);
+      return [
+        { gw: currentGwNum, predicted_pts: pts, predicted_mins: mins, xmins: mins, opp: resultEntry?.opp || null, source: 'injected' },
+        ...raw
+      ];
+    })();
+
+    // Absorbed-game heuristic: FFH sometimes bundles a future midweek game into the
+    // previous GW's results entry, leaving currentGW prediction = 0 in the predictions array.
+    // This happens when Sleeper advances to week N+1 but FFH's week N still includes games
+    // from both the old weekend AND the new week's midweek fixtures.
+    // Detection: currentGW entry is 0, player is healthy, and ≥2 future GWs have positive pts.
+    // Fix: use the average of the next 2-3 future GWs as a proxy for currentGW.
+    if (currentGwNum && chanceOfPlaying >= 75) {
+      const currentEntry = finalPredictions.find(p => p.gw === currentGwNum);
+      if (currentEntry && currentEntry.predicted_pts === 0) {
+        const futureWithPts = finalPredictions
+          .filter(p => p.gw > currentGwNum && p.predicted_pts > 0)
+          .sort((a, b) => a.gw - b.gw);
+        if (futureWithPts.length >= 2) {
+          const proxyPts = futureWithPts.slice(0, 3).reduce((s, p) => s + p.predicted_pts, 0) / Math.min(futureWithPts.length, 3);
+          finalPredictions = finalPredictions.map(p =>
+            p.gw === currentGwNum ? { ...p, predicted_pts: proxyPts, source: 'absorbed_proxy' } : p
+          );
+          ffhGwPredictions[currentGwNum] = proxyPts;
+          currentGwPrediction = proxyPts;
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🔀 Absorbed-game proxy for ${sleeperPlayer.full_name || ffhName} GW${currentGwNum}: ${proxyPts.toFixed(2)} pts (from ${futureWithPts.length} future GWs)`);
+          }
+        }
+      }
+    }
+
     // FIXED: Return enhanced player with ALL data properly merged
     return {
       // PRESERVE all original Sleeper data
       ...sleeperPlayer,
-      
+
       // Core display data (CRITICAL for UI)
       name: sleeperPlayer.full_name || sleeperPlayer.name || ffhName,
       web_name: ffhName,
       full_name: sleeperPlayer.full_name || sleeperPlayer.name,
       team_abbr: sleeperPlayer.team_abbr || sleeperPlayer.team,
-      
+
       // Position (Sleeper authority)
       position: position,
-      
+
       // FFH original predictions (PURE FPL scoring - no multipliers)
       ffh_season_prediction: ffhSeasonPrediction,
       ffh_season_avg: ffhSeasonAvg,
@@ -117,32 +206,8 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       ffh_team: ffhTeam,
       ffh_position_id: ffhData.position_id,
 
-      // Predictions array: raw FFH predictions (have opp data for fixtures),
-      // but ensure the current GW is included even if FFH moved it to results.
-      // This is critical for Start/Sit and other tabs that read predictions for the live GW.
-      predictions: (() => {
-        const raw = ffhData.predictions || [];
-        const hasCurrentGW = raw.some(p => p.gw === currentGwNum);
-        if (hasCurrentGW || !currentGwNum) return raw;
-        // Current GW missing (FFH moved it to results) — inject it back.
-        // Use allGameweekPredictions first, then fall back to the already-calculated
-        // currentGwPrediction (which itself falls back to season avg).
-        const currentGwEntry = allGameweekPredictions.find(p => p.gw === currentGwNum);
-        const pts = currentGwEntry?.predicted_pts || currentGwPrediction || 0;
-        // FFH results often drop predicted_mins — use the next future GW's xmins as proxy
-        let mins = currentGwEntry?.predicted_mins || currentGwMins || 0;
-        if (!mins && raw.length > 0) {
-          const nextFutureGW = raw.find(p => p.xmins > 0);
-          mins = nextFutureGW?.xmins || 0;
-        }
-        if (pts <= 0 && mins <= 0) return raw; // Nothing useful to inject
-        // Also check raw results for opp data
-        const resultEntry = (ffhData.results || []).find(r => r.gw === currentGwNum);
-        return [
-          { gw: currentGwNum, predicted_pts: pts, predicted_mins: mins, xmins: mins, opp: resultEntry?.opp || null, source: 'injected' },
-          ...raw
-        ];
-      })(),
+      // Predictions array with split-GW remapping and absorbed-game proxy applied.
+      predictions: finalPredictions,
       // Processed past-GW results for V3 calibration (source: 'results' entries)
       ffh_gw_results: allGameweekPredictions.filter(p => p.source === 'results'),
       season_prediction_avg: ffhData.season_prediction_avg || 0,

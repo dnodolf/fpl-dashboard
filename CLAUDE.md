@@ -15,7 +15,7 @@ npm run check:scoring # Scoring consistency lint (catches banned field usage)
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v5.1 - Transfer Improvements
+**Current Version**: v6.0 - Mock Draft Simulator
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -45,17 +45,23 @@ app/
 │   ├── fplNewsService.js             # FPL bootstrap-static news/status
 │   ├── ffhCustomStatsService.js      # FFH players-custom Opta stats
 │   ├── draftRankingService.js        # VORP, tiers, pick suggestions (pure, no React)
-│   └── draftAnalysisService.js       # Post-draft strategy analysis
+│   ├── draftAnalysisService.js       # Post-draft strategy analysis
+│   └── mockDraftAiService.js         # Snake engine, 7 AI archetypes, Monte Carlo availability
 ├── components/                    # UI components
 │   ├── DashboardHeader.js, SetupModal.js, PlayerModal.js
 │   ├── OptimizerTabContent.js, TransferTabContent.js, ComparisonTabContent.js
-│   ├── DraftTabContent.js            # Draft board UI (tier board, suggestions, roster)
+│   ├── DraftTabContent.js            # Draft tab shell: 4 sub-tabs (Cheat Sheet, Mock Draft, Draft Assistant, Draft Analysis)
 │   ├── draft/
-│   │   └── DraftAnalysisPanel.js    # Draft analysis sub-view (post-draft insights)
+│   │   ├── DraftAnalysisPanel.js    # Draft Analysis sub-tab (post-draft retroactive insights)
+│   │   ├── MockDraftSetup.js        # Mock Draft setup form (league size, position, speed, difficulty)
+│   │   ├── MockDraftBoard.js        # Mock Draft live board (tier list, pick banner, suggestions, picks log)
+│   │   ├── MockDraftResults.js      # Mock Draft results (grade, VORP efficiency, team rankings, archetype reveal)
+│   │   └── DraftAssistantPlaceholder.js  # "Coming soon" placeholder for live Sleeper sync
 │   └── stats/OptimizerStatsCard.js
 ├── hooks/                         # Custom React hooks
 │   ├── usePlayerData.js, useGameweek.js, useUserConfig.js
-│   └── useDraftBoard.js              # Draft session state (picks, watchlist, DND)
+│   ├── useDraftBoard.js              # Cheat sheet state (rankings, search, position filter)
+│   └── useMockDraft.js              # Mock draft state machine (idle → drafting → complete)
 └── utils/                         # Utility functions
     ├── predictionUtils.js            # Centralized scoring utilities
     └── cacheManager.js               # Client-side caching with compression
@@ -84,7 +90,10 @@ app/
 - **FPL Injury Status**: Real-time injury badges and news timestamps
 - **Hardcoded Gameweek System**: 100% reliability, zero external dependencies
 - **Live GW Auto-Expand**: Home tab fixtures section auto-expands when GW status is `live`
-- **Draft Assistant**: VORP-based tier board with pick suggestions, watchlist, roster tracking, and post-draft strategy analysis
+- **Cheat Sheet**: Static VORP-ranked tier board with Overall view and By Position 4-column grid (FWD/MID/DEF/GKP)
+- **Mock Draft Simulator**: Solo snake draft vs 7 AI archetypes, Monte Carlo availability %, VORP-graded results with letter grade
+- **Draft Analysis**: Retroactive VORP grading of actual Sleeper league draft — manager grades, position flow, steals/reaches, strategy takeaways
+- **Draft Assistant** *(coming soon)*: Live Sleeper draft sync placeholder
 
 ## Environment Configuration
 
@@ -107,6 +116,17 @@ FFH_BEARER_TOKEN=your_ffh_bearer_token
 **NEVER suggest captain-related features** - this is a common FPL concept that does not exist in Sleeper.
 
 ## Code Conventions
+
+### Position Display Order
+Always use **FWD → MID → DEF → GKP** when displaying positions in filters, grids, dropdowns, or any UI list. This is the attack-first ordering used throughout the app.
+```javascript
+// ✅ Correct
+const POSITIONS = ['FWD', 'MID', 'DEF', 'GKP'];
+const posOrder = { FWD: 0, MID: 1, DEF: 2, GKP: 3 };
+
+// ❌ Incorrect (old football lineup order — do not use in UI)
+const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
+```
 
 ### Position Handling
 Always use Sleeper position data as authoritative source:
@@ -172,9 +192,18 @@ V3 scoring uses ONLY position ratios. Complex adjustments (form, fixture, injury
 
 V3 represents the optimal balance - more complex approaches added variance without improving accuracy.
 
-## Draft Assistant (v5.0)
+## Draft Tab (v6.0)
 
-The Draft tab is an offline mock-draft cheat sheet inspired by FantasyPros Draft Wizard, adapted for the Sleeper FC EPL league format.
+The Draft tab has four sub-tabs: **Cheat Sheet**, **Mock Draft**, **Draft Assistant** (placeholder), and **Draft Analysis**.
+
+### Cheat Sheet
+Static read-only ranked tier list. No interactive draft tracking — that lives in the Draft Assistant tab (future).
+- **Overall view**: All positions ranked together by VORP with pyramid tier labels
+- **By Position view**: 4-column grid — FWD | MID | DEF | GKP — each with independent per-position tier model
+- Toggle between views; search works in both
+
+### Mock Draft Simulator
+Solo snake draft practice against AI opponents. Inspired by FantasyPros Draft Wizard, adapted for Sleeper FC EPL format.
 
 ### Sleeper FC Roster Structure (17 players)
 ```
@@ -207,8 +236,24 @@ Three-phase weighting in `getPickSuggestions()`:
 
 Suggestions always guarantee at least one pick per unfilled mandatory position when available.
 
-### State Persistence
-Draft state persists to `localStorage` across page reloads:
+### Mock Draft AI Archetypes
+Seven distinct personalities assigned randomly (except user's slot):
+- **Value Bot** — pure VORP, plays near-optimal
+- **Attack Hunter** (×2) — overweights MID/FWD, weak on defence
+- **Clean Sheet Merchant** — overweights DEF/GKP, grabs GK early
+- **Star Chaser** — uses raw projection not VORP, reaches for big names
+- **Balanced Builder** (×2) — fills positions proportionally
+- **Late GK Specialist** — ignores GK until rounds 15-17
+
+### Mock Draft Grade
+`efficiency = myTotalVorp / sumOfTopAvailableVorpAtEachPick`
+A+ ≥ 0.93 · A ≥ 0.89 · B+ ≥ 0.85 · B ≥ 0.80 · C+ ≥ 0.75 · C ≥ 0.70 · D otherwise
+
+### Mock Draft localStorage Keys
+- `fpl_mock_draft_active` — active draft state (phase, picks, archetypes)
+- `fpl_mock_draft_history` — last 3 draft summaries (grade, efficiency, rank)
+
+### Cheat Sheet localStorage Keys (useDraftBoard — legacy, not used in cheat sheet view)
 - `fpl_draft_session` — drafted players map: `{ [sleeperId]: { draftedBy, pickNumber, name, position } }`
 - `fpl_draft_watchlist` — array of sleeper IDs
 - `fpl_draft_dnd` — do-not-draft sleeper IDs (also excluded from tier ranking)
@@ -224,12 +269,33 @@ Sleeper draft API endpoints used (all public, no auth):
 
 ## Recent Technical Updates
 
+### v6.1 - GW Sync & Draft Fixes (April 2026)
+- **Stale-while-revalidate**: `usePlayerData.js` shows cached data instantly on load, always fires a background refresh — Sleeper roster changes appear within ~15s of page load instead of waiting for cache TTL
+- **Client cache TTL**: Reduced from 30 min → 10 min (SWR makes it safe to refresh more often)
+- **Server cache TTL**: Reduced from 15 min → 3 min in `integrated-players/route.js`
+- **FFH/Sleeper split-GW fix**: Data-driven detection finds GWs that appear in both FFH `predictions` and `results` arrays; remaps prediction entries to the correct Sleeper week
+- **Absorbed-game heuristic**: When FFH bundles a future midweek game into the current GW's results (leaving `predictions[currentGW]=0`), proxy the prediction using the avg of the next 2–3 future GWs — only fires for healthy players (chance ≥ 75%) with ≥2 positive future GWs
+- **Draft Analysis grade recalibration**: Manager grade thresholds corrected from unreachable values (A+≥20, A≥15, B+≥10, B≥5) to realistic ones matching actual VORP output (A+≥10, A≥7.5, B+≥5, B≥2.5, C≥0, D≥-2.5, F<-2.5)
+- **All-play Schedule Luck**: Added `/api/all-play` route + expanded luck section in Home tab showing per-week all-play W/L, Tough Luck/Lucky Win badges, and all-play column in league table. **Note**: Sleeper EPL (`clubsoccer:epl`) leagues don't expose per-week matchup scores via the `/league/{id}/matchups/{week}` endpoint (returns 404); the UI gracefully shows "not available" when the endpoint isn't supported by the league type.
+
+### v6.0 - Mock Draft Simulator (April 2026)
+- **Mock Draft tab**: Full snake draft simulator — 12 teams, 17 rounds, 7 AI archetypes
+- **AI pick engine**: `pickScore = draftVorp × positionWeight × needMultiplier × (1 + Gaussian(0, σ))` with multiplicative noise
+- **Monte Carlo availability**: 300 simulations at draft start; per-player % chance of being available at your next pick
+- **Draft grade**: Efficiency score (myVORP / optimalVORP) → A+→D letter grade with per-pick analysis
+- **Speed modes**: Instant / Fast (80ms/pick) / Slow (350ms/pick) with animated pick banner
+- **Undo support**: Snapshot-based undo restores to any previous user pick
+- **Mock draft history**: Last 3 session summaries persisted to localStorage
+- **Cheat Sheet redesigned**: Converted to static read-only ranked list (no interactive draft tracking)
+- **By Position view**: 4-column grid (FWD | MID | DEF | GKP) with independent per-position tiers
+- **Draft Assistant placeholder**: "Coming soon" tab for future live Sleeper sync feature
+- **Position order standardized**: FWD → MID → DEF → GKP everywhere in UI (filters, grids, sort maps)
+
 ### v5.0 - Draft Assistant (April 2026)
 - **Draft tab**: VORP-based tier board, pick suggestions, watchlist, DND list, my roster sidebar
 - **Stable tiers**: Rankings computed from all eligible players once; drafted players stay in tier marked as taken (not removed)
 - **Pyramid tier distribution**: Geometric growth (1.35×/tier) gives small elite tiers, larger lower tiers
 - **Position-aware suggestions**: Mandatory minimums, urgency detection, diminishing returns, hard caps per position
-- **By-position tier view**: Independent per-position tiers alongside overall tier board
 - **Draft Analysis tab**: Retroactive analysis of actual Sleeper draft with manager grades, position flow, steals/reaches, strategy takeaways
 - **localStorage persistence**: Draft session, watchlist, and DND survive page reloads; Reset clears all three
 

@@ -14,6 +14,7 @@ import { getDifficultyColor } from '../constants/designTokens';
 import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 import { getTeamLogoFromPlayer, getTeamFullName } from '../utils/teamImage';
+import { getPlayerName } from '../utils/playerUtils';
 
 export function PlayerModal({
   player = null,
@@ -336,7 +337,7 @@ export function PlayerModal({
             </div>
             <div className="flex-1">
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {player.web_name || player.name || player.full_name}
+                {getPlayerName(player)}
               </h2>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-lg">
                 {/* Team logo and name */}

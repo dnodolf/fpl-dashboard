@@ -23,7 +23,7 @@ export default function TransferPairRecommendations({
 }) {
   const [selectedPosition, setSelectedPosition] = useState('ALL');
   const [hideReserve, setHideReserve] = useState(true); // Hide reserve/IR slot players from drop candidates
-  const [minGain, setMinGain] = useState(5); // Minimum points gain to show
+  const [minGain, setMinGain] = useState(0); // Minimum points gain to show
   const [sortColumn, setSortColumn] = useState('confidence'); // Column to sort by
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
   
@@ -59,7 +59,7 @@ export default function TransferPairRecommendations({
 
     const pairs = [];
     const positions = selectedPosition === 'ALL'
-      ? ['GKP', 'DEF', 'MID', 'FWD']
+      ? ['FWD', 'MID', 'DEF', 'GKP']
       : [selectedPosition];
 
     positions.forEach(position => {

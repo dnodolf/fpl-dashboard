@@ -18,8 +18,8 @@ const DIFF_CELL = {
 };
 
 const GW_COUNT = 5;
-const POSITIONS = ['GKP', 'DEF', 'MID', 'FWD'];
-const POS_ORDER = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
+const POSITIONS = ['FWD', 'MID', 'DEF', 'GKP'];
+const POS_ORDER = { FWD: 0, MID: 1, DEF: 2, GKP: 3 };
 
 // Trade score metric weights (must sum to 1)
 const WEIGHTS = { next1: 0.10, next3: 0.25, next5: 0.40, ros: 0.25 };

@@ -56,7 +56,7 @@ export const LoadingSpinner = ({ message = "Loading..." }) => {
             top: '50%',
             left: '8%',
             transform: 'translate(-50%, -50%)',
-            animation: 'pulse 1.5s ease-in-out infinite'
+            animation: 'loadingPulse 1.5s ease-in-out infinite'
           }}
         />
 
@@ -69,7 +69,7 @@ export const LoadingSpinner = ({ message = "Loading..." }) => {
               top: `${top}%`,
               left: '28%',
               transform: 'translate(-50%, -50%)',
-              animation: `pulse 1.5s ease-in-out infinite ${i * 0.15}s`
+              animation: `loadingPulse 1.5s ease-in-out infinite ${i * 0.15}s`
             }}
           />
         ))}
@@ -83,7 +83,7 @@ export const LoadingSpinner = ({ message = "Loading..." }) => {
               top: `${top}%`,
               left: '55%',
               transform: 'translate(-50%, -50%)',
-              animation: `pulse 1.5s ease-in-out infinite ${i * 0.15 + 0.3}s`
+              animation: `loadingPulse 1.5s ease-in-out infinite ${i * 0.15 + 0.3}s`
             }}
           />
         ))}
@@ -97,7 +97,7 @@ export const LoadingSpinner = ({ message = "Loading..." }) => {
               top: `${top}%`,
               left: '82%',
               transform: 'translate(-50%, -50%)',
-              animation: `pulse 1.5s ease-in-out infinite ${i * 0.15 + 0.6}s`
+              animation: `loadingPulse 1.5s ease-in-out infinite ${i * 0.15 + 0.6}s`
             }}
           />
         ))}
@@ -135,29 +135,6 @@ export const LoadingSpinner = ({ message = "Loading..." }) => {
         />
       </div>
 
-      {/* Custom styles for animations */}
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: translate(-50%, -50%) scale(1.3);
-            opacity: 0.7;
-          }
-        }
-
-        @keyframes scanLine {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(160px); }
-        }
-
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
     </div>
   );
 };
