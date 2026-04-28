@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev          # Start development server (http://localhost:3000)
 npm run build        # Build for production
-npm test             # Run Jest unit tests (135 tests across 9 suites)
+npm test             # Run Jest unit tests (240 tests across 13 suites)
 npm run check:scoring # Scoring consistency lint (catches banned field usage)
 ```
 
@@ -15,7 +15,7 @@ npm run check:scoring # Scoring consistency lint (catches banned field usage)
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v5.0 - Draft Assistant
+**Current Version**: v5.1 - Transfer Improvements
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -245,6 +245,13 @@ Sleeper draft API endpoints used (all public, no auth):
 - Responsive breakpoints across MyPlayersTable, PlayerModal, ComparisonTabContent, DashboardHeader
 - Hide non-essential columns below `md` breakpoint; clamp font sizes for mobile
 - `flex-wrap` for gameweek controls; emoji-only scoring buttons on mobile
+
+### v5.1 - Transfer Improvements & Test Coverage (April 2026)
+- **Reserve player toggle**: Transfers tab hides IR/reserve-slot players from drop candidates by default (amber "🏥 Reserve Hidden" toggle). Sleeper `roster.reserve` is now tracked in the data pipeline and exposed as `is_reserve` on each player object.
+- **Transfer rating overhaul**: Rating now uses absolute weighted-gain-per-GW (±50 range around 50%) instead of a fragile ratio that inflated tiny signals. `next5Gain` (previously missing from `actualScore`) now contributes with 0.6× weight. Season gain uses remaining GWs not a flat 38. Risk adjustment only applies when a real signal exists.
+- **Zero-signal guard**: Pairs where the Add player has no FFH projection, or where every per-GW gain rounds to zero, are excluded entirely before any rating is computed.
+- **Test suite expanded**: 135 → 240 tests across 13 suites. New suites: `v3Adjustments`, `v3Matchup`, `playerArchetypeService`, `positionUtils`. Fixed color-token mismatches (`gray` → `slate`) in `newsUtils` and `gameweekStyles` tests.
+- **GW schedule fix**: GW34 end date extended to prevent the live-detection window collapsing to zero between rounds.
 
 ### v4.3 - Code Cleanup & Expanded Tests (March 2026)
 - Dead code removed: 9 unused functions, 3 unused re-export blocks
