@@ -118,6 +118,16 @@ export default function TransferPairRecommendations({
           const riskAdjustment = Math.max(-15, Math.min(15, risk.score * 0.15));
           transferRating = Math.min(100, Math.max(0, transferRating + riskAdjustment));
 
+          // Skip pairs with no meaningful signal — all gain columns would
+          // render as +0.0 (toFixed(1) rounds anything < 0.05 to 0.0), making
+          // any recommendation misleading regardless of rating.
+          const allGainsRoundToZero =
+            Math.abs(next1Gain) < 0.05 &&
+            Math.abs(next3Gain) < 0.05 &&
+            Math.abs(next5Gain) < 0.05 &&
+            Math.abs(netGain) < 0.05;
+          if (allGainsRoundToZero) return;
+
           // Only include if net gain and rating meet minimum thresholds
           if (netGain >= minGain && transferRating >= minRating) {
             pairs.push({
