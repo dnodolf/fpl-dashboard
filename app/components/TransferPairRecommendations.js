@@ -100,36 +100,43 @@ export default function TransferPairRecommendations({
           // Confidence-weighted score (next GW 100%, next 3 GW 80%, ROS 50%)
           const confidenceScore = (next1Gain * 1.0) + (next3Gain * 0.8) + (netGain * 0.5);
 
-          // Calculate transfer recommendation rating (0-100%)
-          // Based on: positive gains across all timeframes = good
-          // Now also factors in risk (positive risk = bonus, negative risk = penalty)
-          const maxPossibleScore = Math.max(
+          // Skip pairs without a real signal:
+          //   - Add player has no FFH match / no season projection (predicted_points = 0)
+          //   - OR every gain column would render as +0.0 (toFixed(1) < 0.05)
+          // Without this, a pair with all-zero gains can still produce a positive
+          // rating purely from the risk bonus, which is misleading.
+          const addHasProjection = (addScore || 0) > 0.05;
+          const maxAbsGainPerGW = Math.max(
             Math.abs(next1Gain),
-            Math.abs(next3Gain / 3),
-            Math.abs(next5Gain / 5),
-            Math.abs(netGain / 38)
-          ) * 3; // Multiply by 3 to get rough max score
+            Math.abs(next3Gain) / 3,
+            Math.abs(next5Gain) / 5,
+            Math.abs(netGain) / 38
+          );
+          if (!addHasProjection || maxAbsGainPerGW < 0.05) return;
 
-          const actualScore = (next1Gain * 1.0) + (next3Gain / 3 * 0.8) + (netGain / 38 * 0.5);
-          let transferRating = maxPossibleScore > 0
-            ? Math.min(100, Math.max(0, (actualScore / maxPossibleScore) * 100))
-            : 50;
+          // Translate per-GW weighted gain into a 0-100 rating.
+          // Weights: next GW (1.0) > next 3 (0.8) > next 5 (0.6) > season ROS (0.5).
+          //   - next5Gain was previously omitted from actualScore — fixed.
+          //   - netGain divided by remaining GWs (not always 38) so end-of-season
+          //     pairs aren't artificially flattened.
+          const remainingGWs = Math.max(1, 38 - (currentGameweek || 1) + 1);
+          const weightedGainPerGW =
+            (next1Gain * 1.0) +
+            ((next3Gain / 3) * 0.8) +
+            ((next5Gain / 5) * 0.6) +
+            ((netGain / remainingGWs) * 0.5);
 
-          // Adjust rating based on risk (max ±15% adjustment)
-          // Positive risk = safer = bonus to rating
-          // Negative risk = riskier = penalty to rating
+          // Scale so that +1 pt/GW weighted-average ≈ 75% rating, 0 = 50%, -1 = 25%.
+          // Sum of weights = 2.9, so divide to normalize, then map to ±50 range.
+          let transferRating = Math.min(100, Math.max(0,
+            50 + (weightedGainPerGW / 2.9) * 50
+          ));
+
+          // Adjust rating based on risk (max ±15% adjustment).
+          // Risk only modifies an existing signal — never creates one out of zero
+          // (handled by the addHasProjection / maxAbsGainPerGW guard above).
           const riskAdjustment = Math.max(-15, Math.min(15, risk.score * 0.15));
           transferRating = Math.min(100, Math.max(0, transferRating + riskAdjustment));
-
-          // Skip pairs with no meaningful signal — all gain columns would
-          // render as +0.0 (toFixed(1) rounds anything < 0.05 to 0.0), making
-          // any recommendation misleading regardless of rating.
-          const allGainsRoundToZero =
-            Math.abs(next1Gain) < 0.05 &&
-            Math.abs(next3Gain) < 0.05 &&
-            Math.abs(next5Gain) < 0.05 &&
-            Math.abs(netGain) < 0.05;
-          if (allGainsRoundToZero) return;
 
           // Only include if net gain and rating meet minimum thresholds
           if (netGain >= minGain && transferRating >= minRating) {
