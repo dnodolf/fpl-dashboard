@@ -535,7 +535,8 @@ if (process.env.NODE_ENV === 'development') {
 // V4 Ensemble: blend V3 predictions with Sleeper projections (75/25)
 const { applyV4Scoring } = await import('../../services/v4/core.js');
 const sleeperProj = sleeperProjectionsData?.projections || null;
-finalPlayers = applyV4Scoring(finalPlayers, sleeperProj, currentGameweek.number);
+const sleeperGwsWithData = sleeperProjectionsData?.gwsWithData || null;
+finalPlayers = applyV4Scoring(finalPlayers, sleeperProj, currentGameweek.number, sleeperGwsWithData);
 const v4PlayersWithData = finalPlayers.filter(p => p.v4_has_sleeper_data).length;
 
 if (process.env.NODE_ENV === 'development') {
@@ -583,7 +584,7 @@ const responseData = {
     playersWithSleeperData: v4PlayersWithData,
     totalPlayers: finalPlayers.length,
     coverage: Math.round((v4PlayersWithData / finalPlayers.length) * 100) + '%',
-    blendWeights: { v3: 0.75, sleeper: 0.25 },
+    blendWeights: { ffh: 0.70, sleeper: 0.30 },
     sleeperProjectionsAvailable: !!sleeperProj
   },
 

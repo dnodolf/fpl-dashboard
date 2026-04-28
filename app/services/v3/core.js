@@ -54,16 +54,10 @@ export async function calculateV3Prediction(player, currentGameweek, calibration
     const v3SeasonTotal = fplSeasonTotal * ratio;
     const v3SeasonAvg = fplSeasonAvg * ratio;
 
-    // For current GW: blend with FPL's official ep_next model if available
-    // Two independent models blended typically outperform either alone
-    let v3CurrentGW = fplCurrentGW * ratio;
-    if (player.ep_next && player.ep_next > 0 && fplCurrentGW > 0) {
-      const ep_next_v3 = player.ep_next * ratio;
-      v3CurrentGW = v3CurrentGW * 0.65 + ep_next_v3 * 0.35;
-    }
+    // V3 current GW: pure FFH × ratio
+    const v3CurrentGW = fplCurrentGW * ratio;
 
-    // Embed v3_pts on each prediction entry so client-side utilities can use
-    // calibrated values without needing access to calibration data
+    // Embed v3_pts on each prediction entry — v4_pts is handled by applyV4Scoring
     const predictionsWithV3 = player.predictions?.map(pred => ({
       ...pred,
       v3_pts: (pred.predicted_pts || 0) * ratio
@@ -122,7 +116,7 @@ export async function calculateV3Prediction(player, currentGameweek, calibration
     }
 
     return {
-      // Updated predictions array with v3_pts embedded per GW
+      // Updated predictions array with v3_pts embedded per GW (v4_pts added by applyV4Scoring)
       predictions: predictionsWithV3,
       v3_season_total: Math.round(v3SeasonTotal * 100) / 100,
       v3_season_avg: Math.round(v3SeasonAvg * 100) / 100,
@@ -266,8 +260,7 @@ export function getScoringValue(player, field, scoringMode = 'ffh') {
       case 'season_avg':
         return player.v4_season_avg || player.v3_season_avg || player.season_prediction_avg || 0;
       case 'current_gw':
-        // Use predictions array via getNextNGameweeksTotal, not pre-calculated field
-        return player.v3_current_gw || player.current_gw_prediction || 0;
+        return player.v4_current_gw || player.v3_current_gw || player.current_gw_prediction || 0;
       default:
         return player[field] || 0;
     }

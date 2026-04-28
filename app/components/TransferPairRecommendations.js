@@ -200,7 +200,7 @@ export default function TransferPairRecommendations({
       }
       return sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
     });
-  }, [myPlayers, availablePlayers, scoringMode, selectedPosition, minGain, minRating, currentGameweek, nextNGameweeks, sortColumn, sortDirection]);
+  }, [myPlayers, availablePlayers, scoringMode, selectedPosition, hideReserve, minGain, minRating, currentGameweek, nextNGameweeks, sortColumn, sortDirection]);
 
   /**
    * Get player score based on scoring mode (using season total)

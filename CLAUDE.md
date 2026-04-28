@@ -15,7 +15,7 @@ npm run check:scoring # Scoring consistency lint (catches banned field usage)
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v6.0 - Mock Draft Simulator
+**Current Version**: v6.2 - V4 Ensemble Scoring
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -40,9 +40,11 @@ app/
 │   ├── gameweekService.js            # Hardcoded 2025-26 schedule
 │   ├── playerMatchingService.js      # Opta ID-based matching (98% success)
 │   ├── formationOptimizerService.js  # Lineup optimization algorithms
-│   ├── v3ScoringService.js           # V3 Sleeper scoring with FPL conversion
+│   ├── v3/core.js                    # V3 Sleeper scoring (FFH × position ratio)
+│   ├── v4/core.js                    # V4 Ensemble scoring (70% FFH + 30% Sleeper blend)
+│   ├── sleeperProjectionsService.js  # Fetches Sleeper EPL projected points per GW
 │   ├── scoringConversionService.js   # Pure FFH data extraction
-│   ├── fplNewsService.js             # FPL bootstrap-static news/status
+│   ├── fplNewsService.js             # FPL bootstrap-static news/status + ep_next
 │   ├── ffhCustomStatsService.js      # FFH players-custom Opta stats
 │   ├── draftRankingService.js        # VORP, tiers, pick suggestions (pure, no React)
 │   ├── draftAnalysisService.js       # Post-draft strategy analysis
@@ -68,11 +70,12 @@ app/
 ```
 
 ### Data Sources
-1. **Sleeper API**: Authoritative source for player positions, league data, rosters
-2. **Fantasy Football Hub (FFH)**: Per-GW predictions via `player-predictions` endpoint
-3. **FFH Opta Stats**: Season stats (xG, xA, shots, tackles) via `players-custom` endpoint
-4. **FPL Official API**: Player injury/status news via `bootstrap-static` endpoint
-5. **Hardcoded Schedule**: Complete 2025-26 Premier League gameweek dates
+1. **Sleeper API**: Authoritative source for player positions, league data, rosters, reserve slots
+2. **Sleeper Projections API**: Per-GW EPL player projections via `/projections/clubsoccer:epl/regular/{season}/{gw}` — converted to custom league fantasy points using actual league scoring settings. Coverage is partial (~200 of ~400 active players); absence in a GW with data = rotation risk signal.
+3. **Fantasy Football Hub (FFH)**: Per-GW predictions via `player-predictions` endpoint
+4. **FFH Opta Stats**: Season stats (xG, xA, shots, tackles) via `players-custom` endpoint
+5. **FPL Official API**: Player injury/status news + `ep_next`/`ep_this` (expected points) via `bootstrap-static` endpoint
+6. **Hardcoded Schedule**: Complete 2025-26 Premier League gameweek dates
 
 **Position Authority**: Sleeper position data takes absolute precedence over FFH data.
 
@@ -81,10 +84,10 @@ app/
 ## Key Features
 
 - **Multi-User Support**: Per-user league config via localStorage, first-run onboarding modal
-- **Dual Scoring Systems**: Toggle between FFH FPL predictions and V3/V4 Sleeper scoring
+- **Triple Scoring Systems**: Toggle between FFH FPL predictions, V3 Sleeper (ratio conversion), and V4 Ensemble (70% FFH + 30% Sleeper projections blend)
 - **Formation Optimizer**: Mathematical constraint-based lineup optimization (6 formations)
 - **Live GW Locked Players**: Players whose match has started are locked in formation optimizer
-- **Smart Transfer Pairing**: "Drop X, Add Y" recommendations with net gain analysis
+- **Smart Transfer Pairing**: "Drop X, Add Y" recommendations with net gain analysis; reserve player toggle hides IR/reserve slot players from drop candidates
 - **Player Analytics**: Comprehensive filtering, search, comparison modals with charts
 - **Opta Advanced Stats**: xG, xA, ICT surfaced across decision tabs
 - **FPL Injury Status**: Real-time injury badges and news timestamps
@@ -192,6 +195,48 @@ V3 scoring uses ONLY position ratios. Complex adjustments (form, fixture, injury
 
 V3 represents the optimal balance - more complex approaches added variance without improving accuracy.
 
+## V4 Ensemble Scoring System
+
+V4 blends raw FFH predictions with Sleeper projected points (converted to custom league scoring) for the best accuracy of any available model.
+
+### Blend Weights (empirically validated)
+- **70% FFH raw predictions** (`pred.predicted_pts`) — primary signal
+- **30% Sleeper projections** — converted via actual league scoring settings
+
+These weights were determined via backtest across GW1-34 (3132 paired samples):
+| Model | MAE |
+|---|---|
+| V3 (FFH × position ratio) | 2.738 |
+| FFH raw standalone | 2.717 |
+| Sleeper projections standalone | 2.983 |
+| **V4 (70% FFH + 30% Sleeper)** | **2.622** ← best |
+
+Using `pred.predicted_pts` (raw FFH) rather than `v3_pts` (FFH × ratio) as the primary signal — the ratio conversion adds noise at this sample size.
+
+### Rotation Risk Discount
+When Sleeper returns projection data for a GW (`gwsWithData`) but **does not project** a specific player, this signals Sleeper's model considers them a rotation risk. V4 applies a **0.65× multiplier** (`ROTATION_RISK_MULTIPLIER`) to their predicted points for that GW.
+
+Key distinction:
+- `gwsWithData` has GW and player is absent → rotation risk → `v4_pts = baseV4 * 0.65`, `v4_rotation_risk: true`
+- `gwsWithData` does NOT have GW → GW not yet projected → fall back to V3 (`v4_pts = v3_pts ?? ffhPts`)
+
+This correctly handles the real-world case: Sleeper's EPL projection API only covers ~200 of ~400 active players. A player absent from a projected GW has a fixture but is at risk of not starting.
+
+### Player Fields
+- `v4_pts` — per prediction entry: blended or discounted points
+- `v4_sleeper_pts` — raw Sleeper projection (when available)
+- `v4_rotation_risk` — true when Sleeper had GW data but skipped this player
+- `v4_season_total`, `v4_season_avg`, `v4_current_gw` — aggregated from predictions
+- `v4_has_sleeper_data` — false if no Sleeper projections exist for this player (falls back to V3 values)
+
+### Implementation Files
+- **`app/services/v4/core.js`** — `applyV4Scoring()` — called after V3 enhancement in `integrated-players/route.js`
+- **`app/services/sleeperProjectionsService.js`** — `fetchSleeperProjections()` — batched parallel fetch, 2-hour cache, returns `{ projections, playerCount, gwsLoaded, gwsWithData }`
+- **`scripts/backtestV4.js`** — standalone Node.js backtest tool — fetches FFH history + Sleeper actuals to compute MAE across model variants; run with `node scripts/backtestV4.js`
+
+### V4 Player Fields: `is_reserve`
+Players occupying IR/reserve roster slots in Sleeper are tagged `is_reserve: true`. The Transfers tab uses this to optionally hide them from drop candidates (reserve toggle in `TransferPairRecommendations.js`).
+
 ## Draft Tab (v6.0)
 
 The Draft tab has four sub-tabs: **Cheat Sheet**, **Mock Draft**, **Draft Assistant** (placeholder), and **Draft Analysis**.
@@ -269,6 +314,16 @@ Sleeper draft API endpoints used (all public, no auth):
 
 ## Recent Technical Updates
 
+### v6.2 - V4 Ensemble Scoring (April 2026)
+- **V4 Ensemble model**: 70% FFH raw predictions + 30% Sleeper projected points (custom league scoring applied) — best MAE of any tested model (2.622 vs 2.717 FFH-only, validated GW1-34, 3132 samples)
+- **Sleeper Projections Service**: `sleeperProjectionsService.js` fetches per-GW EPL projections from Sleeper API, converts to custom fantasy points using actual league `scoring_settings`, caches 2 hours
+- **Rotation risk discount**: When Sleeper has GW projection data but omits a player, V4 applies a 0.65× multiplier (`ROTATION_RISK_MULTIPLIER`) — Sleeper's absence signals rotation risk, not a blank fixture
+- **`gwsWithData` tracking**: Set of GWs where Sleeper returned projection data; distinguishes rotation risk (player absent from projected GW) from not-yet-projected (fall back to V3 unchanged)
+- **`is_reserve` field**: Players in Sleeper IR/reserve slots tagged `is_reserve: true`; Transfers tab hides them from drop candidates by default via reserve toggle
+- **Reserve toggle restored**: `TransferPairRecommendations.js` — toggle was lost in a bad merge; `hideReserve` state + filter + button UI all restored; `hideReserve` added to `useMemo` dependency array to fix non-refreshing toggle
+- **Localhost HTTP fix**: `scout/route.js`, `optimizer/route.js`, `players/route.js` — detect localhost and force `http://` for internal fetches; Next.js passes `https://` in `request.url` even in dev causing `ERR_SSL_PACKET_LENGTH_TOO_LONG`
+- **Backtest infrastructure**: `scripts/backtestV4.js` — standalone Node.js script; fetches FFH history + Sleeper actuals, computes MAE for FFH-only / V3 / Sleeper-only / V4 blend variants; `MAX_GW = 34`
+
 ### v6.1 - GW Sync & Draft Fixes (April 2026)
 - **Stale-while-revalidate**: `usePlayerData.js` shows cached data instantly on load, always fires a background refresh — Sleeper roster changes appear within ~15s of page load instead of waiting for cache TTL
 - **Client cache TTL**: Reduced from 30 min → 10 min (SWR makes it safe to refresh more often)
@@ -328,7 +383,9 @@ Sleeper draft API endpoints used (all public, no auth):
 
 - **JSX Compilation**: Avoid styled-jsx; use global CSS instead
 - **Gameweek Schedule Maintenance**: Each entry in `gameweekService.js` must have `end` set 2–3 days after `start`. If `start === end`, the live detection window is zero — the GW flips to "upcoming" the instant it starts. Annual schedule updates must include proper end dates.
-- **V3 Scoring**: Minutes weighting critical for realistic predictions
+- **V3 Scoring**: Uses only position ratios (GKP 0.90×, DEF 1.15×, MID 1.05×, FWD 0.97×). Complex adjustments were removed — they added variance without improving accuracy.
+- **V4 Scoring**: Always runs after V3 (needs `v3_pts` per prediction). Requires `sleeperProjections` and `gwsWithData` from `fetchSleeperProjections()`. Falls back to V3 values when Sleeper data is unavailable.
+- **Sleeper Projections Coverage**: Partial (~200/400 active players). Never assume missing player = blank fixture — could be rotation risk. Use `gwsWithData` to distinguish.
 - **Error Handling**: Always implement graceful fallbacks for external API dependencies
 - **Theme System**: Application uses dark theme exclusively
 - **Cache Strategy**: Compression essential for large datasets (1500+ players)

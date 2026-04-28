@@ -8,14 +8,14 @@
  *   3. V4 Blend (V3 * w + Sleeper * (1-w)) — grid search for optimal weights
  *
  * Usage:
- *   node scripts/backtestV4.js              # Sleeper-only (no dev server needed)
- *   node scripts/backtestV4.js --with-v3    # Also test V3 (needs dev server on :3000)
+ *   node scripts/backtestV4.js              # Sleeper projections only (no dev server needed)
+ *   node scripts/backtestV4.js --with-v3    # Also test V3 + V4 ep_next blend (needs dev server on :3000)
  */
 
 const LEAGUE_ID = '1240184286171107328';
 const SLEEPER_API = 'https://api.sleeper.app/v1';
 const SEASON = '2025';
-const MAX_GW = 29; // Latest completed GW
+const MAX_GW = 34; // Latest completed GW
 
 const withV3 = process.argv.includes('--with-v3');
 
@@ -233,6 +233,123 @@ async function main() {
     }
   }
 
+  // ─── V4 ep_next Blend Validation ───────────────────────────────────────
+
+  let epSamples = null;
+  if (v3Samples && v3Samples.length > 0) {
+    console.log('\n═══════════════════════════════════════════════════');
+    console.log('  MODEL 3: V4 ep_next Blend (V3 * 0.65 + ep_next * 0.35)');
+    console.log('═══════════════════════════════════════════════════');
+
+    try {
+      // Build sleeper_id -> ffh_id (FPL element ID) map from dev server response
+      process.stdout.write('  Fetching player ID mapping from dev server...');
+      const mapResp = await fetch('http://localhost:3000/api/integrated-players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const mapData = await mapResp.json();
+      const sleeperToFplId = {};
+      (mapData.players || []).forEach(p => {
+        if (p.sleeper_id && p.ffh_id) sleeperToFplId[p.sleeper_id] = p.ffh_id;
+      });
+      console.log(` ${Object.keys(sleeperToFplId).length} mappings`);
+
+      // Unique FPL IDs needed (only players that appear in our v3Samples)
+      const neededFplIds = [...new Set(v3Samples.map(s => sleeperToFplId[s.pid]).filter(Boolean))];
+      process.stdout.write(`  Fetching FPL element summaries for ${neededFplIds.length} players...`);
+
+      const FPL_API = 'https://fantasy.premierleague.com/api';
+      const epHistory = {}; // fpl_id -> { gw -> ep }
+
+      // Batch 10 at a time to avoid rate limiting
+      for (let i = 0; i < neededFplIds.length; i += 10) {
+        const batch = neededFplIds.slice(i, i + 10);
+        await Promise.all(batch.map(async fplId => {
+          try {
+            const res = await fetch(`${FPL_API}/element-summary/${fplId}/`, {
+              headers: { 'User-Agent': 'FPL-Dashboard/1.0' }
+            });
+            if (!res.ok) return;
+            const d = await res.json();
+            epHistory[fplId] = {};
+            (d.history || []).forEach(h => {
+              // FPL element-summary uses 'event' (not 'round') for GW number
+              const gw = h.event ?? h.round;
+              if (gw != null && h.expected_points != null) {
+                epHistory[fplId][gw] = parseFloat(h.expected_points);
+              }
+            });
+          } catch { /* skip */ }
+        }));
+        process.stdout.write('.');
+      }
+      console.log(' done');
+
+      // Build ep-enriched samples: add epSleeper (ep_next converted to Sleeper scoring via ratio)
+      epSamples = v3Samples.map(s => {
+        const fplId = sleeperToFplId[s.pid];
+        const ep = fplId && epHistory[fplId] ? epHistory[fplId][s.gw] : null;
+        if (ep == null) return null;
+        // Recover position ratio from v3Pts / ffhPts
+        const ratio = s.ffhPts > 0 ? s.v3Pts / s.ffhPts : 1;
+        const epSleeper = ep * ratio;
+        return { ...s, ep, epSleeper };
+      }).filter(Boolean);
+
+      if (epSamples.length < 10) {
+        console.log(`  Only ${epSamples.length} samples with ep_next data — skipping ep blend analysis.`);
+        epSamples = null;
+      } else {
+        const v3MAE = epSamples.reduce((sum, s) => sum + Math.abs(s.v3Pts - s.actual), 0) / epSamples.length;
+        const epMAE = epSamples.reduce((sum, s) => sum + Math.abs(s.epSleeper - s.actual), 0) / epSamples.length;
+        const v4MAE = epSamples.reduce((sum, s) => sum + Math.abs(s.v3Pts * 0.65 + s.epSleeper * 0.35 - s.actual), 0) / epSamples.length;
+
+        // Grid search optimal V3/ep_next blend weights
+        let bestW = 0.65, bestMAE = Infinity;
+        for (let w = 0; w <= 1.0; w += 0.05) {
+          const mae = epSamples.reduce((sum, s) => sum + Math.abs(s.v3Pts * w + s.epSleeper * (1 - w) - s.actual), 0) / epSamples.length;
+          if (mae < bestMAE) { bestMAE = mae; bestW = w; }
+        }
+
+        console.log(`  ep_next samples: ${epSamples.length}`);
+        console.log(`  V3 standalone MAE:        ${v3MAE.toFixed(3)}`);
+        console.log(`  ep_next standalone MAE:   ${epMAE.toFixed(3)}`);
+        console.log(`  V4 as shipped (65/35) MAE: ${v4MAE.toFixed(3)}`);
+        console.log(`  Optimal V3/ep blend:       ${bestMAE.toFixed(3)} (${(bestW*100).toFixed(0)}% V3 / ${((1-bestW)*100).toFixed(0)}% ep_next)`);
+
+        const shippedDelta = ((v4MAE - v3MAE) / v3MAE * 100).toFixed(1);
+        const optimalDelta = ((bestMAE - v3MAE) / v3MAE * 100).toFixed(1);
+        console.log(`\n  V4 as shipped vs V3:  ${shippedDelta > 0 ? '+' : ''}${shippedDelta}% (${v4MAE < v3MAE ? 'improvement' : 'regression'})`);
+        console.log(`  Optimal blend vs V3:  ${optimalDelta > 0 ? '+' : ''}${optimalDelta}% (${bestMAE < v3MAE ? 'improvement' : 'regression'})`);
+
+        if (Math.abs(bestW - 0.65) >= 0.10) {
+          console.log(`\n  ⚠️  Optimal weight (${(bestW*100).toFixed(0)}% V3) differs from shipped (65%) by ≥10pp`);
+          console.log(`     Consider updating core.js blend: v3*${bestW.toFixed(2)} + ep_next*${(1-bestW).toFixed(2)}`);
+        } else {
+          console.log(`\n  ✅  Shipped weights (65/35) within 10pp of optimal — no change needed`);
+        }
+
+        console.log('\n  Per-position ep_next blend:');
+        positions.forEach(pos => {
+          const ps = epSamples.filter(s => s.pos === pos);
+          if (ps.length < 5) return;
+          let bw = 0.65, bm = Infinity;
+          for (let w = 0; w <= 1.0; w += 0.05) {
+            const mae = ps.reduce((sum, s) => sum + Math.abs(s.v3Pts * w + s.epSleeper * (1 - w) - s.actual), 0) / ps.length;
+            if (mae < bm) { bm = mae; bw = w; }
+          }
+          const v3mae = ps.reduce((sum, s) => sum + Math.abs(s.v3Pts - s.actual), 0) / ps.length;
+          const epmae = ps.reduce((sum, s) => sum + Math.abs(s.epSleeper - s.actual), 0) / ps.length;
+          console.log(`    ${pos}: optimal=${(bw*100).toFixed(0)}%V3/${((1-bw)*100).toFixed(0)}%ep → MAE=${bm.toFixed(3)} (V3-only: ${v3mae.toFixed(3)}, ep-only: ${epmae.toFixed(3)}, n=${ps.length})`);
+        });
+      }
+    } catch (e) {
+      console.log(`  FAILED: ${e.message}`);
+    }
+  }
+
   // ─── V4 Blend Optimization ─────────────────────────────────────────────
 
   if (v3Samples && v3Samples.length > 0) {
@@ -329,6 +446,12 @@ async function main() {
   if (v3Samples && v3Samples.length > 0) {
     const v3MAE = v3Samples.reduce((sum, s) => sum + Math.abs(s.v3Pts - s.actual), 0) / v3Samples.length;
     console.log(`  V3 MAE (this run):       ${v3MAE.toFixed(3)} (${v3Samples.length} paired samples)`);
+  }
+  if (epSamples && epSamples.length > 0) {
+    const v4MAE = epSamples.reduce((sum, s) => sum + Math.abs(s.v3Pts * 0.65 + s.epSleeper * 0.35 - s.actual), 0) / epSamples.length;
+    const v3SubMAE = epSamples.reduce((sum, s) => sum + Math.abs(s.v3Pts - s.actual), 0) / epSamples.length;
+    const delta = ((v4MAE - v3SubMAE) / v3SubMAE * 100).toFixed(1);
+    console.log(`  V4 ep_next blend MAE:    ${v4MAE.toFixed(3)} (${epSamples.length} samples, ${delta > 0 ? '+' : ''}${delta}% vs V3)`);
   }
   console.log('');
 }

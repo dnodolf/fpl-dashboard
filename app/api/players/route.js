@@ -13,7 +13,9 @@ export async function GET(request) {
     }
 
     let playerData;
-    const baseUrl = new URL(request.url).origin;
+    const { host } = new URL(request.url);
+    const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+    const baseUrl = `${isLocalhost ? 'http' : 'https'}://${host}`;
 
     // Route to appropriate data source
     switch (source) {

@@ -83,15 +83,16 @@ export async function fetchSleeperProjections(currentGWNumber) {
     }
 
     const playerCount = Object.keys(projections).length;
-    const gwsLoaded = allResults.filter(r => r.result).length;
+    // Track which GWs had projection data — absence of a player in a GW with data = blank fixture
+    const gwsWithData = new Set(allResults.filter(r => r.result).map(r => r.gw));
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`Sleeper Projections: ${playerCount} players, ${totalSamples} data points across ${gwsLoaded}/${gwNumbers.length} GWs`);
+      console.log(`Sleeper Projections: ${playerCount} players, ${totalSamples} data points across ${gwsWithData.size}/${gwNumbers.length} GWs`);
     }
 
     if (playerCount === 0) return null;
 
-    return { projections, playerCount, gwsLoaded };
+    return { projections, playerCount, gwsLoaded: gwsWithData.size, gwsWithData };
 
   } catch (error) {
     console.error('Sleeper projections fetch failed:', error.message);

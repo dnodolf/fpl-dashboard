@@ -142,8 +142,9 @@ export async function POST(request) {
     }
 
     // Get base URL for API calls
-    const { protocol, host } = new URL(request.url);
-    const baseUrl = `${protocol}//${host}`;
+    const { host } = new URL(request.url);
+    const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+    const baseUrl = `${isLocalhost ? 'http' : 'https'}://${host}`;
 
     // Fetch player data and live fixture status in parallel
     const currentGW = requestData.currentGameweek;

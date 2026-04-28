@@ -64,8 +64,9 @@ export async function POST(request) {
       return NextResponse.json({ ...cached, cached: true });
     }
 
-    const { protocol, host } = new URL(request.url);
-    const baseUrl = `${protocol}//${host}`;
+    const { host } = new URL(request.url);
+    const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+    const baseUrl = `${isLocalhost ? 'http' : 'https'}://${host}`;
 
     // Fetch players + rosters in parallel
     const [allPlayers, leagueRosters] = await Promise.all([
