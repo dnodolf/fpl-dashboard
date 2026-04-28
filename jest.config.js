@@ -19,7 +19,8 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: [
         '<rootDir>/app/utils/__tests__/**/*.test.js',
-        '<rootDir>/app/services/__tests__/**/*.test.js'
+        '<rootDir>/app/services/__tests__/**/*.test.js',
+        '<rootDir>/utils/__tests__/**/*.test.js'
       ],
       transform: { '^.+\\.jsx?$': 'babel-jest' },
       transformIgnorePatterns,

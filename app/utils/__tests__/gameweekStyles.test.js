@@ -35,18 +35,18 @@ describe('getGameweekStatusStyles', () => {
   it('returns gray default for unknown status', () => {
     const s = getGameweekStatusStyles('unknown');
     expect(s.icon).toBe('⚽');
-    expect(s.bg).toContain('gray');
+    expect(s.bg).toContain('slate');
   });
 
   it('returns gray default for null', () => {
     const s = getGameweekStatusStyles(null);
     REQUIRED_KEYS.forEach(key => expect(s).toHaveProperty(key));
-    expect(s.bg).toContain('gray');
+    expect(s.bg).toContain('slate');
   });
 
   it('returns gray default for undefined', () => {
     const s = getGameweekStatusStyles(undefined);
-    expect(s.bg).toContain('gray');
+    expect(s.bg).toContain('slate');
   });
 
   it('does not mutate the styles object across calls', () => {

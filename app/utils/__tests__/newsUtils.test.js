@@ -115,13 +115,13 @@ describe('getFPLStatusBadge', () => {
   it('returns UNAVAILABLE badge for "u"', () => {
     const badge = getFPLStatusBadge('u');
     expect(badge).toMatchObject({ badge: 'UNAVAILABLE', icon: '❌' });
-    expect(badge.color).toContain('gray');
+    expect(badge.color).toContain('slate');
   });
 
   it('returns NOT IN SQUAD badge for "n"', () => {
     const badge = getFPLStatusBadge('n');
     expect(badge).toMatchObject({ badge: 'NOT IN SQUAD', icon: '➖' });
-    expect(badge.color).toContain('gray');
+    expect(badge.color).toContain('slate');
   });
 
   it('returns null for "a" (available)', () => {

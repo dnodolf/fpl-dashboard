@@ -29,7 +29,7 @@ jest.mock('../v3/matchup.js', () => ({
   }))
 }));
 
-import { calculateV3Prediction, applyV3Scoring, getScoringValue } from '../v3/core.js';
+import { calculateV3Prediction, applyV3Scoring, getScoringValue } from '../v3ScoringService.js';
 
 const GW = { number: 20 };
 
