@@ -22,6 +22,7 @@ export default function TransferPairRecommendations({
   onPlayerClick
 }) {
   const [selectedPosition, setSelectedPosition] = useState('ALL');
+  const [hideReserve, setHideReserve] = useState(true); // Hide reserve/IR slot players from drop candidates
   const [minGain, setMinGain] = useState(5); // Minimum points gain to show
   const [sortColumn, setSortColumn] = useState('confidence'); // Column to sort by
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
@@ -62,8 +63,10 @@ export default function TransferPairRecommendations({
       : [selectedPosition];
 
     positions.forEach(position => {
-      // Get my players in this position
-      const myPositionPlayers = myPlayers.filter(p => p.position === position);
+      // Get my players in this position (exclude reserve/IR slot players when toggle is on)
+      const myPositionPlayers = myPlayers.filter(p =>
+        p.position === position && !(hideReserve && p.is_reserve)
+      );
 
       // Get available players in this position
       const availablePositionPlayers = availablePlayers.filter(p => p.position === position);
@@ -422,6 +425,19 @@ export default function TransferPairRecommendations({
             <option value={60}>Good+ (60%+)</option>
             <option value={80}>Strong Only (80%+)</option>
           </select>
+
+          {/* Reserve Toggle */}
+          <button
+            onClick={() => setHideReserve(v => !v)}
+            title={hideReserve ? 'Reserve/IR players hidden from drop list' : 'Showing reserve/IR players as drop candidates'}
+            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+              hideReserve
+                ? 'bg-amber-600/20 border-amber-500/50 text-amber-400 hover:bg-amber-600/30'
+                : 'bg-slate-700 border-slate-600 text-slate-400 hover:bg-slate-600'
+            }`}
+          >
+            {hideReserve ? '🏥 Reserve Hidden' : '🏥 Show Reserve'}
+          </button>
         </div>
       </div>
 
