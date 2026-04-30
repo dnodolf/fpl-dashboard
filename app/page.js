@@ -11,6 +11,7 @@ import HomeTabContent from './components/HomeTabContent';
 
 import ScoutTabContent from './components/ScoutTabContent';
 import DraftTabContent from './components/DraftTabContent';
+import LeagueTabContent from './components/LeagueTabContent';
 import DashboardHeader from './components/DashboardHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -28,9 +29,180 @@ import { getNextNGameweeksTotal, getAvgMinutesNextN } from './utils/predictionUt
 import { getSleeperPositionStyle, getPositionColors } from './constants/positionColors';
 import { timeAgo } from './utils/newsUtils';
 
+// ----------------- PLAYERS TABLE COMPONENT -----------------
+const PlayersContent = ({ players, sortedPlayers, filters, setFilters, owners, userId, scoringMode, currentGameweek, handlePlayerClick, handleSort, renderSortIcon, getPositionColor }) => (
+  <>
+    <div className="p-4 rounded-lg mb-6 shadow-sm bg-slate-800 border border-slate-700/60 ring-1 ring-slate-700/30">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">
+            Positions ({filters.position.length > 0 ? filters.position.length : 'All'})
+          </label>
+          <div className="flex gap-2">
+            {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
+              const colors = getPositionColor(pos);
+              const isSelected = filters.position.includes(pos);
+              return (
+                <button key={pos}
+                  onClick={() => {
+                    if (isSelected) {
+                      setFilters(prev => ({ ...prev, position: prev.position.filter(p => p !== pos) }));
+                    } else {
+                      setFilters(prev => ({ ...prev, position: [...prev.position, pos] }));
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${isSelected ? `${colors.pill} text-white shadow-lg` : 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-2 border-transparent hover:border-slate-300'}`}>
+                  {pos}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">Owner</label>
+          <select value={filters.owner} onChange={(e) => setFilters(prev => ({ ...prev, owner: e.target.value }))}
+            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white">
+            <option value={FILTER_OPTIONS.ALL}>All Owners</option>
+            <option value={FILTER_OPTIONS.MY_PLAYERS_AND_FAS}>My Players + FAs</option>
+            <option value={userId}>My Players Only</option>
+            <option value={OWNERSHIP_STATUS.FREE_AGENT}>Free Agents Only</option>
+            {owners.map(owner => <option key={owner} value={owner}>{owner}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">Min ROS Points</label>
+          <input type="number" step="0.1" value={filters.minPoints}
+            onChange={(e) => setFilters(prev => ({ ...prev, minPoints: parseFloat(e.target.value) || 0 }))}
+            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white"
+            placeholder="0" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">Search</label>
+          <input type="text" value={filters.search}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            placeholder="Player name, team..."
+            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white placeholder-slate-400" />
+        </div>
+      </div>
+    </div>
+    <div className="mb-4 flex items-center justify-between">
+      <div className="text-sm text-slate-400">
+        Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
+        <span className="ml-2 text-xs">
+          (Free Agents: {players.filter(p => !p.owned_by || p.owned_by === OWNERSHIP_STATUS.FREE_AGENT).length},
+          Owned: {players.filter(p => p.owned_by && p.owned_by !== OWNERSHIP_STATUS.FREE_AGENT).length})
+        </span>
+      </div>
+      <div className="text-sm text-slate-500">Click column headers to sort</div>
+    </div>
+    <div className="rounded-lg shadow-sm border overflow-hidden bg-slate-800 border-slate-700">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-700">
+          <thead className="bg-slate-700">
+            <tr>
+              {[
+                { key: 'name', label: 'Player' },
+                { key: 'position', label: 'Position' },
+                { key: 'team', label: 'Team' },
+                { key: 'owned_by', label: 'Ownership' },
+                { key: 'sleeper_points_ros', label: 'ROS Points' },
+                { key: 'sleeper_points_next5', label: 'Next 5 GW' },
+                { key: 'avg_minutes_next5', label: 'Avg Mins (Next 5)' },
+                { key: 'predicted_ppg', label: 'PPG (Predicted)' }
+              ].map(col => (
+                <th key={col.key}
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-slate-300 hover:bg-slate-600"
+                  onClick={() => handleSort(col.key)}>
+                  <div className="flex items-center">{col.label} {renderSortIcon(col.key)}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-slate-800 divide-y divide-slate-700">
+            {sortedPlayers.map((player, index) => (
+              <tr key={`${player.sleeper_id || player.id || index}`} className="hover:bg-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div>
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <button onClick={() => handlePlayerClick(player)}
+                          className="text-white hover:text-violet-400 underline decoration-transparent hover:decoration-violet-400 transition-all cursor-pointer text-left">
+                          {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
+                        </button>
+                        {(player.news?.trim() || (player.fpl_status && player.fpl_status !== 'a')) && (() => {
+                          const statusColor = player.fpl_status === 'i' || player.fpl_status === 's'
+                            ? 'text-red-400 hover:text-red-300'
+                            : 'text-orange-400 hover:text-orange-300';
+                          const newsText = player.news?.trim() || '';
+                          const timestamp = player.news_added ? timeAgo(player.news_added) : '';
+                          const tooltip = [newsText, timestamp].filter(Boolean).join(' · ');
+                          return (
+                            <span className={`${statusColor} cursor-pointer transition-colors`} title={tooltip || 'Status alert'}>📰</span>
+                          );
+                        })()}
+                      </div>
+                      {player.injury_status && (
+                        <div className="text-xs text-red-600">🏥 {player.injury_status}</div>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSleeperPositionStyle(player.position)}`}>
+                    {player.position || 'N/A'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                  {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  {player.owned_by && player.owned_by !== OWNERSHIP_STATUS.FREE_AGENT && player.owned_by !== '' ? (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${player.owned_by === userId ? 'bg-indigo-100 text-indigo-900 border border-indigo-400' : 'bg-orange-100 text-orange-900 border border-orange-400'}`}>
+                      {player.owned_by === userId ? '👤 My Player' : player.owned_by}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">⚡ Free Agent</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                  {(() => {
+                    const seasonTotal = v3ScoringService.getScoringValue(player, 'season_total', scoringMode);
+                    return seasonTotal > 0 ? seasonTotal.toFixed(1) : 'N/A';
+                  })()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                  {getNextNGameweeksTotal(player, scoringMode, currentGameweek?.number, 5).toFixed(1)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                  {Math.round(getAvgMinutesNextN(player, currentGameweek?.number, 5))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                  {v3ScoringService.getScoringValue(player, 'season_avg', scoringMode).toFixed(1)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {sortedPlayers.length === 0 && (
+      <div className="text-center py-8">
+        <div className="mb-2 text-slate-400">No players match your current filters</div>
+        <button
+          onClick={() => setFilters({ position: [], team: FILTER_OPTIONS.ALL, owner: FILTER_OPTIONS.ALL, minPoints: 0, search: '' })}
+          className="text-violet-500 hover:text-violet-600 text-sm underline">
+          Clear all filters
+        </button>
+      </div>
+    )}
+  </>
+);
+
 // ----------------- MAIN DASHBOARD COMPONENT -----------------
 export default function FPLDashboard() {
   const [activeTab, setActiveTab] = useState('home');
+  const [lineupSubTab, setLineupSubTab] = useState('startSit');
+  const [transfersSubTab, setTransfersSubTab] = useState('recommendations');
   const [filters, setFilters] = useState({
     position: [],
     team: FILTER_OPTIONS.ALL,
@@ -289,15 +461,6 @@ export default function FPLDashboard() {
   }
 
   // Render tab-specific stats
-  const renderStatsCards = () => {
-    switch(activeTab) {
-      case 'optimizer':
-        return <OptimizerStatsCard scoringMode={scoringMode} currentGameweek={currentGameweek} userId={userId} />;
-      default:
-        return null;
-    }
-  };
-
   // Main render
   return (
     <ErrorBoundary>
@@ -321,9 +484,6 @@ export default function FPLDashboard() {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-6">
 
-          {/* Tab-Specific Stats Cards */}
-          {renderStatsCards()}
-
           {/* Content based on active tab */}
           {activeTab === 'home' && (
             <HomeTabContent
@@ -335,269 +495,90 @@ export default function FPLDashboard() {
             />
           )}
 
-          {activeTab === 'players' && (
+          {activeTab === 'lineup' && (
             <>
-              {/* Filters */}
-              <div className="p-4 rounded-lg mb-6 shadow-sm bg-slate-800 border border-slate-700/60 ring-1 ring-slate-700/30">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* Position Filter - Multi-select */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-slate-300">
-                      Positions ({filters.position.length > 0 ? filters.position.length : 'All'})
-                    </label>
-                    <div className="flex gap-2">
-                      {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
-                        const colors = getPositionColor(pos);
-                        const isSelected = filters.position.includes(pos);
-                        return (
-                          <button
-                            key={pos}
-                            onClick={() => {
-                              if (isSelected) {
-                                setFilters(prev => ({
-                                  ...prev,
-                                  position: prev.position.filter(p => p !== pos)
-                                }));
-                              } else {
-                                setFilters(prev => ({
-                                  ...prev,
-                                  position: [...prev.position, pos]
-                                }));
-                              }
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${
-                              isSelected
-                                ? `${colors.pill} text-white shadow-lg`
-                                : 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-2 border-transparent hover:border-slate-300'
-                            }`}
-                          >
-                            {pos}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Owner Filter */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-slate-300">Owner</label>
-                    <select
-                      value={filters.owner}
-                      onChange={(e) => setFilters(prev => ({ ...prev, owner: e.target.value }))}
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white"
-                    >
-                      <option value={FILTER_OPTIONS.ALL}>All Owners</option>
-                      <option value={FILTER_OPTIONS.MY_PLAYERS_AND_FAS}>My Players + FAs</option>
-                      <option value={userId}>My Players Only</option>
-                      <option value={OWNERSHIP_STATUS.FREE_AGENT}>Free Agents Only</option>
-                      {owners.map(owner => (
-                        <option key={owner} value={owner}>{owner}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Min Points Filter */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-slate-300">Min ROS Points</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={filters.minPoints}
-                      onChange={(e) => setFilters(prev => ({ ...prev, minPoints: parseFloat(e.target.value) || 0 }))}
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white"
-                      placeholder="0"
-                    />
-                  </div>
-
-                  {/* Search Filter */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-slate-300">Search</label>
-                    <input
-                      type="text"
-                      value={filters.search}
-                      onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                      placeholder="Player name, team..."
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Results Summary */}
-              <div className="mb-4 flex items-center justify-between">
-                <div className="text-sm text-slate-400">
-                  Showing {sortedPlayers.length.toLocaleString()} of {players.length.toLocaleString()} players
-                  <span className="ml-2 text-xs">
-                    (Free Agents: {players.filter(p => !p.owned_by || p.owned_by === OWNERSHIP_STATUS.FREE_AGENT).length},
-                     Owned: {players.filter(p => p.owned_by && p.owned_by !== OWNERSHIP_STATUS.FREE_AGENT).length})
-                  </span>
-                </div>
-                <div className="text-sm text-slate-500">
-                  Click column headers to sort
-                </div>
-              </div>
-
-              {/* Players Table */}
-              <div className="rounded-lg shadow-sm border overflow-hidden bg-slate-800 border-slate-700">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-700">
-                    <thead className="bg-slate-700">
-                      <tr>
-                        {[
-                          { key: 'name', label: 'Player' },
-                          { key: 'position', label: 'Position' },
-                          { key: 'team', label: 'Team' },
-                          { key: 'owned_by', label: 'Ownership' },
-                          { key: 'sleeper_points_ros', label: 'ROS Points' },
-                          { key: 'sleeper_points_next5', label: 'Next 5 GW' },
-                          { key: 'avg_minutes_next5', label: 'Avg Mins (Next 5)' },
-                          { key: 'predicted_ppg', label: 'PPG (Predicted)' }
-                        ].map(col => (
-                          <th
-                            key={col.key}
-                            className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-slate-300 hover:bg-slate-600"
-                            onClick={() => handleSort(col.key)}
-                          >
-                            <div className="flex items-center">
-                              {col.label} {renderSortIcon(col.key)}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-slate-800 divide-y divide-slate-700">
-                      {sortedPlayers.map((player, index) => (
-                        <tr key={`${player.sleeper_id || player.id || index}`} className="hover:bg-slate-700">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div>
-                                <div className="text-sm font-medium flex items-center gap-2">
-                                  <button
-                                    onClick={() => handlePlayerClick(player)}
-                                    className="text-white hover:text-violet-400 underline decoration-transparent hover:decoration-violet-400 transition-all cursor-pointer text-left"
-                                  >
-                                    {player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()}
-                                  </button>
-                                  {(player.news?.trim() || (player.fpl_status && player.fpl_status !== 'a')) && (() => {
-                                    const statusColor = player.fpl_status === 'i' || player.fpl_status === 's'
-                                      ? 'text-red-400 hover:text-red-300'
-                                      : player.fpl_status === 'd'
-                                        ? 'text-orange-400 hover:text-orange-300'
-                                        : 'text-orange-400 hover:text-orange-300';
-                                    const newsText = player.news?.trim() || '';
-                                    const timestamp = player.news_added ? timeAgo(player.news_added) : '';
-                                    const tooltip = [newsText, timestamp].filter(Boolean).join(' · ');
-                                    return (
-                                      <span className={`${statusColor} cursor-pointer transition-colors`} title={tooltip || 'Status alert'}>
-                                        📰
-                                      </span>
-                                    );
-                                  })()}
-                                </div>
-                                {player.injury_status && (
-                                  <div className="text-xs text-red-600">🏥 {player.injury_status}</div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSleeperPositionStyle(player.position)}`}>
-                              {player.position || 'N/A'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                            {TEAM_DISPLAY_NAMES[player.team_abbr] || player.team_abbr || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {player.owned_by && player.owned_by !== OWNERSHIP_STATUS.FREE_AGENT && player.owned_by !== '' ? (
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                player.owned_by === userId
-                                  ? 'bg-indigo-100 text-indigo-900 border border-indigo-400'
-                                  : 'bg-orange-100 text-orange-900 border border-orange-400'
-                              }`}>
-                                {player.owned_by === userId ? '👤 My Player' : player.owned_by}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
-                                ⚡ Free Agent
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                            {(() => {
-                              const seasonTotal = v3ScoringService.getScoringValue(player, 'season_total', scoringMode);
-                              return seasonTotal > 0 ? seasonTotal.toFixed(1) : 'N/A';
-                            })()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                            {getNextNGameweeksTotal(player, scoringMode, currentGameweek?.number, 5).toFixed(1)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                            {Math.round(getAvgMinutesNextN(player, currentGameweek?.number, 5))}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                            {v3ScoringService.getScoringValue(player, 'season_avg', scoringMode).toFixed(1)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* No Results Message */}
-              {sortedPlayers.length === 0 && (
-                <div className="text-center py-8">
-                  <div className="mb-2 text-slate-400">No players match your current filters</div>
-                  <button
-                    onClick={() => {
-                      setFilters({
-                        position: [],
-                        team: FILTER_OPTIONS.ALL,
-                        owner: FILTER_OPTIONS.ALL,
-                        minPoints: 0,
-                        search: ''
-                      });
-                    }}
-                    className="text-violet-500 hover:text-violet-600 text-sm underline"
-                  >
-                    Clear all filters
+              <div className="flex items-center gap-1 border-b border-slate-700 pb-2 mb-6">
+                {[{ key: 'startSit', label: 'Start/Sit' }, { key: 'myTeam', label: 'My Team' }].map(t => (
+                  <button key={t.key} onClick={() => setLineupSubTab(t.key)}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-t transition-colors ${lineupSubTab === t.key ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+                    {t.label}
                   </button>
+                ))}
+              </div>
+              {lineupSubTab === 'startSit' && (
+                <>
+                <OptimizerStatsCard scoringMode={scoringMode} currentGameweek={currentGameweek} userId={userId} />
+                <OptimizerTabContent
+                  players={players}
+                  currentGameweek={currentGameweek}
+                  scoringMode={scoringMode}
+                  onPlayerClick={handlePlayerClick}
+                  userId={userId}
+                />
+                </>
+              )}
+              {lineupSubTab === 'myTeam' && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="text-4xl mb-4">👤</div>
+                  <h3 className="text-lg font-semibold text-white mb-2">My Team</h3>
+                  <p className="text-sm text-slate-400 max-w-sm">Full team overview — your roster, player statuses, and projected points at a glance.</p>
+                  <span className="mt-4 text-xs bg-violet-900/40 text-violet-300 border border-violet-700/50 px-3 py-1 rounded-full">Coming Soon</span>
                 </div>
               )}
             </>
           )}
 
-          {activeTab === 'scout' && (
-            <ScoutTabContent
-              players={players}
-              currentGameweek={currentGameweek}
-              scoringMode={scoringMode}
-              onPlayerClick={handlePlayerClick}
-              userId={userId}
-            />
-          )}
-
-          {activeTab === 'optimizer' && (
-            <OptimizerTabContent
-              players={players}
-              currentGameweek={currentGameweek}
-              scoringMode={scoringMode}
-              onPlayerClick={handlePlayerClick}
-              userId={userId}
-            />
-          )}
-
           {activeTab === 'transfers' && (
-            <TransferTabContent
-              players={players}
-              currentGameweek={currentGameweek}
-              scoringMode={scoringMode}
-              gameweekRange={transferGameweekRange}
-              onGameweekRangeChange={setTransferGameweekRange}
-              onPlayerClick={handlePlayerClick}
-              userId={userId}
-            />
+            <>
+              <div className="flex items-center gap-1 border-b border-slate-700 pb-2 mb-6">
+                {[
+                  { key: 'recommendations', label: 'Recommendations' },
+                  { key: 'cheatsheet', label: 'Cheat Sheet' },
+                  { key: 'players', label: 'Players' },
+                ].map(t => (
+                  <button key={t.key} onClick={() => setTransfersSubTab(t.key)}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-t transition-colors ${transfersSubTab === t.key ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {transfersSubTab === 'recommendations' && (
+                <TransferTabContent
+                  players={players}
+                  currentGameweek={currentGameweek}
+                  scoringMode={scoringMode}
+                  gameweekRange={transferGameweekRange}
+                  onGameweekRangeChange={setTransferGameweekRange}
+                  onPlayerClick={handlePlayerClick}
+                  userId={userId}
+                />
+              )}
+              {transfersSubTab === 'cheatsheet' && (
+                <CheatSheetTabContent
+                  players={players}
+                  scoringMode={scoringMode}
+                  currentGameweek={currentGameweek}
+                  onPlayerClick={handlePlayerClick}
+                  userId={userId}
+                />
+              )}
+              {transfersSubTab === 'players' && (
+                <PlayersContent
+                  players={players}
+                  sortedPlayers={sortedPlayers}
+                  filters={filters}
+                  setFilters={setFilters}
+                  owners={owners}
+                  userId={userId}
+                  scoringMode={scoringMode}
+                  currentGameweek={currentGameweek}
+                  handlePlayerClick={handlePlayerClick}
+                  handleSort={handleSort}
+                  renderSortIcon={renderSortIcon}
+                  getPositionColor={getPositionColor}
+                />
+              )}
+            </>
           )}
 
           {activeTab === 'trades' && (
@@ -621,11 +602,11 @@ export default function FPLDashboard() {
             />
           )}
 
-          {activeTab === 'cheatsheet' && (
-            <CheatSheetTabContent
+          {activeTab === 'league' && (
+            <LeagueTabContent
               players={players}
-              scoringMode={scoringMode}
               currentGameweek={currentGameweek}
+              scoringMode={scoringMode}
               onPlayerClick={handlePlayerClick}
               userId={userId}
             />

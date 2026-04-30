@@ -9,7 +9,6 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
   const [standings, setStandings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const fetchStandings = async () => {
@@ -63,43 +62,34 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
-      {/* Header - Always Visible */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700 transition-colors rounded-t-lg"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-xl">🏆</span>
-          <div className="text-left">
-            <div className="text-sm font-bold text-white">League Standings</div>
-            {userRank && (
-              <div className="text-xs text-slate-400">
-                You're #{userRank} • {userStanding.wins}-{userStanding.losses}
-                {userStanding.ties > 0 && `-${userStanding.ties}`}
-              </div>
-            )}
-          </div>
+      {/* Header */}
+      <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-700">
+        <span className="text-xl">🏆</span>
+        <div>
+          <div className="text-sm font-bold text-white">League Standings</div>
+          {userRank && (
+            <div className="text-xs text-slate-400">
+              You&apos;re #{userRank} • {userStanding.wins}-{userStanding.losses}
+              {userStanding.ties > 0 && `-${userStanding.ties}`}
+            </div>
+          )}
         </div>
-        <span className="text-slate-400 text-sm">
-          {isExpanded ? '▼' : '▶'}
-        </span>
-      </button>
+      </div>
 
-      {/* Expanded Standings Table */}
-      {isExpanded && (
-        <div className="border-t border-slate-700">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-900">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Team</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L-T</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PA</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {standings.map((team, index) => {
+      {/* Standings Table */}
+      <div>
+        <table className="w-full text-sm">
+          <thead className="bg-slate-900">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Team</th>
+              <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L-T</th>
+              <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF</th>
+              <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PA</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-700">
+            {standings.map((team, index) => {
                 const isCurrentUser = team.displayName === currentUserId;
                 return (
                   <tr
@@ -136,10 +126,9 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

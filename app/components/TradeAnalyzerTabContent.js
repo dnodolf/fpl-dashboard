@@ -71,7 +71,10 @@ function PlayerCard({ player, isSelected, onToggle, scoringMode, currentGW }) {
   const badge = player?.fpl_status && player.fpl_status !== 'a'
     ? getFPLStatusBadge(player.fpl_status)
     : null;
-  const pts = getNextNGameweeksTotal(player, scoringMode, currentGW, 5);
+  const n1  = getNextNGameweeksTotal(player, scoringMode, currentGW, 1);
+  const n3  = getNextNGameweeksTotal(player, scoringMode, currentGW, 3);
+  const n5  = getNextNGameweeksTotal(player, scoringMode, currentGW, 5);
+  const ros = getScoringValue(player, 'season_total', scoringMode) || 0;
 
   return (
     <button
@@ -101,10 +104,14 @@ function PlayerCard({ player, isSelected, onToggle, scoringMode, currentGW }) {
           <div className="text-[10px] text-slate-400">{player.team_abbr || player.team}</div>
         </div>
 
-        {/* Next 5 GW pts */}
-        <div className="text-right shrink-0">
-          <div className="text-xs font-semibold text-slate-200">{pts.toFixed(1)}</div>
-          <div className="text-[9px] text-slate-500">n5</div>
+        {/* Stats columns: n1 | n3 | n5 | ROS */}
+        <div className="flex gap-2 shrink-0 text-right">
+          {[['n1', n1], ['n3', n3], ['n5', n5], ['ROS', ros]].map(([label, val]) => (
+            <div key={label} className="w-8">
+              <div className="text-xs font-semibold text-slate-200">{val.toFixed(0)}</div>
+              <div className="text-[9px] text-slate-500">{label}</div>
+            </div>
+          ))}
         </div>
       </div>
     </button>

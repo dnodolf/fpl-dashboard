@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { getDataFreshnessStatus } from '../utils/cacheManager';
 import CacheManager from '../utils/cacheManager';
 import { AppLogo } from './common/AppLogo';
-import { Home, Users, ArrowLeftRight, BookOpen, GitCompare, Search, Table2, RefreshCw, Info, Scale, Target } from 'lucide-react';
+import { Home, Users, ArrowLeftRight, Scale, Trophy, Target, RefreshCw, Info } from 'lucide-react';
 
 const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration, modelAccuracy, leagueName, onChangeLeague }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
@@ -152,15 +152,12 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
           )}
         <div ref={tabScrollRef} className="flex overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
           {[
-            { id: 'home', label: 'Home', icon: <Home size={14} /> },
-            { id: 'optimizer', label: 'Start/Sit', icon: <Users size={14} /> },
+            { id: 'home',      label: 'Home',      icon: <Home size={14} /> },
+            { id: 'lineup',    label: 'Lineup',    icon: <Users size={14} /> },
             { id: 'transfers', label: 'Transfers', icon: <ArrowLeftRight size={14} /> },
-            { id: 'trades', label: 'Trades', icon: <Scale size={14} /> },
-            { id: 'cheatsheet', label: 'Cheat Sheet', icon: <BookOpen size={14} /> },
-            { id: 'comparison', label: 'Comparison', icon: <GitCompare size={14} /> },
-            { id: 'scout', label: 'Scout', icon: <Search size={14} /> },
-            { id: 'players', label: 'Players', icon: <Table2 size={14} /> },
-            { id: 'draft', label: 'Draft', icon: <Target size={14} /> }
+            { id: 'trades',    label: 'Trades',    icon: <Scale size={14} /> },
+            { id: 'league',    label: 'League',    icon: <Trophy size={14} /> },
+            { id: 'draft',     label: 'Draft',     icon: <Target size={14} /> }
           ].map((tab) => (
             <button
               key={tab.id}

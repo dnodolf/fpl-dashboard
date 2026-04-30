@@ -15,7 +15,7 @@ npm run check:scoring # Scoring consistency lint (catches banned field usage)
 
 Fantasy FC Playbook is a Next.js 14 application that integrates Sleeper Fantasy Football league data with Fantasy Football Hub (FFH) predictions. The system uses Opta ID matching to achieve 98% player matching accuracy and provides fantasy football analytics with reliable gameweek tracking and dual scoring systems.
 
-**Current Version**: v6.2 - V4 Ensemble Scoring
+**Current Version**: v6.3 - Navigation Redesign & Bug Fixes
 **Production Status**: Ready for 2025-26 Premier League season
 
 ## Architecture
@@ -52,6 +52,8 @@ app/
 ├── components/                    # UI components
 │   ├── DashboardHeader.js, SetupModal.js, PlayerModal.js
 │   ├── OptimizerTabContent.js, TransferTabContent.js, ComparisonTabContent.js
+│   ├── LeagueTabContent.js           # League tab shell: Standings · Scout · Schedule Luck · Reporting · Season Review
+│   ├── ScheduleLuckContent.js        # Self-contained luck analyzer (Pythagorean expected wins, all-play breakdown)
 │   ├── DraftTabContent.js            # Draft tab shell: 4 sub-tabs (Cheat Sheet, Mock Draft, Draft Assistant, Draft Analysis)
 │   ├── draft/
 │   │   ├── DraftAnalysisPanel.js    # Draft Analysis sub-tab (post-draft retroactive insights)
@@ -85,6 +87,7 @@ app/
 
 - **Multi-User Support**: Per-user league config via localStorage, first-run onboarding modal
 - **Triple Scoring Systems**: Toggle between FFH FPL predictions, V3 Sleeper (ratio conversion), and V4 Ensemble (70% FFH + 30% Sleeper projections blend)
+- **6-Tab Navigation**: Home · Lineup · Transfers · Trades · League · Draft — each with sub-tabs
 - **Formation Optimizer**: Mathematical constraint-based lineup optimization (6 formations)
 - **Live GW Locked Players**: Players whose match has started are locked in formation optimizer
 - **Smart Transfer Pairing**: "Drop X, Add Y" recommendations with net gain analysis; reserve player toggle hides IR/reserve slot players from drop candidates
@@ -93,6 +96,8 @@ app/
 - **FPL Injury Status**: Real-time injury badges and news timestamps
 - **Hardcoded Gameweek System**: 100% reliability, zero external dependencies
 - **Live GW Auto-Expand**: Home tab fixtures section auto-expands when GW status is `live`
+- **DGW Scaling**: FFH predictions with `predicted_mins > 100` are scaled to single-match equivalent (`90 / predicted_mins`) — Sleeper FC only scores one match per GW
+- **Schedule Luck Analyzer**: Pythagorean expected wins vs actual, all-play record, weekly breakdown with Tough Luck / Lucky Win badges — under League tab
 - **Cheat Sheet**: Static VORP-ranked tier board with Overall view and By Position 4-column grid (FWD/MID/DEF/GKP)
 - **Mock Draft Simulator**: Solo snake draft vs 7 AI archetypes, Monte Carlo availability %, VORP-graded results with letter grade
 - **Draft Analysis**: Retroactive VORP grading of actual Sleeper league draft — manager grades, position flow, steals/reaches, strategy takeaways
@@ -314,6 +319,25 @@ Sleeper draft API endpoints used (all public, no auth):
 
 ## Recent Technical Updates
 
+### v6.3 - Navigation Redesign & Bug Fixes (April 2026)
+- **6-tab navigation**: Consolidated 9 tabs → Home · Lineup · Transfers · Trades · League · Draft. Each has sub-tabs following FantasyPros-style UX.
+  - **Lineup**: Start/Sit (optimizer) · My Team (placeholder)
+  - **Transfers**: Recommendations · Cheat Sheet (in-season) · Players
+  - **League**: Standings · Scout · Schedule Luck · Reporting (placeholder) · Season Review (placeholder)
+  - **Draft**: Cheat Sheet (VORP) · Mock Draft · Draft Assistant · Draft Analysis
+- **`LeagueTabContent.js`** — new League tab shell; renders `LeagueStandings`, `ScoutTabContent`, `ScheduleLuckContent`, and two ComingSoon placeholders
+- **`ScheduleLuckContent.js`** — self-contained luck analyzer extracted from HomeTabContent; self-fetches `/api/standings` and `/api/all-play`; always expanded (no collapse toggle)
+- **`LeagueStandings.js`** — removed collapsible behavior; table is always expanded now that it lives on its own dedicated sub-tab page
+- **Stats card position fix**: `OptimizerStatsCard` moved inside the Lineup tab, below the sub-tab bar, so switching sub-tabs doesn't shift the tab control position
+- **Trades tab player columns**: `PlayerCard` in `TradeAnalyzerTabContent.js` now shows n1 · n3 · n5 · ROS per player instead of n5 only
+- **Scrollbar layout shift fix**: Added `scrollbar-gutter: stable` to `body` in `globals.css` — prevents content jumping when scrollbar appears/disappears between tabs
+- **DGW scaling**: FFH returns combined predictions for Double/Triple Gameweeks with inflated `predicted_mins` (e.g. 180 for two matches). Applied `scale = 90 / predicted_mins` when `predicted_mins > 100` in two places:
+  - `app/utils/ffhDataUtils.js` → fixes `currentGwPrediction`, `currentGwMins`, `ffhSeasonPrediction`
+  - `app/services/scoringConversionService.js` → fixes `finalPredictions` (per-GW array consumed by V3/V4)
+  - Only future predictions scaled; completed results entries untouched. Diagnostic fields `dgw_scaled` and `dgw_fixture_count` embedded on affected entries.
+- **GW schedule corrections**: GW35 start corrected to Fri 1 May (was May 2); GW36 end extended to Wed 13 May (was May 11, missed Man City/Crystal Palace); GW36-37 kickoff times corrected to first match of week (12:30 BST early slot)
+- **Emoji encoding fix**: PowerShell UTF-8 corruption in `HomeTabContent.js` repaired — all double-encoded byte sequences restored (▶ ▼ ▲ ● → 🔴 🏁 ✅ 🔗 📰 🔒 and Unicode arrows/symbols)
+
 ### v6.2 - V4 Ensemble Scoring (April 2026)
 - **V4 Ensemble model**: 70% FFH raw predictions + 30% Sleeper projected points (custom league scoring applied) — best MAE of any tested model (2.622 vs 2.717 FFH-only, validated GW1-34, 3132 samples)
 - **Sleeper Projections Service**: `sleeperProjectionsService.js` fetches per-GW EPL projections from Sleeper API, converts to custom fantasy points using actual league `scoring_settings`, caches 2 hours
@@ -382,7 +406,8 @@ Sleeper draft API endpoints used (all public, no auth):
 ## Development Notes
 
 - **JSX Compilation**: Avoid styled-jsx; use global CSS instead
-- **Gameweek Schedule Maintenance**: Each entry in `gameweekService.js` must have `end` set 2–3 days after `start`. If `start === end`, the live detection window is zero — the GW flips to "upcoming" the instant it starts. Annual schedule updates must include proper end dates.
+- **Gameweek Schedule Maintenance**: Each entry in `gameweekService.js` must have `end` set 2–3 days after `start`. If `start === end`, the live detection window is zero — the GW flips to "upcoming" the instant it starts. Annual schedule updates must include proper end dates. All times are stored in UTC (BST = UTC+1, so 15:00 BST Saturday kickoff = 14:00Z; early 12:30 BST slot = 11:30Z).
+- **DGW Scaling**: FFH bundles Double/Triple Gameweek fixtures into one prediction entry with `predicted_mins > 90`. Sleeper FC scores only one match per GW. Scaling is applied automatically in `ffhDataUtils.js` and `scoringConversionService.js` when `predicted_mins > 100`. Do NOT add separate DGW handling in components — it is already corrected in the pipeline.
 - **V3 Scoring**: Uses only position ratios (GKP 0.90×, DEF 1.15×, MID 1.05×, FWD 0.97×). Complex adjustments were removed — they added variance without improving accuracy.
 - **V4 Scoring**: Always runs after V3 (needs `v3_pts` per prediction). Requires `sleeperProjections` and `gwsWithData` from `fetchSleeperProjections()`. Falls back to V3 values when Sleeper data is unavailable.
 - **Sleeper Projections Coverage**: Partial (~200/400 active players). Never assume missing player = blank fixture — could be rotation risk. Use `gwsWithData` to distinguish.

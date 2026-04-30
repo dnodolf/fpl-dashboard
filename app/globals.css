@@ -10,6 +10,7 @@
 body {
   color: var(--foreground);
   background-color: var(--background);
+  scrollbar-gutter: stable;
 }
 
 @layer utilities {

@@ -23,11 +23,16 @@ export function extractAllGameweekPredictions(ffhPlayer) {
         const mins = pred.predicted_mins || pred.xmins || 0;
 
         if (typeof pts === 'number' && pts >= 0) {
+          // DGW/TGW: FFH bundles all fixtures into one prediction entry with inflated
+          // predicted_mins (e.g. 180 for two matches). Sleeper FC scores only one match
+          // per GW, so scale down to a single-match equivalent when mins > 100.
+          const dgwScale = mins > 100 ? 90 / mins : 1;
           allPredictions.set(pred.gw, {
             gw: pred.gw,
-            predicted_pts: pts,
-            predicted_mins: mins,
-            source: 'predictions'
+            predicted_pts: dgwScale < 1 ? Math.round(pts * dgwScale * 100) / 100 : pts,
+            predicted_mins: dgwScale < 1 ? 90 : mins,
+            source: 'predictions',
+            ...(dgwScale < 1 && { dgw_scaled: true, dgw_fixture_count: Math.round(mins / 90) }),
           });
         }
       }

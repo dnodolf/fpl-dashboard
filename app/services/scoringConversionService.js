@@ -184,6 +184,22 @@ export async function enhancePlayerWithScoringConversion(player, ffhData, curren
       }
     }
 
+    // DGW/TGW scaling: finalPredictions comes from ffhData.predictions (raw array).
+    // Each entry with predicted_mins > 100 covers multiple fixtures; Sleeper scores one.
+    finalPredictions = finalPredictions.map(pred => {
+      const mins = pred.predicted_mins || pred.xmins || 0;
+      if (mins <= 100) return pred;
+      const scale = 90 / mins;
+      return {
+        ...pred,
+        predicted_pts: Math.round((pred.predicted_pts || 0) * scale * 100) / 100,
+        predicted_mins: 90,
+        xmins: 90,
+        dgw_scaled: true,
+        dgw_fixture_count: Math.round(mins / 90),
+      };
+    });
+
     // FIXED: Return enhanced player with ALL data properly merged
     return {
       // PRESERVE all original Sleeper data
