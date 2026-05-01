@@ -114,7 +114,7 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode, isGWActive = 
                           {getPlayerName(player)}
                         </span>
                         {!player.is_starter && (
-                          <span className="text-[8px] text-slate-600">BN</span>
+                          <span className="text-[8px] text-[#98B3D6]">BN</span>
                         )}
                       </div>
                     </div>

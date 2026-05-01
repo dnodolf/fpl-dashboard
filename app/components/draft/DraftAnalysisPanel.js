@@ -64,7 +64,7 @@ const PositionFlowChart = ({ roundFlow }) => {
                 const count = round[pos] || 0;
                 if (count === 0) return null;
                 const width = (count / maxPerRound) * 100;
-                const colors = { GKP: 'bg-yellow-500', DEF: 'bg-cyan-500', MID: 'bg-pink-500', FWD: 'bg-purple-500' };
+                const colors = { GKP: 'bg-[#FF7900]', DEF: 'bg-[#00D7FF]', MID: 'bg-[#C96CFF]', FWD: 'bg-[#FF6482]' };
                 return (
                   <div
                     key={pos}
@@ -82,7 +82,7 @@ const PositionFlowChart = ({ roundFlow }) => {
       </div>
       <div className="flex items-center gap-4 mt-3 justify-center">
         {['FWD', 'MID', 'DEF', 'GKP'].map(pos => {
-          const colors = { GKP: 'bg-yellow-500', DEF: 'bg-cyan-500', MID: 'bg-pink-500', FWD: 'bg-purple-500' };
+          const colors = { GKP: 'bg-[#FF7900]', DEF: 'bg-[#00D7FF]', MID: 'bg-[#C96CFF]', FWD: 'bg-[#FF6482]' };
           return (
             <div key={pos} className="flex items-center gap-1.5">
               <div className={`w-2.5 h-2.5 rounded ${colors[pos]}`} />

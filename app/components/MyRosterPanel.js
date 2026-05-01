@@ -83,10 +83,10 @@ const MyRosterPanel = ({ players, userId, scoringMode, currentGameweek, onPlayer
             .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a));
 
           const positionGradients = {
-            GKP: 'from-yellow-600/20 to-amber-600/20',
-            DEF: 'from-green-600/20 to-emerald-600/20',
-            MID: 'from-blue-600/20 to-indigo-600/20',
-            FWD: 'from-purple-600/20 to-fuchsia-600/20'
+            GKP: 'from-[#FF7900]/20 to-[#FF7900]/5',
+            DEF: 'from-[#00D7FF]/20 to-[#00D7FF]/5',
+            MID: 'from-[#C96CFF]/20 to-[#C96CFF]/5',
+            FWD: 'from-[#FF6482]/20 to-[#FF6482]/5',
           };
 
           return (

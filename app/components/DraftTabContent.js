@@ -18,10 +18,10 @@ import DraftAssistantPanel from './draft/DraftAssistantPanel';
 
 
 const POS_PANEL_STYLE = {
-  GKP: { badge: 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300', header: 'bg-yellow-900/20 border-yellow-700/30', label: 'Goalkeepers' },
-  DEF: { badge: 'bg-green-600/20 border-green-500/40 text-green-300',   header: 'bg-green-900/20 border-green-700/30',   label: 'Defenders'   },
-  MID: { badge: 'bg-blue-600/20 border-blue-500/40 text-blue-300',      header: 'bg-blue-900/20 border-blue-700/30',      label: 'Midfielders' },
-  FWD: { badge: 'bg-red-600/20 border-red-500/40 text-red-300',         header: 'bg-red-900/20 border-red-700/30',         label: 'Forwards'    },
+  GKP: { badge: 'bg-[#FF7900]/20 border-[#FF7900]/40 text-[#FF7900]', header: 'bg-[#FF7900]/10 border-[#FF7900]/20', label: 'Goalkeepers' },
+  DEF: { badge: 'bg-[#00D7FF]/20 border-[#00D7FF]/40 text-[#00D7FF]', header: 'bg-[#00D7FF]/10 border-[#00D7FF]/20', label: 'Defenders'   },
+  MID: { badge: 'bg-[#C96CFF]/20 border-[#C96CFF]/40 text-[#C96CFF]', header: 'bg-[#C96CFF]/10 border-[#C96CFF]/20', label: 'Midfielders' },
+  FWD: { badge: 'bg-[#FF6482]/20 border-[#FF6482]/40 text-[#FF6482]', header: 'bg-[#FF6482]/10 border-[#FF6482]/20', label: 'Forwards'    },
 };
 
 // ─── Main DraftTabContent ───────────────────────────────────────────────────

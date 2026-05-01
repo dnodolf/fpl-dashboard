@@ -53,7 +53,7 @@ const PlayersContent = ({ players, sortedPlayers, filters, setFilters, owners, u
                       setFilters(prev => ({ ...prev, position: [...prev.position, pos] }));
                     }
                   }}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${isSelected ? `${colors.pill} text-white shadow-lg` : 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-2 border-transparent hover:border-slate-300'}`}>
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${isSelected ? `${colors.pill} text-black shadow-lg` : 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-2 border-transparent hover:border-slate-300'}`}>
                   {pos}
                 </button>
               );
@@ -246,35 +246,9 @@ export default function FPLDashboard() {
   const getPositionColor = useCallback((position) => {
     const colors = getPositionColors(position);
 
-    const lightBgMap = {
-      'GKP': 'bg-yellow-100',
-      'DEF': 'bg-teal-100',
-      'MID': 'bg-pink-100',
-      'FWD': 'bg-purple-100'
-    };
-
-    const textMap = {
-      'GKP': 'text-yellow-800',
-      'DEF': 'text-teal-800',
-      'MID': 'text-pink-800',
-      'FWD': 'text-purple-800'
-    };
-
-    const borderMap = {
-      'GKP': 'border-yellow-200',
-      'DEF': 'border-teal-200',
-      'MID': 'border-pink-200',
-      'FWD': 'border-purple-200'
-    };
-
-    const normalizedPos = position?.toUpperCase() || 'GKP';
-
     return {
-      bg: lightBgMap[normalizedPos] || 'bg-slate-100',
-      text: textMap[normalizedPos] || 'text-slate-800',
-      border: borderMap[normalizedPos] || 'border-slate-200',
       accent: colors.accent,
-      pill: colors.pill
+      pill: colors.pill,
     };
   }, []);
 

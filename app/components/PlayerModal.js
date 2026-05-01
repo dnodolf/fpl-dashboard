@@ -268,25 +268,23 @@ export function PlayerModal({
 
   const form = getFormIndicator();
 
-  // Position-themed gradient for header
   const getPositionGradient = (position) => {
     switch (position) {
-      case 'GKP': return 'from-yellow-700 to-amber-900';
-      case 'DEF': return 'from-green-700 to-emerald-900';
-      case 'MID': return 'from-pink-700 to-fuchsia-900';
-      case 'FWD': return 'from-purple-700 to-fuchsia-900';
-      default: return 'from-slate-700 to-slate-900';
+      case 'GKP': return 'from-[#FF7900]/30 to-slate-900';
+      case 'DEF': return 'from-[#00D7FF]/20 to-slate-900';
+      case 'MID': return 'from-[#C96CFF]/30 to-slate-900';
+      case 'FWD': return 'from-[#FF6482]/30 to-slate-900';
+      default:    return 'from-slate-700 to-slate-900';
     }
   };
 
-  // Position-themed ring color for avatar
   const getPositionRingColor = (position) => {
     switch (position) {
-      case 'GKP': return 'ring-yellow-500';
-      case 'DEF': return 'ring-green-500';
-      case 'MID': return 'ring-pink-500';
-      case 'FWD': return 'ring-purple-500';
-      default: return 'ring-slate-500';
+      case 'GKP': return 'ring-[#FF7900]';
+      case 'DEF': return 'ring-[#00D7FF]';
+      case 'MID': return 'ring-[#C96CFF]';
+      case 'FWD': return 'ring-[#FF6482]';
+      default:    return 'ring-slate-500';
     }
   };
 

@@ -201,10 +201,10 @@ const FormationVisualization = ({ lineup, isOptimal = false, optimalPlayerIds = 
 
     // Map position to subtle background color
     const positionBgMap = {
-      GKP: 'bg-yellow-900/50 border-yellow-700/50',
-      DEF: 'bg-cyan-900/50 border-cyan-700/50',
-      MID: 'bg-pink-900/50 border-pink-700/50',
-      FWD: 'bg-purple-900/50 border-purple-700/50'
+      GKP: 'bg-[#FF7900]/15 border-[#FF7900]/30',
+      DEF: 'bg-[#00D7FF]/15 border-[#00D7FF]/30',
+      MID: 'bg-[#C96CFF]/15 border-[#C96CFF]/30',
+      FWD: 'bg-[#FF6482]/15 border-[#FF6482]/30',
     };
     const positionBg = positionBgMap[player.position?.toUpperCase()] || 'bg-slate-700 border-slate-600';
 
