@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useMemo } from 'react';
 
 const POSITION_ORDER = { FWD: 0, MID: 1, DEF: 2, GKP: 3 };
 
@@ -23,8 +22,6 @@ const DIFF_CELL = {
 const GW_COUNT = 5;
 
 const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode, isGWActive = false }) => {
-  const [expanded, setExpanded] = useState(false);
-
   const gwRange = useMemo(() => {
     if (!currentGW) return [];
     const range = [];
@@ -63,138 +60,117 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode, isGWActive = 
   if (!sortedPlayers.length || !gwRange.length) return null;
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg">
-      {/* Collapsed header — always visible */}
-      <button
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
-        onClick={() => setExpanded(v => !v)}
-      >
-        <span className="text-sm font-bold text-white">Squad Fixture Forecast</span>
-        <div className="flex items-center gap-2">
-          {!expanded && (
-            <span className="text-[10px] text-slate-500">Next {gwRange.length} GWs</span>
-          )}
-          {expanded
-            ? <ChevronDown size={14} className="text-slate-500" />
-            : <ChevronRight size={14} className="text-slate-500" />
-          }
-        </div>
-      </button>
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+      {/* Legend */}
+      <div className="flex items-center gap-1.5 text-[10px] mb-3">
+        <span className="text-slate-500 mr-0.5">Difficulty:</span>
+        <span className="px-1.5 py-0.5 rounded bg-green-800 text-green-200">Easy</span>
+        <span className="px-1.5 py-0.5 rounded bg-lime-800 text-lime-200">Fav</span>
+        <span className="px-1.5 py-0.5 rounded bg-yellow-800 text-yellow-200">Med</span>
+        <span className="px-1.5 py-0.5 rounded bg-orange-800 text-orange-200">Hard</span>
+        <span className="px-1.5 py-0.5 rounded bg-red-900 text-red-200">V.Hard</span>
+      </div>
 
-      {expanded && (
-        <div className="px-4 pb-4">
-          {/* Legend */}
-          <div className="flex items-center gap-1.5 text-[10px] mb-3">
-            <span className="text-slate-500 mr-0.5">Difficulty:</span>
-            <span className="px-1.5 py-0.5 rounded bg-green-800 text-green-200">Easy</span>
-            <span className="px-1.5 py-0.5 rounded bg-lime-800 text-lime-200">Fav</span>
-            <span className="px-1.5 py-0.5 rounded bg-yellow-800 text-yellow-200">Med</span>
-            <span className="px-1.5 py-0.5 rounded bg-orange-800 text-orange-200">Hard</span>
-            <span className="px-1.5 py-0.5 rounded bg-red-900 text-red-200">V.Hard</span>
-          </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr>
+              <th className="text-left text-slate-500 font-medium pb-1.5 pr-3 w-24 min-w-[96px]">
+                Player
+              </th>
+              {gwRange.map(gw => (
+                <th key={gw} className="text-center text-slate-500 font-medium pb-1.5 px-0.5 min-w-[56px]">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span>GW{gw}</span>
+                    {gw === currentGW && isGWActive && (
+                      <span className="text-[8px] font-bold text-orange-400 tracking-wider">● LIVE</span>
+                    )}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => {
+              if (row.type === 'header') {
+                return (
+                  <tr key={`hdr-${row.pos}-${i}`}>
+                    <td colSpan={gwRange.length + 1} className="pt-2.5 pb-0.5">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${POSITION_LABEL_COLORS[row.pos] || 'text-slate-400'}`}>
+                        {row.pos}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              }
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr>
-                  <th className="text-left text-slate-500 font-medium pb-1.5 pr-3 w-24 min-w-[96px]">
-                    Player
-                  </th>
-                  {gwRange.map(gw => (
-                    <th key={gw} className="text-center text-slate-500 font-medium pb-1.5 px-0.5 min-w-[56px]">
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span>GW{gw}</span>
-                        {gw === currentGW && isGWActive && (
-                          <span className="text-[8px] font-bold text-orange-400 tracking-wider">● LIVE</span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => {
-                  if (row.type === 'header') {
-                    return (
-                      <tr key={`hdr-${row.pos}-${i}`}>
-                        <td colSpan={gwRange.length + 1} className="pt-2.5 pb-0.5">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider ${POSITION_LABEL_COLORS[row.pos] || 'text-slate-400'}`}>
-                            {row.pos}
-                          </span>
+              const { player } = row;
+              return (
+                <tr key={player.sleeper_id || player.player_id || i}>
+                  <td className="pr-3 py-0.5">
+                    <div className="flex items-center gap-1">
+                      <span
+                        className="text-slate-300 block truncate max-w-[88px]"
+                        title={player.web_name || player.name}
+                      >
+                        {player.web_name || player.name}
+                      </span>
+                      {!player.is_starter && (
+                        <span className="text-[8px] text-slate-600 shrink-0">BN</span>
+                      )}
+                    </div>
+                  </td>
+                  {gwRange.map(gw => {
+                    const pred = player.predictions?.find(p => p.gw === gw);
+                    if (!pred?.opp?.[0] || !Array.isArray(pred.opp[0])) {
+                      return (
+                        <td key={gw} className="px-0.5 py-0.5">
+                          <div className="flex flex-col items-center justify-center h-10 rounded bg-slate-700/20 text-[9px] leading-tight text-center">
+                            {gw === currentGW && isGWActive
+                              ? <span className="text-orange-400 font-bold">GW<br/>Active</span>
+                              : <span className="text-slate-600">—</span>
+                            }
+                          </div>
                         </td>
-                      </tr>
-                    );
-                  }
+                      );
+                    }
 
-                  const { player } = row;
-                  return (
-                    <tr key={player.sleeper_id || player.player_id || i}>
-                      <td className="pr-3 py-0.5">
-                        <div className="flex items-center gap-1">
-                          <span
-                            className="text-slate-300 block truncate max-w-[88px]"
-                            title={player.web_name || player.name}
-                          >
-                            {player.web_name || player.name}
+                    const [code, full, difficulty] = pred.opp[0];
+                    const isHome = (full || '').includes('(H)');
+                    const diff = Math.min(5, Math.max(1, Math.round(difficulty || 3)));
+                    const style = DIFF_CELL[diff];
+
+                    const pts = scoringMode === 'v4'
+                      ? (pred.v4_pts ?? pred.v3_pts ?? pred.predicted_pts ?? 0)
+                      : scoringMode === 'v3'
+                        ? (pred.v3_pts ?? pred.predicted_pts ?? 0)
+                        : (pred.predicted_pts ?? 0);
+
+                    return (
+                      <td key={gw} className="px-0.5 py-0.5">
+                        <div
+                          className={`flex flex-col items-center justify-center h-10 rounded border ${style.bg} ${style.border} cursor-default`}
+                          title={`${player.web_name || player.name} vs ${full} — Difficulty ${diff}/5 · ${pts.toFixed(1)} pts`}
+                        >
+                          <span className={`font-bold text-[10px] leading-tight ${style.text}`}>
+                            {(code || '').toUpperCase()}
+                            <span className={`font-normal opacity-60 text-[8px] ml-0.5`}>
+                              {isHome ? 'H' : 'A'}
+                            </span>
                           </span>
-                          {!player.is_starter && (
-                            <span className="text-[8px] text-slate-600 shrink-0">BN</span>
-                          )}
+                          <span className={`text-[10px] leading-tight font-medium ${style.text} opacity-80`}>
+                            {pts.toFixed(1)}
+                          </span>
                         </div>
                       </td>
-                      {gwRange.map(gw => {
-                        const pred = player.predictions?.find(p => p.gw === gw);
-                        if (!pred?.opp?.[0] || !Array.isArray(pred.opp[0])) {
-                          return (
-                            <td key={gw} className="px-0.5 py-0.5">
-                              <div className="flex flex-col items-center justify-center h-10 rounded bg-slate-700/20 text-[9px] leading-tight text-center">
-                                {gw === currentGW && isGWActive
-                                  ? <span className="text-orange-400 font-bold">GW<br/>Active</span>
-                                  : <span className="text-slate-600">—</span>
-                                }
-                              </div>
-                            </td>
-                          );
-                        }
-
-                        const [code, full, difficulty] = pred.opp[0];
-                        const isHome = (full || '').includes('(H)');
-                        const diff = Math.min(5, Math.max(1, Math.round(difficulty || 3)));
-                        const style = DIFF_CELL[diff];
-
-                        const pts = scoringMode === 'v4'
-                          ? (pred.v4_pts ?? pred.v3_pts ?? pred.predicted_pts ?? 0)
-                          : scoringMode === 'v3'
-                            ? (pred.v3_pts ?? pred.predicted_pts ?? 0)
-                            : (pred.predicted_pts ?? 0);
-
-                        return (
-                          <td key={gw} className="px-0.5 py-0.5">
-                            <div
-                              className={`flex flex-col items-center justify-center h-10 rounded border ${style.bg} ${style.border} cursor-default`}
-                              title={`${player.web_name || player.name} vs ${full} — Difficulty ${diff}/5 · ${pts.toFixed(1)} pts`}
-                            >
-                              <span className={`font-bold text-[10px] leading-tight ${style.text}`}>
-                                {(code || '').toUpperCase()}
-                                <span className={`font-normal opacity-60 text-[8px] ml-0.5`}>
-                                  {isHome ? 'H' : 'A'}
-                                </span>
-                              </span>
-                              <span className={`text-[10px] leading-tight font-medium ${style.text} opacity-80`}>
-                                {pts.toFixed(1)}
-                              </span>
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
