@@ -4,12 +4,29 @@ import { useState, useRef, useEffect } from 'react';
 import { getDataFreshnessStatus } from '../utils/cacheManager';
 import CacheManager from '../utils/cacheManager';
 import { AppLogo } from './common/AppLogo';
-import { Home, Users, ArrowLeftRight, Scale, Trophy, Target, RefreshCw, Info } from 'lucide-react';
+import { Home, Users, ArrowLeftRight, Scale, Trophy, Target, RefreshCw, Info, ChevronDown } from 'lucide-react';
+
+const SCORING_MODES = [
+  { id: 'ffh', label: 'FFH', emoji: '📊' },
+  { id: 'v3',  label: 'V3',  emoji: '🚀' },
+  { id: 'v4',  label: 'V4',  emoji: '⚡' },
+];
 
 const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiveTab, currentGameweek, scoringMode, setScoringMode, calibration, modelAccuracy, leagueName, onChangeLeague }) => {
   const freshnessStatus = getDataFreshnessStatus(lastUpdated);
   const tabScrollRef = useRef(null);
+  const scoringDropdownRef = useRef(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [scoringOpen, setScoringOpen] = useState(false);
+
+  useEffect(() => {
+    if (!scoringOpen) return;
+    const handleClick = (e) => {
+      if (!scoringDropdownRef.current?.contains(e.target)) setScoringOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [scoringOpen]);
 
   useEffect(() => {
     const el = tabScrollRef.current;
@@ -57,46 +74,35 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
-            {/* Scoring Mode Toggle */}
-            <div className="flex items-center gap-1 sm:gap-2">
-              <span className="text-xs sm:text-sm text-slate-400 hidden sm:inline">
-                Scoring:
-              </span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setScoringMode('ffh')}
-                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                    scoringMode === 'ffh'
-                      ? 'bg-violet-500 hover:bg-violet-600 text-white'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                  }`}
-                  title="Fantasy Football Hub (FPL scoring)"
-                >
-                  📊 <span className="hidden sm:inline">FFH</span>
-                </button>
-                <button
-                  onClick={() => setScoringMode('v3')}
-                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                    scoringMode === 'v3'
-                      ? 'bg-violet-500 hover:bg-violet-600 text-white'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                  }`}
-                  title="V3 Sleeper conversion (optimal position-based ratios)"
-                >
-                  🚀 <span className="hidden sm:inline">V3</span>
-                </button>
-                <button
-                  onClick={() => setScoringMode('v4')}
-                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                    scoringMode === 'v4'
-                      ? 'bg-violet-500 hover:bg-violet-600 text-white'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                  }`}
-                  title="V4 Ensemble (75% V3 + 25% Sleeper projections)"
-                >
-                  ⚡ <span className="hidden sm:inline">V4</span>
-                </button>
-              </div>
+            {/* Scoring Mode Dropdown */}
+            <div className="relative" ref={scoringDropdownRef}>
+              <button
+                onClick={() => setScoringOpen(o => !o)}
+                className="flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+              >
+                <span>{SCORING_MODES.find(m => m.id === scoringMode)?.emoji}</span>
+                <span>{SCORING_MODES.find(m => m.id === scoringMode)?.label}</span>
+                <ChevronDown size={12} className={`transition-transform duration-150 ${scoringOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {scoringOpen && (
+                <div className="absolute right-0 top-full mt-1 w-36 bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow-xl shadow-black/40 z-50">
+                  {SCORING_MODES.map(mode => (
+                    <button
+                      key={mode.id}
+                      onClick={() => { setScoringMode(mode.id); setScoringOpen(false); }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
+                        scoringMode === mode.id
+                          ? 'bg-violet-500/20 text-white'
+                          : 'text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      <span>{mode.emoji}</span>
+                      <span className="font-medium">{mode.label}</span>
+                      {scoringMode === mode.id && <span className="ml-auto text-violet-400">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Model accuracy + calibration — info icon with hover tooltip */}
