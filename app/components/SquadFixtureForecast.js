@@ -1,15 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
+import { getSleeperPositionStyle } from '../constants/positionColors';
+import { getPlayerName } from '../utils/playerUtils';
+import PlayerAvatar from './common/PlayerAvatar';
 
 const POSITION_ORDER = { FWD: 0, MID: 1, DEF: 2, GKP: 3 };
-
-const POSITION_LABEL_COLORS = {
-  GKP: 'text-yellow-400',
-  DEF: 'text-blue-400',
-  MID: 'text-green-400',
-  FWD: 'text-red-400',
-};
 
 const DIFF_CELL = {
   1: { bg: 'bg-green-800',  border: 'border-green-700/50',  text: 'text-green-200'  },
@@ -75,7 +71,7 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode, isGWActive = 
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr>
-              <th className="text-left text-slate-500 font-medium pb-1.5 pr-3 w-24 min-w-[96px]">
+              <th className="text-left text-slate-500 font-medium pb-1.5 pr-3 w-36 min-w-[144px]">
                 Player
               </th>
               {gwRange.map(gw => (
@@ -96,7 +92,7 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode, isGWActive = 
                 return (
                   <tr key={`hdr-${row.pos}-${i}`}>
                     <td colSpan={gwRange.length + 1} className="pt-2.5 pb-0.5">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${POSITION_LABEL_COLORS[row.pos] || 'text-slate-400'}`}>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${getSleeperPositionStyle(row.pos)}`}>
                         {row.pos}
                       </span>
                     </td>
@@ -107,17 +103,20 @@ const SquadFixtureForecast = ({ myPlayers, currentGW, scoringMode, isGWActive = 
               const { player } = row;
               return (
                 <tr key={player.sleeper_id || player.player_id || i}>
-                  <td className="pr-3 py-0.5">
-                    <div className="flex items-center gap-1">
-                      <span
-                        className="text-slate-300 block truncate max-w-[88px]"
-                        title={player.web_name || player.name}
-                      >
-                        {player.web_name || player.name}
-                      </span>
-                      {!player.is_starter && (
-                        <span className="text-[8px] text-slate-600 shrink-0">BN</span>
-                      )}
+                  <td className="pr-3 py-1">
+                    <div className="flex items-center gap-1.5">
+                      <PlayerAvatar player={player} size="sm" />
+                      <div className="min-w-0">
+                        <span
+                          className="text-slate-300 block truncate max-w-[96px] text-xs"
+                          title={player.web_name || player.name}
+                        >
+                          {getPlayerName(player)}
+                        </span>
+                        {!player.is_starter && (
+                          <span className="text-[8px] text-slate-600">BN</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   {gwRange.map(gw => {
