@@ -1,7 +1,7 @@
 // app/components/LeagueStandings.js
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { DEFAULT_USER_ID } from '../config/constants';
 
@@ -9,6 +9,8 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
   const [standings, setStandings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortKey, setSortKey] = useState(null); // null = default API order (wins-based)
+  const [sortDir, setSortDir] = useState('desc');
 
   useEffect(() => {
     const fetchStandings = async () => {
@@ -56,7 +58,29 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
     );
   }
 
-  // Find current user's standing
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
+
+  const sortedStandings = useMemo(() => {
+    if (!sortKey) return standings;
+    return [...standings].sort((a, b) => {
+      const aVal = sortKey === 'wlt' ? a.wins + a.ties * 0.5
+                 : sortKey === 'pf'  ? a.pointsFor
+                 :                     a.pointsAgainst;
+      const bVal = sortKey === 'wlt' ? b.wins + b.ties * 0.5
+                 : sortKey === 'pf'  ? b.pointsFor
+                 :                     b.pointsAgainst;
+      return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+  }, [standings, sortKey, sortDir]);
+
+  // userRank always reflects the original standings order (Sleeper's wins-based rank)
   const userStanding = standings.find(s => s.displayName === currentUserId);
   const userRank = userStanding ? standings.indexOf(userStanding) + 1 : null;
 
@@ -83,13 +107,28 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
             <tr>
               <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Team</th>
-              <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L-T</th>
-              <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF</th>
-              <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PA</th>
+              {[
+                { key: 'wlt', label: 'W-L-T' },
+                { key: 'pf',  label: 'PF' },
+                { key: 'pa',  label: 'PA' },
+              ].map(col => (
+                <th
+                  key={col.key}
+                  onClick={() => handleSort(col.key)}
+                  className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase cursor-pointer select-none hover:text-white transition-colors"
+                >
+                  {col.label}
+                  <span className="ml-1 inline-block w-3 text-center">
+                    {sortKey === col.key
+                      ? (sortDir === 'desc' ? '▼' : '▲')
+                      : <span className="opacity-30">⇅</span>}
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700">
-            {standings.map((team, index) => {
+            {sortedStandings.map((team, index) => {
                 const isCurrentUser = team.displayName === currentUserId;
                 return (
                   <tr
