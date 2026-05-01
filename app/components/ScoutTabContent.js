@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
-import { getSleeperPositionBadgeClasses } from '../../utils/positionUtils';
+import { getSleeperPositionStyle } from '../constants/positionColors';
 import { getPlayerName } from '../utils/playerUtils';
 import { getDifficultyColor } from '../constants/designTokens';
 import { getFPLStatusBadge } from '../utils/newsUtils';
@@ -249,7 +249,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
 
               {/* Position badge + diff */}
               <div className="flex flex-col items-center gap-1 min-w-[60px]">
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${getSleeperPositionBadgeClasses(m.pos)}`}>
+                <span className={getSleeperPositionStyle(m.pos)}>
                   {m.pos}
                 </span>
                 <span className={`text-sm font-bold ${
@@ -279,7 +279,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
           {edges.length === 0 && <p className="text-xs text-slate-500">No clear edges this GW</p>}
           {edges.map(e => (
             <div key={e.pos} className="flex items-center justify-between text-sm">
-              <span className={`px-2 py-0.5 rounded text-xs font-bold ${getSleeperPositionBadgeClasses(e.pos)}`}>{e.pos}</span>
+              <span className={getSleeperPositionStyle(e.pos)}>{e.pos}</span>
               <span className="text-green-400 font-bold">+{e.diff.toFixed(1)} pts</span>
             </div>
           ))}
@@ -288,7 +288,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
           {vulnerabilities.length === 0 && <p className="text-xs text-slate-500">No weak spots this GW</p>}
           {vulnerabilities.map(v => (
             <div key={v.pos} className="flex items-center justify-between text-sm">
-              <span className={`px-2 py-0.5 rounded text-xs font-bold ${getSleeperPositionBadgeClasses(v.pos)}`}>{v.pos}</span>
+              <span className={getSleeperPositionStyle(v.pos)}>{v.pos}</span>
               <span className="text-red-400 font-bold">{v.diff.toFixed(1)} pts</span>
             </div>
           ))}
@@ -304,7 +304,7 @@ const H2HScoutView = ({ myTeam, rival, scoringMode, currentGW, onBack, onPlayerC
                 <span className="text-slate-500 w-4">{i === 0 ? '1.' : i === 1 ? '2.' : '3.'}</span>
                 <PlayerAvatar player={p} size="xs" />
                 <span className="text-white font-medium truncate flex-1">{getPlayerName(p)}</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getSleeperPositionBadgeClasses(p.position)}`}>{p.position}</span>
+                <span className={getSleeperPositionStyle(p.position)}>{p.position}</span>
                 <span className="text-red-400 font-bold">{pts.toFixed(1)}</span>
                 {p.opta_stats && (
                   <span className="text-[10px] text-slate-500" title={`xG: ${Number(p.opta_stats.xg || 0).toFixed(1)}, xA: ${Number(p.opta_stats.xa || 0).toFixed(1)}, Shots: ${p.opta_stats.shots || 0}`}>
