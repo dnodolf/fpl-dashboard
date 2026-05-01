@@ -1,20 +1,11 @@
 'use client';
 
-import { getSleeperPositionStyle } from '../constants/positionColors';
+import { getSleeperPositionStyle, getPositionTextColor } from '../constants/positionColors';
 import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
 import { getNextNGameweeksTotal } from '../utils/predictionUtils';
 import { getPlayerName } from '../utils/playerUtils';
 import PlayerAvatar from './common/PlayerAvatar';
 
-const getPositionTextColor = (position) => {
-  switch (position) {
-    case 'GKP': return 'text-yellow-400';
-    case 'DEF': return 'text-green-400';
-    case 'MID': return 'text-blue-400';
-    case 'FWD': return 'text-purple-400';
-    default: return 'text-slate-400';
-  }
-};
 
 const MyRosterPanel = ({ players, userId, scoringMode, currentGameweek, onPlayerClick }) => {
   const myPlayers = players.filter(p => p.owned_by === userId);

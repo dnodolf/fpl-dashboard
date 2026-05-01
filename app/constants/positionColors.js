@@ -144,6 +144,21 @@ function normalizePosition(position) {
 }
 
 /**
+ * Get position text color matching Sleeper's palette
+ * GKP: yellow | DEF: cyan | MID: pink | FWD: purple
+ */
+export function getPositionTextColor(position) {
+  const normalized = normalizePosition(position);
+  switch (normalized) {
+    case 'GKP': return 'text-yellow-400';
+    case 'DEF': return 'text-cyan-400';
+    case 'MID': return 'text-pink-400';
+    case 'FWD': return 'text-purple-400';
+    default: return 'text-slate-400';
+  }
+}
+
+/**
  * Get Sleeper position badge style for standard badges
  * Used by: page.js, HomeTabContent.js
  * Returns full CSS string for position badges (px-2 py-0.5)

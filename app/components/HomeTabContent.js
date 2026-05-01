@@ -1,723 +1,713 @@
-﻿// app/components/HomeTabContent.js
-'use client';
-
-import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import { getSleeperPositionStyle } from '../constants/positionColors';
-import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
-import { getTeamLogoUrl } from '../utils/teamImage';
-import { getNextNGameweeksTotal } from '../utils/predictionUtils';
-import { getPlayerName } from '../utils/playerUtils';
-import PlayerAvatar from './common/PlayerAvatar';
-import MyRosterPanel from './MyRosterPanel';
-
-// Progress Ring component for visual stats
-const ProgressRing = ({ progress, size = 60, strokeWidth = 6, color = 'green', label, sublabel }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / 100) * circumference;
-
-  const colorClasses = {
-    green: 'text-green-500',
-    yellow: 'text-yellow-500',
-    red: 'text-red-500',
-    blue: 'text-blue-500',
-    purple: 'text-purple-500'
-  };
-
-  return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg width={size} height={size} className="transform -rotate-90">
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-          stroke="currentColor"
-          fill="none"
-          className="text-slate-700"
-        />
-        {/* Progress circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-          stroke="currentColor"
-          fill="none"
-          strokeLinecap="round"
-          className={colorClasses[color] || 'text-green-500'}
-          style={{
-            strokeDasharray: circumference,
-            strokeDashoffset: offset,
-            transition: 'stroke-dashoffset 0.5s ease-out'
-          }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-bold text-white">{label}</span>
-        {sublabel && <span className="text-[10px] text-slate-400">{sublabel}</span>}
-      </div>
-    </div>
-  );
-};
-
-// Countdown timer component
-const CountdownTimer = ({ deadline }) => {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
-  const [isUrgent, setIsUrgent] = useState(false);
-
-  useEffect(() => {
-    if (!deadline) return;
-
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const deadlineTime = new Date(deadline).getTime();
-      const diff = deadlineTime - now;
-
-      if (diff <= 0) {
-        return { days: 0, hours: 0, mins: 0, secs: 0 };
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const secs = Math.floor((diff % (1000 * 60)) / 1000);
-
-      return { days, hours, mins, secs };
-    };
-
-    // Initial calculation
-    const initial = calculateTimeLeft();
-    setTimeLeft(initial);
-    setIsUrgent(initial.days === 0 && initial.hours < 24);
-
-    // Update every second
-    const timer = setInterval(() => {
-      const newTime = calculateTimeLeft();
-      setTimeLeft(newTime);
-      setIsUrgent(newTime.days === 0 && newTime.hours < 24);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [deadline]);
-
-  if (!deadline) return null;
-
-  const TimeUnit = ({ value, label }) => (
-    <div className="flex flex-col items-center">
-      <span className={`text-2xl font-bold ${isUrgent ? 'text-orange-400' : 'text-white'}`}>
-        {String(value).padStart(2, '0')}
-      </span>
-      <span className="text-[10px] text-slate-500 uppercase">{label}</span>
-    </div>
-  );
-
-  return (
-    <div className="flex items-center gap-2">
-      {timeLeft.days > 0 && (
-        <>
-          <TimeUnit value={timeLeft.days} label="days" />
-          <span className="text-slate-600 text-xl">:</span>
-        </>
-      )}
-      <TimeUnit value={timeLeft.hours} label="hrs" />
-      <span className="text-slate-600 text-xl">:</span>
-      <TimeUnit value={timeLeft.mins} label="min" />
-      <span className="text-slate-600 text-xl">:</span>
-      <TimeUnit value={timeLeft.secs} label="sec" />
-    </div>
-  );
-};
-
-// Gradient border card wrapper
-const GradientCard = ({ children, gradient = 'from-violet-500 to-purple-500', className = '' }) => (
-  <div className={`relative p-[1px] rounded-lg bg-gradient-to-r ${gradient} ${className}`}>
-    <div className="bg-slate-800 rounded-lg h-full">
-      {children}
-    </div>
-  </div>
-);
-
-// Position-themed text color helper
-const getPositionTextColor = (position) => {
-  switch (position) {
-    case 'GKP': return 'text-yellow-400';
-    case 'DEF': return 'text-green-400';
-    case 'MID': return 'text-blue-400';
-    case 'FWD': return 'text-purple-400';
-    default: return 'text-slate-400';
-  }
-};
-
-const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, userId }) => {
-  const [optimizerData, setOptimizerData] = useState(null);
-  const [loadingOptimizer, setLoadingOptimizer] = useState(true);
-  const [standings, setStandings] = useState([]);
-  const [loadingStandings, setLoadingStandings] = useState(true);
-  const [standingsExpanded, setStandingsExpanded] = useState(false);
-  const [fixtureExpanded, setFixtureExpanded] = useState(false);
-
-  // Auto-expand fixtures when GW is live
-  useEffect(() => {
-    if (currentGameweek?.status === 'live') {
-      setFixtureExpanded(true);
-    }
-  }, [currentGameweek?.status]);
-  const [fixtureCounts, setFixtureCounts] = useState(null);
-  const [fixtureList, setFixtureList] = useState(null);
-
-  // Fetch fixture data for live and upcoming GWs
-  useEffect(() => {
-    if (currentGameweek?.status !== 'live' && currentGameweek?.status !== 'upcoming') {
-      setFixtureCounts(null);
-      setFixtureList(null);
-      return;
-    }
-    const fetchFixtures = async () => {
-      try {
-        const res = await fetch('/api/fpl-gameweek', { cache: 'no-store' });
-        const data = await res.json();
-        if (data.success && data.currentGameweek?.fixtureCounts) {
-          setFixtureCounts(data.currentGameweek.fixtureCounts);
-        }
-        if (data.success && data.currentGameweek?.fixtureList) {
-          setFixtureList(data.currentGameweek.fixtureList);
-        }
-      } catch { /* silent */ }
-    };
-    fetchFixtures();
-    // Refresh every 60 seconds while live, once for upcoming
-    if (currentGameweek?.status === 'live') {
-      const interval = setInterval(fetchFixtures, 60000);
-      return () => clearInterval(interval);
-    }
-  }, [currentGameweek?.status, currentGameweek?.number]);
-  // Fetch optimizer data to check if lineup is optimized
-  useEffect(() => {
-    const fetchOptimizerData = async () => {
-      try {
-        setLoadingOptimizer(true);
-        const response = await fetch('/api/optimizer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId,
-            scoringMode,
-            currentGameweek: currentGameweek?.number
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setOptimizerData(data);
-        }
-      } catch (error) {
-        console.error('Error fetching optimizer data:', error);
-      } finally {
-        setLoadingOptimizer(false);
-      }
-    };
-
-    if (currentGameweek?.number) {
-      fetchOptimizerData();
-    }
-  }, [currentGameweek, scoringMode]);
-
-  // Fetch league standings
-  useEffect(() => {
-    const fetchStandings = async () => {
-      try {
-        setLoadingStandings(true);
-        const response = await fetch('/api/standings');
-        if (response.ok) {
-          const data = await response.json();
-          setStandings(data.standings || []);
-        }
-      } catch (error) {
-        console.error('Error fetching standings:', error);
-      } finally {
-        setLoadingStandings(false);
-      }
-    };
-    fetchStandings();
-  }, []);
-
-  // Get my players
-  const myPlayers = players.filter(p => p.owned_by === userId);
-
-  // Helper to get current GW points - use predictions array for consistency
-  const currentGW = currentGameweek?.number || 1;
-  const getPlayerPoints = (player) => {
-    return getNextNGameweeksTotal(player, scoringMode, currentGW, 1);
-  };
-
-  // Calculate playersToSwap locally (same logic as OptimizerTabContent)
-  const calculateOptimizationStats = () => {
-    const current = optimizerData?.current;
-    const optimal = optimizerData?.optimal;
-
-    if (!current?.players || !optimal?.players) {
-      return { playersToSwap: 0, improvement: 0, efficiency: 100 };
-    }
-
-    const optimalPlayerIds = new Set(
-      optimal.players.map(p => p.sleeper_id || p.id || p.player_id)
-    );
-
-    const playersToSwap = current.players.filter(p => {
-      const playerId = p.sleeper_id || p.id || p.player_id;
-      return !optimalPlayerIds.has(playerId);
-    }).length;
-
-    const currentPts = current.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
-    const optimalPts = optimal.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
-    const improvement = optimalPts - currentPts;
-
-    // Efficiency = % of current starters that are also in the optimal XI
-    const totalStarters = current.players.length || 11;
-    const correctStarters = totalStarters - playersToSwap;
-    const efficiency = Math.round((correctStarters / totalStarters) * 100);
-
-    return { playersToSwap, improvement, efficiency };
-  };
-
-  const optimizationStats = calculateOptimizationStats();
-
-  // Get top 3 players for this GW
-  const top3ThisGW = [...myPlayers]
-    .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a))
-    .slice(0, 3);
-
-  // Find user's league standing
-  const userStanding = standings.find(s => s.displayName === userId);
-  const userRank = userStanding ? standings.indexOf(userStanding) + 1 : null;
-
-
-  // Count players by availability status
-  const availabilityStats = {
-    healthy: myPlayers.filter(p => {
-      if (p.fpl_status && p.fpl_status !== 'a') return false;
-      const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
-      return chance >= 75;
-    }).length,
-    doubtful: myPlayers.filter(p => {
-      if (p.fpl_status === 'd') return true;
-      const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
-      return chance >= 25 && chance < 75;
-    }).length,
-    out: myPlayers.filter(p => {
-      if (p.fpl_status && p.fpl_status !== 'a' && p.fpl_status !== 'd') return true;
-      const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
-      return chance < 25;
-    }).length
-  };
-
-  // Calculate team health percentage
-  const teamHealth = myPlayers.length > 0
-    ? Math.round((availabilityStats.healthy / myPlayers.length) * 100)
-    : 100;
-
-  // Calculate predicted points for this GW
-  const predictedPoints = myPlayers.reduce((sum, p) => sum + getPlayerPoints(p), 0);
-
-  return (
-    <div className="space-y-6">
-      {/* Hero Header with Countdown or Live Indicator */}
-      <div className={`bg-gradient-to-r ${currentGameweek?.status === 'live' ? 'from-red-700 via-red-600 to-orange-600' : 'from-violet-600 via-purple-600 to-indigo-600'} rounded-xl shadow-lg px-6 py-4 relative overflow-hidden`}>
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          {/* GW Info Widget */}
-          <button
-            onClick={() => {
-              const url = `https://fantasy.premierleague.com/fixtures/${currentGameweek?.number || 1}`;
-              window.open(url, '_blank', 'noopener,noreferrer');
-            }}
-            className="text-left hover:bg-white/10 rounded-lg p-2 -m-2 transition-colors"
-            title={`Click to view GW${currentGameweek?.number} fixtures`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="text-4xl font-bold text-white">
-                GW {currentGameweek?.number || '?'}
-              </div>
-              <div className="text-sm">
-                <p className="text-violet-100">
-                  {currentGameweek?.status === 'live' ? '🔴 Live' : currentGameweek?.status === 'upcoming' ? '🏁 Upcoming' : '✅ Complete'}
-                </p>
-                <p className="text-violet-200/70 text-xs">
-                  {currentGameweek?.date || 'Loading...'}
-                  <span className="ml-1 opacity-60">🔗</span>
-                </p>
-              </div>
-            </div>
-          </button>
-
-          {/* Countdown Timer or Live Indicator */}
-          {currentGameweek?.status === 'live' ? (
-            <div className="bg-red-500/20 backdrop-blur-sm rounded-lg px-5 py-3 border border-red-500/30">
-              <div className="flex items-center gap-3">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-                <div>
-                  <p className="text-lg font-bold text-white">
-                    {fixtureCounts
-                      ? fixtureCounts.finished === fixtureCounts.total
-                        ? 'All Matches Complete'
-                        : fixtureCounts.started > 0
-                          ? 'Matches In Progress'
-                          : 'Matches Today'
-                      : 'Matches In Progress'}
-                  </p>
-                  {fixtureCounts ? (
-                    <div className="flex items-center gap-3 text-xs mt-1">
-                      <span className="text-green-300">{fixtureCounts.finished} played</span>
-                      {fixtureCounts.started > 0 && (
-                        <span className="text-yellow-300">{fixtureCounts.started} live</span>
-                      )}
-                      <span className="text-red-200/70">{fixtureCounts.remaining} remaining</span>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-red-200/70">Loading fixtures...</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-black/20 backdrop-blur-sm rounded-lg px-4 py-2">
-              <p className="text-xs text-violet-200 mb-1 text-center">Deadline</p>
-              <CountdownTimer deadline={currentGameweek?.deadline} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Grid with Progress Rings */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Lineup Optimization with Progress Ring */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg">
-          <div className="p-4">
-            <h3 className="text-sm font-medium text-slate-400 mb-3">Lineup Status</h3>
-            {loadingOptimizer ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"></div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <ProgressRing
-                  progress={optimizationStats.efficiency}
-                  size={70}
-                  color={optimizationStats.playersToSwap === 0 ? 'green' : 'yellow'}
-                  label={`${optimizationStats.efficiency}%`}
-                  sublabel="optimal"
-                />
-                <div>
-                  {optimizationStats.playersToSwap === 0 ? (
-                    <>
-                      <p className="text-lg font-bold text-green-400">Optimized</p>
-                      <p className="text-xs text-slate-400">No changes needed</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-lg font-bold text-yellow-400">{optimizationStats.playersToSwap} Changes</p>
-                      <p className="text-xs text-slate-400">+{optimizationStats.improvement.toFixed(1)} pts</p>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Team Health with Progress Ring */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg">
-          <div className="p-4">
-            <h3 className="text-sm font-medium text-slate-400 mb-3">Team Health</h3>
-            <div className="flex items-center gap-4">
-              <ProgressRing
-                progress={teamHealth}
-                size={70}
-                color={teamHealth >= 80 ? 'green' : teamHealth >= 60 ? 'yellow' : 'red'}
-                label={`${teamHealth}%`}
-                sublabel="healthy"
-              />
-              <div className="space-y-1 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  <span className="text-slate-400">Fit:</span>
-                  <span className="text-white font-bold">{availabilityStats.healthy}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                  <span className="text-slate-400">Doubt:</span>
-                  <span className="text-white font-bold">{availabilityStats.doubtful}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                  <span className="text-slate-400">Out:</span>
-                  <span className="text-white font-bold">{availabilityStats.out}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Top 3 This Gameweek */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg">
-          <div className="p-4">
-            <h3 className="text-sm font-medium text-slate-400 mb-3">Top 3 This GW</h3>
-            <div className="space-y-2">
-              {top3ThisGW.map((player, idx) => (
-                <div key={player.sleeper_id} className="flex items-center gap-2 text-sm min-w-0">
-                  <span className="text-slate-600 w-4 font-bold shrink-0">{idx + 1}</span>
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${getSleeperPositionStyle(player.position)}`}>
-                    {player.position}
-                  </span>
-                  <button
-                    onClick={() => onPlayerClick?.(player)}
-                    className={`truncate max-w-[120px] sm:max-w-none flex-1 text-left font-medium hover:underline transition-colors ${getPositionTextColor(player.position)}`}
-                  >
-                    {getPlayerName(player)}
-                  </button>
-                  <span className="text-green-400 font-bold">{getPlayerPoints(player).toFixed(1)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* League Standing */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg">
-          <div className="p-4">
-            <h3 className="text-sm font-medium text-slate-400 mb-3">League Standing</h3>
-            {loadingStandings ? (
-              <div className="animate-pulse space-y-2">
-                <div className="h-8 bg-slate-700 rounded w-16"></div>
-                <div className="h-4 bg-slate-700 rounded w-24"></div>
-              </div>
-            ) : userRank ? (
-              <div className="flex items-center gap-4">
-                <div className="text-4xl font-bold text-yellow-400">#{userRank}</div>
-                <div>
-                  <p className="text-white font-medium">
-                    {userStanding.wins}-{userStanding.losses}
-                    {userStanding.ties > 0 && `-${userStanding.ties}`}
-                  </p>
-                  <p className="text-xs text-slate-400">of {standings.length} teams</p>
-                  <button
-                    onClick={() => setStandingsExpanded(!standingsExpanded)}
-                    className="text-xs text-violet-400 hover:text-violet-300 mt-1 flex items-center gap-1"
-                  >
-                    {standingsExpanded ? '▼' : '▶'} Full standings
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-slate-500 text-sm">Unable to load</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* GW Fixture Schedule — shown when live */}
-      {fixtureList && fixtureList.length > 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setFixtureExpanded(!fixtureExpanded)}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/50 transition-colors"
-          >
-            <h2 className="text-sm font-bold text-white">GW {currentGameweek?.number} Fixtures</h2>
-            <div className="flex items-center gap-2">
-              {fixtureCounts && (
-                <span className="text-xs text-slate-400">
-                  {fixtureCounts.finished}/{fixtureCounts.total} complete
-                </span>
-              )}
-              <span className="text-slate-400 text-xs">{fixtureExpanded ? '▲' : '▼'}</span>
-            </div>
-          </button>
-          {fixtureExpanded && <div className="divide-y divide-slate-700/50 border-t border-slate-700">
-            {fixtureList.map((fixture, idx) => {
-              const myStarters = myPlayers.filter(p => p.is_starter);
-              const homeMyPlayers = myStarters.filter(p => p.team_abbr === fixture.homeTeam);
-              const awayMyPlayers = myStarters.filter(p => p.team_abbr === fixture.awayTeam);
-              const hasMyPlayers = homeMyPlayers.length > 0 || awayMyPlayers.length > 0;
-              const kickoff = new Date(fixture.kickoffTime);
-              const timeStr = kickoff.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-              const dateStr = kickoff.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-              return (
-                <div
-                  key={idx}
-                  className={`px-4 py-2.5 flex items-center gap-3 ${
-                    fixture.status === 'live' ? 'bg-red-500/10' :
-                    fixture.status === 'finished' ? '' : ''
-                  } ${hasMyPlayers ? 'border-l-2 border-l-violet-500' : ''}`}
-                >
-                  {/* Status / Time */}
-                  <div className="w-16 shrink-0 text-center">
-                    {fixture.status === 'live' ? (
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                        </span>
-                        <span className="text-xs font-bold text-red-400">{fixture.minutes}&apos;</span>
-                      </div>
-                    ) : fixture.status === 'finished' ? (
-                      <span className="text-xs font-medium text-green-500">FT</span>
-                    ) : (
-                      <div>
-                        <p className="text-xs font-medium text-slate-300">{timeStr}</p>
-                        <p className="text-[10px] text-slate-500">{dateStr}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Home Team */}
-                  <div className="flex-1 flex items-center justify-end gap-2">
-                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-slate-400' : 'text-white'}`}>
-                      {fixture.homeTeam}
-                    </span>
-                    <img
-                      src={getTeamLogoUrl(fixture.homeTeam)}
-                      alt={fixture.homeTeam}
-                      className="w-6 h-6"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  </div>
-
-                  {/* Score */}
-                  <div className="w-14 text-center shrink-0">
-                    {fixture.status === 'upcoming' ? (
-                      <span className="text-xs text-slate-500">vs</span>
-                    ) : (
-                      <span className={`text-sm font-bold ${fixture.status === 'live' ? 'text-white' : 'text-slate-300'}`}>
-                        {fixture.homeScore} - {fixture.awayScore}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Away Team */}
-                  <div className="flex-1 flex items-center gap-2">
-                    <img
-                      src={getTeamLogoUrl(fixture.awayTeam)}
-                      alt={fixture.awayTeam}
-                      className="w-6 h-6"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-slate-400' : 'text-white'}`}>
-                      {fixture.awayTeam}
-                    </span>
-                  </div>
-
-                  {/* My Starters */}
-                  <div className="w-44 shrink-0 flex flex-wrap gap-1 justify-end">
-                    {[...homeMyPlayers, ...awayMyPlayers].map(p => (
-                      <span
-                        key={p.sleeper_id}
-                        className={`text-[10px] px-1.5 py-0.5 rounded ${
-                          fixture.status === 'finished'
-                            ? 'bg-green-900/40 text-green-400'
-                            : fixture.status === 'live'
-                              ? 'bg-red-900/40 text-red-300 ring-1 ring-red-500/30'
-                              : getSleeperPositionStyle(p.position)
-                        }`}
-                        title={`${getPlayerName(p)} (${p.position}) — ${
-                          fixture.status === 'finished' ? 'Done' :
-                          fixture.status === 'live' ? 'Playing now' : 'Not started'
-                        }`}
-                      >
-                        {fixture.status === 'finished' && '✅ '}
-                        {fixture.status === 'live' && '● '}
-                        {getPlayerName(p)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>}
-        </div>
-      )}
-
-      {/* Expanded Standings Table */}
-      {standingsExpanded && standings.length > 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-900">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Team</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L-T</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PA</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {standings.map((team, index) => {
-                const isCurrentUser = team.displayName === userId;
-                return (
-                  <tr
-                    key={team.roster_id}
-                    className={`${
-                      isCurrentUser
-                        ? 'bg-violet-900/30 border-l-4 border-violet-500'
-                        : 'hover:bg-slate-700'
-                    }`}
-                  >
-                    <td className="px-4 py-2 text-slate-300 font-medium">{index + 1}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`font-medium ${isCurrentUser ? 'text-violet-400' : 'text-white'}`}>
-                          {team.displayName}
-                        </span>
-                        {isCurrentUser && (
-                          <span className="text-xs bg-violet-600 text-white px-2 py-0.5 rounded">You</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 text-center text-slate-300">
-                      {team.wins}-{team.losses}{team.ties > 0 && `-${team.ties}`}
-                    </td>
-                    <td className="px-4 py-2 text-center text-green-400 font-medium">
-                      {team.pointsFor.toFixed(1)}
-                    </td>
-                    <td className="px-4 py-2 text-center text-red-400 font-medium">
-                      {team.pointsAgainst.toFixed(1)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <MyRosterPanel
-        players={players}
-        userId={userId}
-        scoringMode={scoringMode}
-        currentGameweek={currentGameweek}
-        onPlayerClick={onPlayerClick}
-      />
-
-      {/* Schedule Luck Analyzer moved to League → Schedule Luck tab */}
-    </div>
-  );
-};
-
-HomeTabContent.propTypes = {
-  players: PropTypes.array.isRequired,
-  currentGameweek: PropTypes.object,
-  scoringMode: PropTypes.string.isRequired,
-  onPlayerClick: PropTypes.func,
-  userId: PropTypes.string
-};
-
-export default HomeTabContent;
+﻿// app/components/HomeTabContent.js
+'use client';
+
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { getSleeperPositionStyle, getPositionTextColor } from '../constants/positionColors';
+import { timeAgo, getFPLStatusBadge } from '../utils/newsUtils';
+import { getTeamLogoUrl } from '../utils/teamImage';
+import { getNextNGameweeksTotal } from '../utils/predictionUtils';
+import { getPlayerName } from '../utils/playerUtils';
+import PlayerAvatar from './common/PlayerAvatar';
+import MyRosterPanel from './MyRosterPanel';
+
+// Progress Ring component for visual stats
+const ProgressRing = ({ progress, size = 60, strokeWidth = 6, color = 'green', label, sublabel }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (progress / 100) * circumference;
+
+  const colorClasses = {
+    green: 'text-green-500',
+    yellow: 'text-yellow-500',
+    red: 'text-red-500',
+    blue: 'text-blue-500',
+    purple: 'text-purple-500'
+  };
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width={size} height={size} className="transform -rotate-90">
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          stroke="currentColor"
+          fill="none"
+          className="text-slate-700"
+        />
+        {/* Progress circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          stroke="currentColor"
+          fill="none"
+          strokeLinecap="round"
+          className={colorClasses[color] || 'text-green-500'}
+          style={{
+            strokeDasharray: circumference,
+            strokeDashoffset: offset,
+            transition: 'stroke-dashoffset 0.5s ease-out'
+          }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-lg font-bold text-white">{label}</span>
+        {sublabel && <span className="text-[10px] text-slate-400">{sublabel}</span>}
+      </div>
+    </div>
+  );
+};
+
+// Countdown timer component
+const CountdownTimer = ({ deadline }) => {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+  const [isUrgent, setIsUrgent] = useState(false);
+
+  useEffect(() => {
+    if (!deadline) return;
+
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const deadlineTime = new Date(deadline).getTime();
+      const diff = deadlineTime - now;
+
+      if (diff <= 0) {
+        return { days: 0, hours: 0, mins: 0, secs: 0 };
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return { days, hours, mins, secs };
+    };
+
+    // Initial calculation
+    const initial = calculateTimeLeft();
+    setTimeLeft(initial);
+    setIsUrgent(initial.days === 0 && initial.hours < 24);
+
+    // Update every second
+    const timer = setInterval(() => {
+      const newTime = calculateTimeLeft();
+      setTimeLeft(newTime);
+      setIsUrgent(newTime.days === 0 && newTime.hours < 24);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [deadline]);
+
+  if (!deadline) return null;
+
+  const TimeUnit = ({ value, label }) => (
+    <div className="flex flex-col items-center">
+      <span className={`text-2xl font-bold ${isUrgent ? 'text-orange-400' : 'text-white'}`}>
+        {String(value).padStart(2, '0')}
+      </span>
+      <span className="text-[10px] text-slate-500 uppercase">{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="flex items-center gap-2">
+      {timeLeft.days > 0 && (
+        <>
+          <TimeUnit value={timeLeft.days} label="days" />
+          <span className="text-slate-600 text-xl">:</span>
+        </>
+      )}
+      <TimeUnit value={timeLeft.hours} label="hrs" />
+      <span className="text-slate-600 text-xl">:</span>
+      <TimeUnit value={timeLeft.mins} label="min" />
+      <span className="text-slate-600 text-xl">:</span>
+      <TimeUnit value={timeLeft.secs} label="sec" />
+    </div>
+  );
+};
+
+// Gradient border card wrapper
+const GradientCard = ({ children, gradient = 'from-violet-500 to-purple-500', className = '' }) => (
+  <div className={`relative p-[1px] rounded-lg bg-gradient-to-r ${gradient} ${className}`}>
+    <div className="bg-slate-800 rounded-lg h-full">
+      {children}
+    </div>
+  </div>
+);
+
+
+const HomeTabContent = ({ players, currentGameweek, scoringMode, onPlayerClick, userId }) => {
+  const [optimizerData, setOptimizerData] = useState(null);
+  const [loadingOptimizer, setLoadingOptimizer] = useState(true);
+  const [standings, setStandings] = useState([]);
+  const [loadingStandings, setLoadingStandings] = useState(true);
+  const [standingsExpanded, setStandingsExpanded] = useState(false);
+  const [fixtureExpanded, setFixtureExpanded] = useState(false);
+
+  // Auto-expand fixtures when GW is live
+  useEffect(() => {
+    if (currentGameweek?.status === 'live') {
+      setFixtureExpanded(true);
+    }
+  }, [currentGameweek?.status]);
+  const [fixtureCounts, setFixtureCounts] = useState(null);
+  const [fixtureList, setFixtureList] = useState(null);
+
+  // Fetch fixture data for live and upcoming GWs
+  useEffect(() => {
+    if (currentGameweek?.status !== 'live' && currentGameweek?.status !== 'upcoming') {
+      setFixtureCounts(null);
+      setFixtureList(null);
+      return;
+    }
+    const fetchFixtures = async () => {
+      try {
+        const res = await fetch('/api/fpl-gameweek', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.success && data.currentGameweek?.fixtureCounts) {
+          setFixtureCounts(data.currentGameweek.fixtureCounts);
+        }
+        if (data.success && data.currentGameweek?.fixtureList) {
+          setFixtureList(data.currentGameweek.fixtureList);
+        }
+      } catch { /* silent */ }
+    };
+    fetchFixtures();
+    // Refresh every 60 seconds while live, once for upcoming
+    if (currentGameweek?.status === 'live') {
+      const interval = setInterval(fetchFixtures, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [currentGameweek?.status, currentGameweek?.number]);
+  // Fetch optimizer data to check if lineup is optimized
+  useEffect(() => {
+    const fetchOptimizerData = async () => {
+      try {
+        setLoadingOptimizer(true);
+        const response = await fetch('/api/optimizer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            scoringMode,
+            currentGameweek: currentGameweek?.number
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setOptimizerData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching optimizer data:', error);
+      } finally {
+        setLoadingOptimizer(false);
+      }
+    };
+
+    if (currentGameweek?.number) {
+      fetchOptimizerData();
+    }
+  }, [currentGameweek, scoringMode]);
+
+  // Fetch league standings
+  useEffect(() => {
+    const fetchStandings = async () => {
+      try {
+        setLoadingStandings(true);
+        const response = await fetch('/api/standings');
+        if (response.ok) {
+          const data = await response.json();
+          setStandings(data.standings || []);
+        }
+      } catch (error) {
+        console.error('Error fetching standings:', error);
+      } finally {
+        setLoadingStandings(false);
+      }
+    };
+    fetchStandings();
+  }, []);
+
+  // Get my players
+  const myPlayers = players.filter(p => p.owned_by === userId);
+
+  // Helper to get current GW points - use predictions array for consistency
+  const currentGW = currentGameweek?.number || 1;
+  const getPlayerPoints = (player) => {
+    return getNextNGameweeksTotal(player, scoringMode, currentGW, 1);
+  };
+
+  // Calculate playersToSwap locally (same logic as OptimizerTabContent)
+  const calculateOptimizationStats = () => {
+    const current = optimizerData?.current;
+    const optimal = optimizerData?.optimal;
+
+    if (!current?.players || !optimal?.players) {
+      return { playersToSwap: 0, improvement: 0, efficiency: 100 };
+    }
+
+    const optimalPlayerIds = new Set(
+      optimal.players.map(p => p.sleeper_id || p.id || p.player_id)
+    );
+
+    const playersToSwap = current.players.filter(p => {
+      const playerId = p.sleeper_id || p.id || p.player_id;
+      return !optimalPlayerIds.has(playerId);
+    }).length;
+
+    const currentPts = current.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
+    const optimalPts = optimal.players.reduce((sum, p) => sum + getPlayerPoints(p), 0);
+    const improvement = optimalPts - currentPts;
+
+    // Efficiency = % of current starters that are also in the optimal XI
+    const totalStarters = current.players.length || 11;
+    const correctStarters = totalStarters - playersToSwap;
+    const efficiency = Math.round((correctStarters / totalStarters) * 100);
+
+    return { playersToSwap, improvement, efficiency };
+  };
+
+  const optimizationStats = calculateOptimizationStats();
+
+  // Get top 3 players for this GW
+  const top3ThisGW = [...myPlayers]
+    .sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a))
+    .slice(0, 3);
+
+  // Find user's league standing
+  const userStanding = standings.find(s => s.displayName === userId);
+  const userRank = userStanding ? standings.indexOf(userStanding) + 1 : null;
+
+
+  // Count players by availability status
+  const availabilityStats = {
+    healthy: myPlayers.filter(p => {
+      if (p.fpl_status && p.fpl_status !== 'a') return false;
+      const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
+      return chance >= 75;
+    }).length,
+    doubtful: myPlayers.filter(p => {
+      if (p.fpl_status === 'd') return true;
+      const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
+      return chance >= 25 && chance < 75;
+    }).length,
+    out: myPlayers.filter(p => {
+      if (p.fpl_status && p.fpl_status !== 'a' && p.fpl_status !== 'd') return true;
+      const chance = p.chance_next_round ?? p.chance_of_playing_next_round ?? 100;
+      return chance < 25;
+    }).length
+  };
+
+  // Calculate team health percentage
+  const teamHealth = myPlayers.length > 0
+    ? Math.round((availabilityStats.healthy / myPlayers.length) * 100)
+    : 100;
+
+  // Calculate predicted points for this GW
+  const predictedPoints = myPlayers.reduce((sum, p) => sum + getPlayerPoints(p), 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Header with Countdown or Live Indicator */}
+      <div className={`bg-gradient-to-r ${currentGameweek?.status === 'live' ? 'from-red-700 via-red-600 to-orange-600' : 'from-violet-600 via-purple-600 to-indigo-600'} rounded-xl shadow-lg px-6 py-4 relative overflow-hidden`}>
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          {/* GW Info Widget */}
+          <button
+            onClick={() => {
+              const url = `https://fantasy.premierleague.com/fixtures/${currentGameweek?.number || 1}`;
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            className="text-left hover:bg-white/10 rounded-lg p-2 -m-2 transition-colors"
+            title={`Click to view GW${currentGameweek?.number} fixtures`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-4xl font-bold text-white">
+                GW {currentGameweek?.number || '?'}
+              </div>
+              <div className="text-sm">
+                <p className="text-violet-100">
+                  {currentGameweek?.status === 'live' ? '🔴 Live' : currentGameweek?.status === 'upcoming' ? '🏁 Upcoming' : '✅ Complete'}
+                </p>
+                <p className="text-violet-200/70 text-xs">
+                  {currentGameweek?.date || 'Loading...'}
+                  <span className="ml-1 opacity-60">🔗</span>
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Countdown Timer or Live Indicator */}
+          {currentGameweek?.status === 'live' ? (
+            <div className="bg-red-500/20 backdrop-blur-sm rounded-lg px-5 py-3 border border-red-500/30">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <div>
+                  <p className="text-lg font-bold text-white">
+                    {fixtureCounts
+                      ? fixtureCounts.finished === fixtureCounts.total
+                        ? 'All Matches Complete'
+                        : fixtureCounts.started > 0
+                          ? 'Matches In Progress'
+                          : 'Matches Today'
+                      : 'Matches In Progress'}
+                  </p>
+                  {fixtureCounts ? (
+                    <div className="flex items-center gap-3 text-xs mt-1">
+                      <span className="text-green-300">{fixtureCounts.finished} played</span>
+                      {fixtureCounts.started > 0 && (
+                        <span className="text-yellow-300">{fixtureCounts.started} live</span>
+                      )}
+                      <span className="text-red-200/70">{fixtureCounts.remaining} remaining</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-red-200/70">Loading fixtures...</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-black/20 backdrop-blur-sm rounded-lg px-4 py-2">
+              <p className="text-xs text-violet-200 mb-1 text-center">Deadline</p>
+              <CountdownTimer deadline={currentGameweek?.deadline} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Grid with Progress Rings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Lineup Optimization with Progress Ring */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-slate-400 mb-3">Lineup Status</h3>
+            {loadingOptimizer ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"></div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <ProgressRing
+                  progress={optimizationStats.efficiency}
+                  size={70}
+                  color={optimizationStats.playersToSwap === 0 ? 'green' : 'yellow'}
+                  label={`${optimizationStats.efficiency}%`}
+                  sublabel="optimal"
+                />
+                <div>
+                  {optimizationStats.playersToSwap === 0 ? (
+                    <>
+                      <p className="text-lg font-bold text-green-400">Optimized</p>
+                      <p className="text-xs text-slate-400">No changes needed</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-yellow-400">{optimizationStats.playersToSwap} Changes</p>
+                      <p className="text-xs text-slate-400">+{optimizationStats.improvement.toFixed(1)} pts</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Team Health with Progress Ring */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-slate-400 mb-3">Team Health</h3>
+            <div className="flex items-center gap-4">
+              <ProgressRing
+                progress={teamHealth}
+                size={70}
+                color={teamHealth >= 80 ? 'green' : teamHealth >= 60 ? 'yellow' : 'red'}
+                label={`${teamHealth}%`}
+                sublabel="healthy"
+              />
+              <div className="space-y-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className="text-slate-400">Fit:</span>
+                  <span className="text-white font-bold">{availabilityStats.healthy}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  <span className="text-slate-400">Doubt:</span>
+                  <span className="text-white font-bold">{availabilityStats.doubtful}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  <span className="text-slate-400">Out:</span>
+                  <span className="text-white font-bold">{availabilityStats.out}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top 3 This Gameweek */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-slate-400 mb-3">Top 3 This GW</h3>
+            <div className="space-y-2">
+              {top3ThisGW.map((player, idx) => (
+                <div key={player.sleeper_id} className="flex items-center gap-2 text-sm min-w-0">
+                  <span className="text-slate-600 w-4 font-bold shrink-0">{idx + 1}</span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${getSleeperPositionStyle(player.position)}`}>
+                    {player.position}
+                  </span>
+                  <button
+                    onClick={() => onPlayerClick?.(player)}
+                    className={`truncate max-w-[120px] sm:max-w-none flex-1 text-left font-medium hover:underline transition-colors ${getPositionTextColor(player.position)}`}
+                  >
+                    {getPlayerName(player)}
+                  </button>
+                  <span className="text-green-400 font-bold">{getPlayerPoints(player).toFixed(1)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* League Standing */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
+          <div className="p-4">
+            <h3 className="text-sm font-medium text-slate-400 mb-3">League Standing</h3>
+            {loadingStandings ? (
+              <div className="animate-pulse space-y-2">
+                <div className="h-8 bg-slate-700 rounded w-16"></div>
+                <div className="h-4 bg-slate-700 rounded w-24"></div>
+              </div>
+            ) : userRank ? (
+              <div className="flex items-center gap-4">
+                <div className="text-4xl font-bold text-yellow-400">#{userRank}</div>
+                <div>
+                  <p className="text-white font-medium">
+                    {userStanding.wins}-{userStanding.losses}
+                    {userStanding.ties > 0 && `-${userStanding.ties}`}
+                  </p>
+                  <p className="text-xs text-slate-400">of {standings.length} teams</p>
+                  <button
+                    onClick={() => setStandingsExpanded(!standingsExpanded)}
+                    className="text-xs text-violet-400 hover:text-violet-300 mt-1 flex items-center gap-1"
+                  >
+                    {standingsExpanded ? '▼' : '▶'} Full standings
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-slate-500 text-sm">Unable to load</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* GW Fixture Schedule — shown when live */}
+      {fixtureList && fixtureList.length > 0 && (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setFixtureExpanded(!fixtureExpanded)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/50 transition-colors"
+          >
+            <h2 className="text-sm font-bold text-white">GW {currentGameweek?.number} Fixtures</h2>
+            <div className="flex items-center gap-2">
+              {fixtureCounts && (
+                <span className="text-xs text-slate-400">
+                  {fixtureCounts.finished}/{fixtureCounts.total} complete
+                </span>
+              )}
+              <span className="text-slate-400 text-xs">{fixtureExpanded ? '▲' : '▼'}</span>
+            </div>
+          </button>
+          {fixtureExpanded && <div className="divide-y divide-slate-700/50 border-t border-slate-700">
+            {fixtureList.map((fixture, idx) => {
+              const myStarters = myPlayers.filter(p => p.is_starter);
+              const homeMyPlayers = myStarters.filter(p => p.team_abbr === fixture.homeTeam);
+              const awayMyPlayers = myStarters.filter(p => p.team_abbr === fixture.awayTeam);
+              const hasMyPlayers = homeMyPlayers.length > 0 || awayMyPlayers.length > 0;
+              const kickoff = new Date(fixture.kickoffTime);
+              const timeStr = kickoff.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              const dateStr = kickoff.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+              return (
+                <div
+                  key={idx}
+                  className={`px-4 py-2.5 flex items-center gap-3 ${
+                    fixture.status === 'live' ? 'bg-red-500/10' :
+                    fixture.status === 'finished' ? '' : ''
+                  } ${hasMyPlayers ? 'border-l-2 border-l-violet-500' : ''}`}
+                >
+                  {/* Status / Time */}
+                  <div className="w-16 shrink-0 text-center">
+                    {fixture.status === 'live' ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                        <span className="text-xs font-bold text-red-400">{fixture.minutes}&apos;</span>
+                      </div>
+                    ) : fixture.status === 'finished' ? (
+                      <span className="text-xs font-medium text-green-500">FT</span>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-medium text-slate-300">{timeStr}</p>
+                        <p className="text-[10px] text-slate-500">{dateStr}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Home Team */}
+                  <div className="flex-1 flex items-center justify-end gap-2">
+                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-slate-400' : 'text-white'}`}>
+                      {fixture.homeTeam}
+                    </span>
+                    <img
+                      src={getTeamLogoUrl(fixture.homeTeam)}
+                      alt={fixture.homeTeam}
+                      className="w-6 h-6"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  </div>
+
+                  {/* Score */}
+                  <div className="w-14 text-center shrink-0">
+                    {fixture.status === 'upcoming' ? (
+                      <span className="text-xs text-slate-500">vs</span>
+                    ) : (
+                      <span className={`text-sm font-bold ${fixture.status === 'live' ? 'text-white' : 'text-slate-300'}`}>
+                        {fixture.homeScore} - {fixture.awayScore}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Away Team */}
+                  <div className="flex-1 flex items-center gap-2">
+                    <img
+                      src={getTeamLogoUrl(fixture.awayTeam)}
+                      alt={fixture.awayTeam}
+                      className="w-6 h-6"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    <span className={`text-sm font-medium ${fixture.status === 'finished' ? 'text-slate-400' : 'text-white'}`}>
+                      {fixture.awayTeam}
+                    </span>
+                  </div>
+
+                  {/* My Starters */}
+                  <div className="w-44 shrink-0 flex flex-wrap gap-1 justify-end">
+                    {[...homeMyPlayers, ...awayMyPlayers].map(p => (
+                      <span
+                        key={p.sleeper_id}
+                        className={`text-[10px] px-1.5 py-0.5 rounded ${
+                          fixture.status === 'finished'
+                            ? 'bg-green-900/40 text-green-400'
+                            : fixture.status === 'live'
+                              ? 'bg-red-900/40 text-red-300 ring-1 ring-red-500/30'
+                              : getSleeperPositionStyle(p.position)
+                        }`}
+                        title={`${getPlayerName(p)} (${p.position}) — ${
+                          fixture.status === 'finished' ? 'Done' :
+                          fixture.status === 'live' ? 'Playing now' : 'Not started'
+                        }`}
+                      >
+                        {fixture.status === 'finished' && '✅ '}
+                        {fixture.status === 'live' && '● '}
+                        {getPlayerName(p)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>}
+        </div>
+      )}
+
+      {/* Expanded Standings Table */}
+      {standingsExpanded && standings.length > 0 && (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-900">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Team</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">W-L-T</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PF</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-slate-400 uppercase">PA</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700">
+              {standings.map((team, index) => {
+                const isCurrentUser = team.displayName === userId;
+                return (
+                  <tr
+                    key={team.roster_id}
+                    className={`${
+                      isCurrentUser
+                        ? 'bg-violet-900/30 border-l-4 border-violet-500'
+                        : 'hover:bg-slate-700'
+                    }`}
+                  >
+                    <td className="px-4 py-2 text-slate-300 font-medium">{index + 1}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium ${isCurrentUser ? 'text-violet-400' : 'text-white'}`}>
+                          {team.displayName}
+                        </span>
+                        {isCurrentUser && (
+                          <span className="text-xs bg-violet-600 text-white px-2 py-0.5 rounded">You</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-center text-slate-300">
+                      {team.wins}-{team.losses}{team.ties > 0 && `-${team.ties}`}
+                    </td>
+                    <td className="px-4 py-2 text-center text-green-400 font-medium">
+                      {team.pointsFor.toFixed(1)}
+                    </td>
+                    <td className="px-4 py-2 text-center text-red-400 font-medium">
+                      {team.pointsAgainst.toFixed(1)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <MyRosterPanel
+        players={players}
+        userId={userId}
+        scoringMode={scoringMode}
+        currentGameweek={currentGameweek}
+        onPlayerClick={onPlayerClick}
+      />
+
+      {/* Schedule Luck Analyzer moved to League → Schedule Luck tab */}
+    </div>
+  );
+};
+
+HomeTabContent.propTypes = {
+  players: PropTypes.array.isRequired,
+  currentGameweek: PropTypes.object,
+  scoringMode: PropTypes.string.isRequired,
+  onPlayerClick: PropTypes.func,
+  userId: PropTypes.string
+};
+
+export default HomeTabContent;
