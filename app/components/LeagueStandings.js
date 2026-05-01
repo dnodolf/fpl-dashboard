@@ -40,23 +40,7 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
     };
 
     fetchStandings();
-  }, []); // Fetches on mount - will get fresh data from Sleeper API
-
-  if (loading) {
-    return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-        <div className="text-sm text-slate-400">Loading standings...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-        <div className="text-sm text-red-400">Failed to load standings</div>
-      </div>
-    );
-  }
+  }, []);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -79,6 +63,22 @@ const LeagueStandings = ({ currentUserId = DEFAULT_USER_ID }) => {
       return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
     });
   }, [standings, sortKey, sortDir]);
+
+  if (loading) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+        <div className="text-sm text-slate-400">Loading standings...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+        <div className="text-sm text-red-400">Failed to load standings</div>
+      </div>
+    );
+  }
 
   // userRank always reflects the original standings order (Sleeper's wins-based rank)
   const userStanding = standings.find(s => s.displayName === currentUserId);
