@@ -152,17 +152,17 @@ const DashboardHeader = ({ lastUpdated, players, updateData, activeTab, setActiv
           )}
         <div ref={tabScrollRef} className="flex overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
           {[
-            { id: 'home',      label: 'Home',      icon: <Home size={14} /> },
-            { id: 'lineup',    label: 'Lineup',    icon: <Users size={14} /> },
-            { id: 'transfers', label: 'Transfers', icon: <ArrowLeftRight size={14} /> },
-            { id: 'trades',    label: 'Trades',    icon: <Scale size={14} /> },
-            { id: 'league',    label: 'League',    icon: <Trophy size={14} /> },
-            { id: 'draft',     label: 'Draft',     icon: <Target size={14} /> }
+            { id: 'home',      label: 'Home',      icon: <Home className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
+            { id: 'lineup',    label: 'Lineup',    icon: <Users className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
+            { id: 'transfers', label: 'Transfers', icon: <ArrowLeftRight className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
+            { id: 'trades',    label: 'Trades',    icon: <Scale className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
+            { id: 'league',    label: 'League',    icon: <Trophy className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
+            { id: 'draft',     label: 'Draft',     icon: <Target className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 border-b-2 ${
+              className={`flex items-center gap-1.5 px-4 py-3 sm:px-3 sm:py-2 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 border-b-2 ${
                 activeTab === tab.id
                   ? 'border-violet-500 text-white'
                   : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600'
