@@ -22,6 +22,8 @@ import { useGameweek } from './hooks/useGameweek';
 import { useUserConfig } from './hooks/useUserConfig';
 import { DEFAULT_USER_ID, TOTAL_GAMEWEEKS, OWNERSHIP_STATUS, FILTER_OPTIONS } from './config/constants';
 import SetupModal from './components/SetupModal';
+import MyRosterPanel from './components/MyRosterPanel';
+import SquadFixtureForecast from './components/SquadFixtureForecast';
 
 import { OptimizerStatsCard } from './components/stats/OptimizerStatsCard';
 import { PlayerModal } from './components/PlayerModal';
@@ -498,7 +500,7 @@ export default function FPLDashboard() {
           {activeTab === 'lineup' && (
             <>
               <div className="flex items-center gap-1 border-b border-slate-700 pb-2 mb-6">
-                {[{ key: 'startSit', label: 'Start/Sit' }, { key: 'myTeam', label: 'My Team' }].map(t => (
+                {[{ key: 'startSit', label: 'Start/Sit' }, { key: 'myTeam', label: 'My Team' }, { key: 'fixtures', label: 'Fixtures' }].map(t => (
                   <button key={t.key} onClick={() => setLineupSubTab(t.key)}
                     className={`px-4 py-1.5 text-sm font-medium rounded-t transition-colors ${lineupSubTab === t.key ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
                     {t.label}
@@ -518,13 +520,27 @@ export default function FPLDashboard() {
                 </>
               )}
               {lineupSubTab === 'myTeam' && (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="text-4xl mb-4">👤</div>
-                  <h3 className="text-lg font-semibold text-white mb-2">My Team</h3>
-                  <p className="text-sm text-slate-400 max-w-sm">Full team overview — your roster, player statuses, and projected points at a glance.</p>
-                  <span className="mt-4 text-xs bg-violet-900/40 text-violet-300 border border-violet-700/50 px-3 py-1 rounded-full">Coming Soon</span>
-                </div>
+                <MyRosterPanel
+                  players={players}
+                  userId={userId}
+                  scoringMode={scoringMode}
+                  currentGameweek={currentGameweek}
+                  onPlayerClick={handlePlayerClick}
+                />
               )}
+              {lineupSubTab === 'fixtures' && (() => {
+                const myPlayers = players.filter(p => p.owned_by === userId);
+                return myPlayers.length > 0 ? (
+                  <SquadFixtureForecast
+                    myPlayers={myPlayers}
+                    currentGW={currentGameweek?.number || 1}
+                    scoringMode={scoringMode}
+                    isGWActive={myPlayers.some(p => p._locked)}
+                  />
+                ) : (
+                  <p className="text-slate-400 text-sm text-center py-12">No roster data available.</p>
+                );
+              })()}
             </>
           )}
 
